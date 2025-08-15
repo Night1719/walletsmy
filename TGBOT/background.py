@@ -252,6 +252,28 @@ async def _check_approvals(
     task_cache["approvals"] = current_ids
 
 
+async def run_user_checks(bot: Bot, chat_id: int) -> None:
+    sessions: Dict[str, Dict[str, Any]] = get_all_sessions()
+    session = sessions.get(str(chat_id))
+    if not session:
+        return
+    intraservice_id = session.get("intraservice_id")
+    if not intraservice_id:
+        return
+
+    prefs = get_preferences(chat_id)
+    cache = get_task_cache(chat_id)
+
+    open_tasks = get_user_tasks(intraservice_id, "open") or []
+
+    await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
+    await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)
+    await _check_comments(bot, chat_id, open_tasks, cache, prefs)
+    await _check_approvals(bot, chat_id, intraservice_id, cache, prefs)
+
+    set_task_cache(chat_id, cache)
+
+
 async def background_worker(bot: Bot):
     while True:
         start = time.perf_counter()
@@ -261,22 +283,7 @@ async def background_worker(bot: Bot):
             for chat_id_str, session in sessions.items():
                 try:
                     chat_id = int(chat_id_str)
-                    intraservice_id = session.get("intraservice_id")
-                    if not intraservice_id:
-                        continue
-
-                    prefs = get_preferences(chat_id)
-                    cache = get_task_cache(chat_id)
-
-                    # Fetch current open tasks
-                    open_tasks = get_user_tasks(intraservice_id, "open") or []
-
-                    await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
-                    await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)
-                    await _check_comments(bot, chat_id, open_tasks, cache, prefs)
-                    await _check_approvals(bot, chat_id, intraservice_id, cache, prefs)
-
-                    set_task_cache(chat_id, cache)
+                    await run_user_checks(bot, chat_id)
                 except Exception:
                     logger.exception("background loop error for user %s", chat_id_str)
                     inc_api_error("user_loop")
