@@ -189,6 +189,38 @@ def get_task_details(task_id: int):
     return None
 
 
+def get_task_comments(task_id: int):
+    """
+    Получить список комментариев напрямую, если include не отдаёт.
+    Пробуем несколько вариантов путей и структур.
+    Возвращает list[dict] или пустой список.
+    """
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    paths = [
+        f"{INTRASERVICE_BASE_URL}/task/{task_id}/comment",
+        f"{INTRASERVICE_BASE_URL}/task/{task_id}/comments",
+    ]
+    for url in paths:
+        try:
+            r = requests.get(url, headers=headers, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict):
+                    for key in ("Comments", "Items", "TaskComments", "List"):
+                        val = data.get(key)
+                        if isinstance(val, list):
+                            return val
+        except Exception:
+            logger.exception("❌ Ошибка при получении комментариев для #%s", task_id)
+    return []
+
+
 # --- 5. ДОБАВЛЕНИЕ КОММЕНТАРИЯ ---
 def add_comment_to_task(task_id: int, comment: str, public: bool = True):
     """

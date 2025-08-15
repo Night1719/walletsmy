@@ -14,6 +14,7 @@ from api_client import (
     get_user_tasks,
     get_task_details,
     get_tasks_awaiting_approval,
+    get_task_comments,
 )
 from keyboards import link_to_task_inline, approval_actions_inline
 from metrics import inc_notification, inc_api_error, observe_cycle, set_sessions
@@ -145,10 +146,12 @@ async def _check_status_and_executor(
         # Status change
         if prefs.get("notify_status") and prev.get("status_id") is not None:
             if core.get("status_id") != prev.get("status_id"):
+                old_name = prev.get('status_name') or str(prev.get('status_id'))
+                new_name = core.get('status_name') or str(core.get('status_id'))
                 await send_safe(
                     bot,
                     chat_id,
-                    f"🔔 Обновление заявки #{task_id}\n• Статус: {prev.get('status_name', '?')} → {core.get('status_name', '?')}",
+                    f"🔔 Обновление заявки #{task_id}\n• Статус: {old_name} → {new_name}",
                     reply_markup=link_to_task_inline(int(task_id), HELPDESK_WEB_BASE),
                 )
                 inc_notification("status")
@@ -225,6 +228,8 @@ async def _check_comments(
         try:
             details = get_task_details(int(task_id)) or {}
             comments = _extract_comments(details)
+            if not comments:
+                comments = get_task_comments(int(task_id)) or []
             total = len(comments)
             if not isinstance(comments, list):
                 continue

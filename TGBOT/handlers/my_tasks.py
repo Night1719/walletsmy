@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from api_client import get_user_tasks, get_task_details, add_comment_to_task
+from api_client import get_user_tasks, get_task_details, get_task_comments, add_comment_to_task
 from keyboards import my_tasks_menu_keyboard, task_actions_inline, link_to_task_inline
 from storage import get_session
 from states import CommentStates
@@ -14,7 +14,7 @@ def _status_name_from(task: dict) -> str:
         task.get("StatusName")
         or task.get("Status")
         or task.get("StatusDisplay")
-        or "?"
+        or (str(task.get("StatusId")) if task.get("StatusId") is not None else "?")
     )
 
 
@@ -99,9 +99,15 @@ async def on_task_inline(call: types.CallbackQuery, state: FSMContext):
         status_name = _status_name_from(data)
         description = data.get("Description", "")
         comments = _extract_comments(data)
+        if not comments:
+            comments = get_task_comments(task_id) or []
         comments.sort(key=_comment_sort_key)
         last3 = comments[-3:]
-        comments_text = "\n".join([f"— {c.get('CreatorName') or c.get('UserName') or 'Кто-то'}: {c.get('Text') or c.get('Body') or ''}" for c in last3]) or "Комментариев нет"
+        def _ct(c):
+            return c.get('Text') or c.get('Body') or c.get('CommentText') or ''
+        def _ca(c):
+            return c.get('CreatorName') or c.get('UserName') or 'Кто-то'
+        comments_text = "\n".join([f"— {_ca(c)}: {_ct(c)}" for c in last3]) or "Комментариев нет"
         text_msg = (
             f"📋 Заявка #{task_id}\n"
             f"🔖 {name}\n"
