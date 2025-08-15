@@ -31,6 +31,12 @@ def my_tasks_menu_keyboard():
     return kb.as_markup(resize_keyboard=True)
 
 
+def cancel_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="❌ Отменить"))
+    return kb.as_markup(resize_keyboard=True)
+
+
 def settings_menu_keyboard(prefs: Dict[str, bool]):
     kb = InlineKeyboardBuilder()
     kb.button(text=f"Новый комментарий {'✔️' if prefs.get('notify_comment') else '❌'}", callback_data="toggle:notify_comment")
@@ -48,7 +54,7 @@ def services_keyboard():
     kb = ReplyKeyboardBuilder()
     for _id, name in ALLOWED_SERVICES.items():
         kb.row(KeyboardButton(text=name))
-    kb.row(KeyboardButton(text="⬅️ Назад"))
+    kb.row(KeyboardButton(text="❌ Отменить"))
     return kb.as_markup(resize_keyboard=True)
 
 

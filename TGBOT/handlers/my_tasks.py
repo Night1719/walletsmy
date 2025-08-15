@@ -9,6 +9,15 @@ from config import HELPDESK_WEB_BASE
 router = Router()
 
 
+def _status_name_from(task: dict) -> str:
+    return (
+        task.get("StatusName")
+        or task.get("Status")
+        or task.get("StatusDisplay")
+        or "?"
+    )
+
+
 @router.message(F.text.in_({"Открытые", "Завершённые", "⬅️ Назад"}))
 async def my_tasks_menu(message: types.Message, state: FSMContext):
     text = message.text.strip()
@@ -30,7 +39,7 @@ async def my_tasks_menu(message: types.Message, state: FSMContext):
     for t in tasks[:30]:
         task_id = t.get("Id")
         name = t.get("Name", "Без названия")
-        status_name = t.get("StatusName", "?")
+        status_name = _status_name_from(t)
         creator_date = t.get("CreateDate", "")
         description = (t.get("Description") or "").strip()
         if len(description) > 300:
@@ -64,7 +73,7 @@ async def on_task_inline(call: types.CallbackQuery, state: FSMContext):
             await call.answer("Не удалось получить детали", show_alert=True)
             return
         name = data.get("Name", "Без названия")
-        status_name = data.get("StatusName", "?")
+        status_name = _status_name_from(data)
         description = data.get("Description", "")
         comments = data.get("Comments", [])
         comments_text = "\n".join([f"— {c.get('CreatorName')}: {c.get('Text')}" for c in comments[-5:]]) or "Комментариев нет"

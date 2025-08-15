@@ -18,3 +18,9 @@ async def main_menu_entry(message: types.Message, state: FSMContext):
 @router.message(F.text == "📋 Мои заявки")
 async def open_my_tasks(message: types.Message, state: FSMContext):
     await message.answer("Выберите список:", reply_markup=my_tasks_menu_keyboard())
+
+
+@router.message(F.text == "⬅️ Назад")
+async def back_to_menu(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Главное меню:", reply_markup=main_menu_keyboard())
