@@ -1,30 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-	<h2>{{ survey.title }}</h2>
-	<p>{{ survey.description }}</p>
-	<form method="post" action="/surveys/submit/{{ survey.id }}">
+	<h2 style="margin-top:0;">{{ survey.title }}</h2>
+	<p style="opacity:.85">{{ survey.description }}</p>
+	<form method="post" action="/surveys/submit/{{ survey.id }}" style="display:grid; gap:12px;">
 		{% for q in survey.questions %}
-		<div class="item">
+		<div class="q-card">
 			<div class="label">{{ loop.index }}. {{ q.text }}</div>
 			{% if q.qtype == 'text' %}
-			<textarea class="input" name="q_{{ q.id }}" rows="3"></textarea>
+			<textarea class="input" name="q_{{ q.id }}" rows="3" placeholder="Ваш ответ..."></textarea>
 			{% elif q.qtype == 'single' %}
 				{% for o in q.options %}
-				<label style="display:block; margin:4px 0;">
+				<label style="display:block; margin:6px 0;">
 					<input type="radio" name="q_{{ q.id }}" value="{{ o.id }}" /> {{ o.text }}
 				</label>
 				{% endfor %}
 			{% elif q.qtype == 'multiple' %}
 				{% for o in q.options %}
-				<label style="display:block; margin:4px 0;">
+				<label style="display:block; margin:6px 0;">
 					<input type="checkbox" name="q_{{ q.id }}" value="{{ o.id }}" /> {{ o.text }}
 				</label>
 				{% endfor %}
 			{% endif %}
 		</div>
 		{% endfor %}
-		<div style="display:flex;justify-content:flex-end;">
+		<div style="display:flex;justify-content:flex-end; gap:8px;">
+			<a class="btn btn-ghost" href="/surveys">Отмена</a>
 			<button class="btn" type="submit">Отправить ответы</button>
 		</div>
 	</form>

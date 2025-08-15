@@ -9,8 +9,9 @@
 		<textarea name="description" rows="3">{{ survey.description if survey else '' }}</textarea>
 		<label class="label">Анонимный</label>
 		<input type="checkbox" name="is_anonymous" {% if survey and survey.is_anonymous %}checked{% endif %} />
-		<label class="label">Вопросы (JSON)</label>
-		<textarea name="questions_payload" rows="12" class="input">{{ (
+		<label class="label">Вопросы</label>
+		<div id="builder" class="builder"></div>
+		<textarea id="questions_payload" name="questions_payload" rows="12" class="input" style="display:none;">{{ (
 			[
 				{"text":"Ваше мнение о BG?","qtype":"text"},
 				{"text":"Как оцените сервис?","qtype":"single","options":["Отлично","Хорошо","Удовл.","Плохо"]}
@@ -19,9 +20,15 @@
 				for q in survey.questions
 			]
 		)|tojson(indent=2) }}</textarea>
+		<script src="/static/builder.js"></script>
+		<script>
+			const builderEl = document.getElementById('builder');
+			const textarea = document.getElementById('questions_payload');
+			window._builder = new Builder(builderEl, textarea);
+		</script>
 		<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
 			<button class="btn" type="submit">Сохранить</button>
-			{% if survey %}<a class="btn" href="/surveys/take/{{ survey.id }}">Предпросмотр</a>{% endif %}
+			{% if survey %}<a class="btn btn-secondary" href="/surveys/take/{{ survey.id }}">Предпросмотр</a>{% endif %}
 		</div>
 	</form>
 </div>
