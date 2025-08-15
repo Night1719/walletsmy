@@ -50,9 +50,13 @@ async def on_approval_action(call: types.CallbackQuery, state: FSMContext):
     _, action, task_id_str = parts
     task_id = int(task_id_str)
 
+    # Определяем текущего согласующего как Telegram-пользователя, соответствующего IntraService Id из сессии
+    session = get_session(call.from_user.id)
+    coordinator_id = session.get("intraservice_id") if session else None
+    user_name = call.from_user.full_name
+
     if action == "ok":
-        user_name = call.from_user.full_name
-        ok = approve_task(task_id, approve=True, comment="", user_name=user_name)
+        ok = approve_task(task_id, approve=True, comment="", user_name=user_name, coordinator_id=coordinator_id, set_status_on_success=45)
         if ok:
             try:
                 await call.message.edit_reply_markup()
@@ -74,6 +78,8 @@ async def on_decline_reason(message: types.Message, state: FSMContext):
     data = await state.get_data()
     task_id = data.get("task_id")
     reason = message.text.strip()
+    session = get_session(message.from_user.id)
+    coordinator_id = session.get("intraservice_id") if session else None
     user_name = message.from_user.full_name
 
     if not task_id:
@@ -81,7 +87,7 @@ async def on_decline_reason(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    ok = approve_task(task_id, approve=False, comment=reason or "Отклонено через Telegram", user_name=user_name)
+    ok = approve_task(task_id, approve=False, comment=reason or "Отклонено через Telegram", user_name=user_name, coordinator_id=coordinator_id)
     if ok:
         await message.answer(f"❌ Заявка #{task_id} отклонена.")
     else:

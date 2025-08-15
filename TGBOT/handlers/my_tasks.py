@@ -107,7 +107,7 @@ async def on_comment_entered(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    ok = add_comment_to_task(task_id, text)
+    ok = add_comment_to_task(task_id, text, public=True)
     if ok:
         await message.answer("✅ Комментарий добавлен.")
     else:

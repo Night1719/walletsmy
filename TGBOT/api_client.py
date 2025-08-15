@@ -77,7 +77,7 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
 
     # ID статусов
     open_ids = "27,31,35,44"   # Новая, Открыта, В работе, Ожидает
-    closed_ids = "28,29,30"     # Завершена, Выполнена, Отклонена
+    closed_ids = "28,29,30,45"     # Завершена, Выполнена, Отклонена, Согласовано
 
     params = {
         "creatorids": user_id,
@@ -178,9 +178,10 @@ def get_task_details(task_id: int):
 
 
 # --- 5. ДОБАВЛЕНИЕ КОММЕНТАРИЯ ---
-def add_comment_to_task(task_id: int, comment: str):
+def add_comment_to_task(task_id: int, comment: str, public: bool = True):
     """
     Добавить комментарий к заявке.
+    public=True — попытка создать общедоступный комментарий (включаем несколько флагов на случай разных настроек API)
     """
     url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
     headers = {
@@ -190,6 +191,16 @@ def add_comment_to_task(task_id: int, comment: str):
         "X-API-Version": API_VERSION,
     }
     payload = {"Comment": comment}
+
+    if public:
+        # Возможные поля для публичности комментария (оставлены сразу несколько, лишние будут проигнорированы)
+        payload.update({
+            "IsPublic": True,
+            "IsClientVisible": True,
+            "ForClient": True,
+            "Internal": False,
+            "IsHidden": False,
+        })
 
     try:
         response = requests.put(url, headers=headers, json=payload, verify=False)
@@ -205,9 +216,11 @@ def add_comment_to_task(task_id: int, comment: str):
 
 
 # --- 6. СОГЛАСОВАНИЕ / ОТКЛОНЕНИЕ ЗАЯВКИ ---
-def approve_task(task_id: int, approve: bool = True, comment: str = "", user_name: str = None):
+def approve_task(task_id: int, approve: bool = True, comment: str = "", user_name: str = None, coordinator_id: int = None, set_status_on_success: int | None = None):
     """
     Согласовать или отклонить заявку.
+    coordinator_id — Id согласующего в IntraService (для выбора конкретного согласующего)
+    set_status_on_success — при успехе дополнительно установить указанный StatusId (например 45)
     """
     url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
     headers = {
@@ -223,6 +236,12 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         full_comment = f"{action} через Telegram пользователем: {user_name}. {full_comment}".strip()
 
     payload = {"Coordinate": approve}
+
+    # Пробуем указать конкретного согласующего (если API поддерживает)
+    if coordinator_id is not None:
+        payload["CoordinatorId"] = coordinator_id
+        payload["CoordinateForCoordinatorId"] = coordinator_id
+
     if full_comment:
         payload["Comment"] = full_comment
 
@@ -230,6 +249,16 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         response = requests.put(url, headers=headers, json=payload, verify=False)
         if response.status_code == 200:
             logger.info(f"✅ Заявка #{task_id} {'согласована' if approve else 'отклонена'}")
+
+            # Опционально выставим статус явно, если нужно (подстроиться под процесс)
+            if set_status_on_success is not None and approve:
+                try:
+                    force_payload = {"StatusId": set_status_on_success}
+                    r2 = requests.put(url, headers=headers, json=force_payload, verify=False)
+                    if r2.status_code != 200:
+                        logger.warning(f"⚠️ Не удалось принудительно установить статус {set_status_on_success} для #{task_id}: {r2.status_code} {r2.text}")
+                except Exception as ie:
+                    logger.error(f"❌ Ошибка установки статуса: {ie}")
             return True
         else:
             logger.error(f"❌ Ошибка согласования: {response.status_code} {response.text}")
