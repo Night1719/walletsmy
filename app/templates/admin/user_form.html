@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:720px; margin:0 auto;">
+	<h2>{{ 'Редактировать пользователя' if user else 'Новый пользователь' }}</h2>
+	<form method="post">
+		<label class="label">Логин</label>
+		<input class="input" type="text" name="username" value="{{ user.username if user else '' }}" {% if user %}readonly{% endif %} required />
+		<label class="label">Email</label>
+		<input class="input" type="email" name="email" value="{{ user.email if user else '' }}" />
+		<label class="label">Роль</label>
+		<select class="input" name="role">
+			{% for r in ['admin','creator','analyst','user'] %}
+			<option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ r }}</option>
+			{% endfor %}
+		</select>
+		{% if not user %}
+		<label class="label">Пароль</label>
+		<input class="input" type="password" name="password" />
+		{% else %}
+		<label class="label">Новый пароль</label>
+		<input class="input" type="password" name="new_password" />
+		<label class="label">Активен</label>
+		<input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %} />
+		{% endif %}
+		{% if error %}<div class="item" style="margin-top:8px;">{{ error }}</div>{% endif %}
+		<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+			<button class="btn" type="submit">Сохранить</button>
+			{% if user %}
+			<form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Удалить пользователя?')">
+				<button class="btn" type="submit" style="background:#444;">Удалить</button>
+			</form>
+			{% endif %}
+		</div>
+	</form>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<h2>Поделиться опросом</h2>
+	<p>Скопируйте ссылку и отправьте коллегам:</p>
+	<input class="input" value="{{ share_url }}" readonly onclick="this.select();document.execCommand('copy')" />
+	<p style="opacity:.8">Опрос: {{ survey.title }}</p>
+</div>
+{% endblock %}

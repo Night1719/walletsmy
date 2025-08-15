@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>{{ title or 'BG Surveys' }}</title>
+	<link rel="stylesheet" href="/static/style.css" />
+	<script>
+	function toggleTheme(){
+		const html = document.documentElement;
+		html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+		localStorage.setItem('theme', html.getAttribute('data-theme'));
+	}
+	window.addEventListener('DOMContentLoaded', ()=>{
+		const saved = localStorage.getItem('theme');
+		if (saved) document.documentElement.setAttribute('data-theme', saved);
+	});
+	</script>
+</head>
+<body>
+	<header class="header">
+		<div class="brand">
+			<span class="logo">BG</span>
+			<span class="brand-text">Banter Group Surveys</span>
+		</div>
+		<nav class="nav">
+			<a href="/surveys">Опросы</a>
+			<a href="/admin">Админ</a>
+			<a href="/logout">Выход</a>
+			<button class="btn" onclick="toggleTheme()">Тема</button>
+		</nav>
+	</header>
+	<main class="container">
+		{% block content %}{% endblock %}
+	</main>
+	<footer class="footer">© Banter Group</footer>
+</body>
+</html>

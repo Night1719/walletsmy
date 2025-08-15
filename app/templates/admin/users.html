@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<div class="row">
+		<h2>Пользователи</h2>
+		<div style="text-align:right;"><a class="btn" href="/admin/users/new">Создать</a></div>
+	</div>
+	<table class="table">
+		<thead><tr><th>ID</th><th>Логин</th><th>Email</th><th>Роль</th><th>Активен</th><th></th></tr></thead>
+		<tbody>
+			{% for u in users %}
+			<tr>
+				<td>{{ u.id }}</td>
+				<td>{{ u.username }}</td>
+				<td>{{ u.email }}</td>
+				<td>{{ u.role }}</td>
+				<td>{{ 'да' if u.is_active else 'нет' }}</td>
+				<td style="text-align:right;">
+					<a class="btn" href="/admin/users/{{ u.id }}/edit">Редактировать</a>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+	<div>
+		<h2>Опросы</h2>
+	</div>
+	<div style="text-align:right;">
+		<a class="btn" href="/surveys/new">Создать опрос</a>
+	</div>
+</div>
+<div class="list">
+	{% for s in surveys %}
+	<div class="item">
+		<div style="display:flex;justify-content:space-between;align-items:center;">
+			<div>
+				<div style="font-weight:700">{{ s.title }}</div>
+				<div style="opacity:.8">{{ s.description }}</div>
+				<div style="margin-top:6px">
+					<span class="badge">{{ 'Анонимный' if s.is_anonymous else 'С авторизацией' }}</span>
+					{% if s.share_token %}<a class="link" href="/s/{{ s.share_token }}">Ссылка</a>{% endif %}
+				</div>
+			</div>
+			<div style="display:flex; gap:8px;">
+				<a class="btn" href="/surveys/{{ s.id }}/edit">Редактировать</a>
+				<a class="btn" href="/surveys/{{ s.id }}/analytics">Аналитика</a>
+				<a class="btn" href="/surveys/{{ s.id }}/share">Шеринг</a>
+			</div>
+		</div>
+	</div>
+	{% else %}
+	<div class="item">Пока нет опросов</div>
+	{% endfor %}
+</div>
+{% endblock %}

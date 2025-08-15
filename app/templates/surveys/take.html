@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<h2>{{ survey.title }}</h2>
+	<p>{{ survey.description }}</p>
+	<form method="post" action="/surveys/submit/{{ survey.id }}">
+		{% for q in survey.questions %}
+		<div class="item">
+			<div class="label">{{ loop.index }}. {{ q.text }}</div>
+			{% if q.qtype == 'text' %}
+			<textarea class="input" name="q_{{ q.id }}" rows="3"></textarea>
+			{% elif q.qtype == 'single' %}
+				{% for o in q.options %}
+				<label style="display:block; margin:4px 0;">
+					<input type="radio" name="q_{{ q.id }}" value="{{ o.id }}" /> {{ o.text }}
+				</label>
+				{% endfor %}
+			{% elif q.qtype == 'multiple' %}
+				{% for o in q.options %}
+				<label style="display:block; margin:4px 0;">
+					<input type="checkbox" name="q_{{ q.id }}" value="{{ o.id }}" /> {{ o.text }}
+				</label>
+				{% endfor %}
+			{% endif %}
+		</div>
+		{% endfor %}
+		<div style="display:flex;justify-content:flex-end;">
+			<button class="btn" type="submit">Отправить ответы</button>
+		</div>
+	</form>
+</div>
+{% endblock %}

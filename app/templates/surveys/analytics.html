@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<h2>Аналитика: {{ survey.title }}</h2>
+	<p>Всего ответов: <b>{{ total_responses }}</b></p>
+	<div class="list">
+		{% for qs in q_stats %}
+		<div class="item">
+			<div class="label">{{ loop.index }}. {{ qs.question.text }}</div>
+			{% if qs.type in ['single','multiple'] %}
+				{% set total = 0 %}
+				{% for o in qs.options %}{% set total = total + o.count %}{% endfor %}
+				{% for o in qs.options %}
+				<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+					<div style="min-width:200px;">{{ o.text }}</div>
+					<div style="flex:1;background:#ffffff22;border-radius:6px;overflow:hidden; height:14px;">
+						<div style="height:100%;width: {{ (100 * (o.count or 0) / (total or 1)) | round(1) }}%; background: var(--bg-red);"></div>
+					</div>
+					<div style="min-width:60px;text-align:right;">{{ o.count }}</div>
+				</div>
+				{% endfor %}
+			{% else %}
+				<div>Текстовых ответов: {{ qs.text_count }}</div>
+			{% endif %}
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}

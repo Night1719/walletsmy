@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<h2>Админ панель</h2>
+	<p>Управляйте пользователями и доступом к созданию опросов.</p>
+	<div style="display:flex;gap:8px;">
+		<a class="btn" href="/admin/users">Пользователи</a>
+		<a class="btn" href="/admin/ldap/import">Импорт из LDAP</a>
+	</div>
+</div>
+{% endblock %}

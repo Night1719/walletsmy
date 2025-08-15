@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+	<h2>{{ 'Редактировать опрос' if survey else 'Новый опрос' }}</h2>
+	<form method="post">
+		<label class="label">Название</label>
+		<input class="input" type="text" name="title" value="{{ survey.title if survey else '' }}" required />
+		<label class="label">Описание</label>
+		<textarea name="description" rows="3">{{ survey.description if survey else '' }}</textarea>
+		<label class="label">Анонимный</label>
+		<input type="checkbox" name="is_anonymous" {% if survey and survey.is_anonymous %}checked{% endif %} />
+		<label class="label">Вопросы (JSON)</label>
+		<textarea name="questions_payload" rows="12" class="input">{{ (
+			[
+				{"text":"Ваше мнение о BG?","qtype":"text"},
+				{"text":"Как оцените сервис?","qtype":"single","options":["Отлично","Хорошо","Удовл.","Плохо"]}
+			] if not survey else [
+				{"text": q.text, "qtype": q.qtype, "options": [o.text for o in q.options] }
+				for q in survey.questions
+			]
+		)|tojson(indent=2) }}</textarea>
+		<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+			<button class="btn" type="submit">Сохранить</button>
+			{% if survey %}<a class="btn" href="/surveys/take/{{ survey.id }}">Предпросмотр</a>{% endif %}
+		</div>
+	</form>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:720px; margin:0 auto;">
+	<h2>Импорт пользователей из LDAP</h2>
+	{% if error %}<div class="item">{{ error }}</div>{% endif %}
+	{% if message %}<div class="item">{{ message }}</div>{% endif %}
+	<form method="post">
+		<label class="label">Base DN</label>
+		<input class="input" type="text" name="base_dn" placeholder="" />
+		<label class="label">Фильтр</label>
+		<input class="input" type="text" name="search_filter" value="(objectClass=person)" />
+		<label class="label">Атрибут логина</label>
+		<input class="input" type="text" name="username_attr" value="uid" />
+		<label class="label">Атрибут email</label>
+		<input class="input" type="text" name="email_attr" value="mail" />
+		<label class="label">Роль по умолчанию</label>
+		<select class="input" name="default_role">
+			<option value="user">user</option>
+			<option value="creator">creator</option>
+			<option value="analyst">analyst</option>
+		</select>
+		<div style="display:flex; justify-content:flex-end; margin-top:12px;">
+			<button class="btn" type="submit">Импортировать</button>
+		</div>
+	</form>
+</div>
+{% endblock %}
