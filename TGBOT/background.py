@@ -52,6 +52,45 @@ def _rotate_indices(length: int, start: int, count: int) -> List[int]:
     return [((start + i) % length) for i in range(min(count, length))]
 
 
+def _extract_comments(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw = data.get("Comments")
+    # Comments can be a list or nested object
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        for key in ("Comments", "Items", "TaskComments", "List"):
+            val = raw.get(key)
+            if isinstance(val, list):
+                return val
+    # Fallback: search shallow keys
+    for key in ("TaskComments", "CommentsList"):
+        val = data.get(key)
+        if isinstance(val, list):
+            return val
+    return []
+
+
+def _comment_id(c: Dict[str, Any]) -> str | None:
+    cid = c.get("Id") or c.get("CommentId") or c.get("ID")
+    return str(cid) if cid is not None else None
+
+
+def _comment_author(c: Dict[str, Any]) -> str:
+    return c.get("CreatorName") or c.get("UserName") or c.get("AuthorName") or c.get("Creator") or "Кто-то"
+
+
+def _comment_text(c: Dict[str, Any]) -> str:
+    return c.get("Text") or c.get("Body") or c.get("CommentText") or c.get("Description") or "(без текста)"
+
+
+def _comment_sort_key(c: Dict[str, Any]):
+    # Prefer numeric Id for ordering; fallback to 0
+    try:
+        return int(c.get("Id") or c.get("CommentId") or 0)
+    except Exception:
+        return 0
+
+
 async def _check_new_tasks(
     bot: Bot,
     chat_id: int,
@@ -67,6 +106,14 @@ async def _check_new_tasks(
     if not task_cache.get("initialized"):
         # First run for user: just mark as seen to avoid flood
         task_cache["initialized"] = True
+        # Initialize last_comment_ids to avoid sending old comments as new
+        for t in open_tasks:
+            tid = str(t.get("Id"))
+            details = get_task_details(int(tid)) or {}
+            comments = _extract_comments(details)
+            last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
+            entry = task_cache.setdefault("tasks", {}).setdefault(tid, {})
+            entry["last_comment_ids_str"] = last_ids
         return
 
     new_ids = [tid for tid in current_ids if tid not in known_ids]
@@ -176,22 +223,20 @@ async def _check_comments(
         t = open_tasks[idx]
         task_id = str(t.get("Id"))
         try:
-            details = get_task_details(int(task_id))
-            if not details:
-                continue
-            comments = details.get("Comments", [])
+            details = get_task_details(int(task_id)) or {}
+            comments = _extract_comments(details)
             if not isinstance(comments, list):
                 continue
 
-            # Determine new comments by Id
-            prev_ids: List[int] = cached_tasks.get(task_id, {}).get("last_comment_ids", [])
-            new_comments = [c for c in comments if c.get("Id") not in prev_ids]
-            # Only notify for actually new ones; update cache with the last few ids
+            prev_ids: List[str] = cached_tasks.get(task_id, {}).get("last_comment_ids_str", [])
+            new_comments = [c for c in comments if (_comment_id(c) not in prev_ids)]
             if new_comments:
-                # Notify only for the most recent few to avoid spam
-                for c in new_comments[-3:]:
-                    author = c.get("CreatorName") or "Кто-то"
-                    text = _truncate(c.get("Text") or "")
+                # Sort and show last three, newest at bottom
+                new_comments.sort(key=_comment_sort_key)
+                to_show = new_comments[-3:]
+                for c in to_show:
+                    author = _comment_author(c)
+                    text = _truncate(_comment_text(c))
                     await send_safe(
                         bot,
                         chat_id,
@@ -200,10 +245,10 @@ async def _check_comments(
                     )
                     inc_notification("comment")
 
-                # Keep last up to 20 comment ids
-                last_ids = [c.get("Id") for c in comments[-20:] if c.get("Id") is not None]
+                # Keep last up to 50 ids from all comments
+                last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
                 entry = cached_tasks.setdefault(task_id, {})
-                entry["last_comment_ids"] = last_ids
+                entry["last_comment_ids_str"] = last_ids
         except Exception:
             logger.exception("Failed to check comments for task %s", task_id)
             inc_api_error("check_comments")

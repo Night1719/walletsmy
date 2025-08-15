@@ -18,6 +18,29 @@ def _status_name_from(task: dict) -> str:
     )
 
 
+def _extract_comments(data: dict):
+    raw = data.get("Comments")
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        for key in ("Comments", "Items", "TaskComments", "List"):
+            val = raw.get(key)
+            if isinstance(val, list):
+                return val
+    for key in ("TaskComments", "CommentsList"):
+        val = data.get(key)
+        if isinstance(val, list):
+            return val
+    return []
+
+
+def _comment_sort_key(c: dict):
+    try:
+        return int(c.get("Id") or c.get("CommentId") or 0)
+    except Exception:
+        return 0
+
+
 @router.message(F.text.in_({"Открытые", "Завершённые", "⬅️ Назад"}))
 async def my_tasks_menu(message: types.Message, state: FSMContext):
     text = message.text.strip()
@@ -68,15 +91,17 @@ async def on_task_inline(call: types.CallbackQuery, state: FSMContext):
     task_id = int(task_id_str)
 
     if action == "task" and action2 == "details":
-        data = get_task_details(task_id)
+        data = get_task_details(task_id) or {}
         if not data:
             await call.answer("Не удалось получить детали", show_alert=True)
             return
         name = data.get("Name", "Без названия")
         status_name = _status_name_from(data)
         description = data.get("Description", "")
-        comments = data.get("Comments", [])
-        comments_text = "\n".join([f"— {c.get('CreatorName')}: {c.get('Text')}" for c in comments[-5:]]) or "Комментариев нет"
+        comments = _extract_comments(data)
+        comments.sort(key=_comment_sort_key)
+        last3 = comments[-3:]
+        comments_text = "\n".join([f"— {c.get('CreatorName') or c.get('UserName') or 'Кто-то'}: {c.get('Text') or c.get('Body') or ''}" for c in last3]) or "Комментариев нет"
         text_msg = (
             f"📋 Заявка #{task_id}\n"
             f"🔖 {name}\n"
