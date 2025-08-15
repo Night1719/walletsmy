@@ -1,66 +1,74 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import KeyboardButton, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from typing import Dict
 from config import ALLOWED_SERVICES
 
 
-def phone_request_keyboard() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+def phone_request_keyboard():
+    kb = ReplyKeyboardBuilder()
     kb.add(KeyboardButton(text="📱 Отправить телефон", request_contact=True))
     kb.add(KeyboardButton(text="✍️ Ввести вручную"))
-    return kb
+    return kb.as_markup(resize_keyboard=True)
 
 
-def main_menu_keyboard() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row("📋 Мои заявки", "✅ Согласование")
-    kb.row("➕ Создать заявку", "⚙️ Настройки")
-    return kb
-
-
-def my_tasks_menu_keyboard() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row("Открытые", "Завершённые")
-    kb.add("⬅️ Назад")
-    return kb
-
-
-def settings_menu_keyboard(prefs: Dict[str, bool]) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton(f"Новый комментарий {'✔️' if prefs.get('notify_comment') else '❌'}", callback_data="toggle:notify_comment"))
-    kb.add(InlineKeyboardButton(f"Изменён статус {'✔️' if prefs.get('notify_status') else '❌'}", callback_data="toggle:notify_status"))
-    kb.add(InlineKeyboardButton(f"Изменён исполнитель {'✔️' if prefs.get('notify_executor') else '❌'}", callback_data="toggle:notify_executor"))
-    kb.add(InlineKeyboardButton(f"Заявка выполнена {'✔️' if prefs.get('notify_done') else '❌'}", callback_data="toggle:notify_done"))
-    kb.add(InlineKeyboardButton(f"Новая заявка {'✔️' if prefs.get('notify_new_task') else '❌'}", callback_data="toggle:notify_new_task"))
-    kb.add(InlineKeyboardButton(f"Ждёт согласования {'✔️' if prefs.get('notify_approval') else '❌'}", callback_data="toggle:notify_approval"))
-    kb.add(InlineKeyboardButton("⬅️ Назад", callback_data="settings:back"))
-    return kb
-
-
-def services_keyboard() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    for _id, name in ALLOWED_SERVICES.items():
-        kb.add(name)
-    kb.add("⬅️ Назад")
-    return kb
-
-
-def task_actions_inline(task_id: int) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("👁 Детали", callback_data=f"task:details:{task_id}"))
-    kb.add(InlineKeyboardButton("💬 Комментарий", callback_data=f"task:comment:{task_id}"))
-    return kb
-
-
-def approval_actions_inline(task_id: int) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup()
+def main_menu_keyboard():
+    kb = ReplyKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton("✅ Согласовать", callback_data=f"approval:ok:{task_id}"),
-        InlineKeyboardButton("❌ Отклонить", callback_data=f"approval:decline:{task_id}")
+        KeyboardButton(text="📋 Мои заявки"),
+        KeyboardButton(text="✅ Согласование"),
     )
-    return kb
+    kb.row(
+        KeyboardButton(text="➕ Создать заявку"),
+        KeyboardButton(text="⚙️ Настройки"),
+    )
+    return kb.as_markup(resize_keyboard=True)
 
 
-def link_to_task_inline(task_id: int, web_base: str) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("🔗 Открыть в Helpdesk", url=f"{web_base}/{task_id}"))
-    return kb
+def my_tasks_menu_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="Открытые"), KeyboardButton(text="Завершённые"))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)
+
+
+def settings_menu_keyboard(prefs: Dict[str, bool]):
+    kb = InlineKeyboardBuilder()
+    kb.button(text=f"Новый комментарий {'✔️' if prefs.get('notify_comment') else '❌'}", callback_data="toggle:notify_comment")
+    kb.button(text=f"Изменён статус {'✔️' if prefs.get('notify_status') else '❌'}", callback_data="toggle:notify_status")
+    kb.button(text=f"Изменён исполнитель {'✔️' if prefs.get('notify_executor') else '❌'}", callback_data="toggle:notify_executor")
+    kb.button(text=f"Заявка выполнена {'✔️' if prefs.get('notify_done') else '❌'}", callback_data="toggle:notify_done")
+    kb.button(text=f"Новая заявка {'✔️' if prefs.get('notify_new_task') else '❌'}", callback_data="toggle:notify_new_task")
+    kb.button(text=f"Ждёт согласования {'✔️' if prefs.get('notify_approval') else '❌'}", callback_data="toggle:notify_approval")
+    kb.button(text="⬅️ Назад", callback_data="settings:back")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def services_keyboard():
+    kb = ReplyKeyboardBuilder()
+    for _id, name in ALLOWED_SERVICES.items():
+        kb.row(KeyboardButton(text=name))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)
+
+
+def task_actions_inline(task_id: int):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="👁 Детали", callback_data=f"task:details:{task_id}")
+    kb.button(text="💬 Комментарий", callback_data=f"task:comment:{task_id}")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def approval_actions_inline(task_id: int):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Согласовать", callback_data=f"approval:ok:{task_id}")
+    kb.button(text="❌ Отклонить", callback_data=f"approval:decline:{task_id}")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
+def link_to_task_inline(task_id: int, web_base: str):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔗 Открыть в Helpdesk", url=f"{web_base}/{task_id}")
+    return kb.as_markup()
