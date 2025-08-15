@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 import os
@@ -42,7 +43,7 @@ async def main_async():
     if not token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
 
-    bot = Bot(token=token, parse_mode="HTML")
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher(storage=MemoryStorage())
 
     # Include routers
@@ -54,7 +55,7 @@ async def main_async():
     dp.include_router(settings_handlers.router)
 
     await on_startup(bot, dp)
-    await dp.start_polling(bot, skip_updates=True)
+    await dp.start_polling(bot)
 
 
 def main():
