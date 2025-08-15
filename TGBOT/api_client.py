@@ -155,26 +155,38 @@ def get_tasks_awaiting_approval(user_intraservice_id: int):
 # --- 4. ПОЛУЧЕНИЕ ДЕТАЛЕЙ ЗАЯВКИ ---
 def get_task_details(task_id: int):
     """
-    Получить детали заявки + комментарии.
+    Получить детали заявки + комментарии. Пытаемся разными include-значениями.
     """
-    url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
+    base_url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
     headers = {
         "Authorization": f"Basic {ENCODED_CREDENTIALS}",
         "Accept": "application/json",
         "X-API-Version": API_VERSION,
     }
-    params = {"include": "COMMENTS"}
+    include_variants = [
+        "COMMENTS",
+        "TASKCOMMENTS",
+        "COMMENTSALL",
+    ]
 
-    try:
-        response = requests.get(url, headers=headers, params=params, verify=False)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"❌ Ошибка получения заявки #{task_id}: {response.status_code}")
-            return None
-    except Exception as e:
-        logger.error(f"❌ Ошибка: {e}")
-        return None
+    for inc in include_variants:
+        try:
+            params = {"include": inc}
+            response = requests.get(base_url, headers=headers, params=params, verify=False)
+            if response.status_code == 200:
+                data = response.json()
+                # Если видим поле Comments в любом виде — возвращаем
+                if any(k in data for k in ("Comments", "TaskComments", "CommentsList")):
+                    return data
+                # Даже если нет явного списка, вернём как есть (для статуса/описания)
+                if inc == include_variants[-1]:
+                    return data
+            else:
+                logger.error(f"❌ Ошибка получения заявки #{task_id} (include={inc}): {response.status_code}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка: {e}")
+
+    return None
 
 
 # --- 5. ДОБАВЛЕНИЕ КОММЕНТАРИЯ ---
