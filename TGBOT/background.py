@@ -168,8 +168,8 @@ async def _check_comments(
     rotation = task_cache.setdefault("rotation", {})
     start_index = int(rotation.get("comment_index", 0))
 
-    # Round-robin check a few tasks each cycle
-    indices = _rotate_indices(len(open_tasks), start_index, count=3)
+    # Round-robin check a few tasks each cycle (wider window)
+    indices = _rotate_indices(len(open_tasks), start_index, count=10)
     rotation["comment_index"] = (start_index + len(indices)) % max(1, len(open_tasks))
 
     for idx in indices:
