@@ -53,7 +53,7 @@ async def on_approval_action(call: types.CallbackQuery, state: FSMContext):
     # Определяем текущего согласующего как Telegram-пользователя, соответствующего IntraService Id из сессии
     session = get_session(call.from_user.id)
     coordinator_id = session.get("intraservice_id") if session else None
-    user_name = call.from_user.full_name
+    user_name = (session.get("name") if session else None)
 
     if action == "ok":
         ok = approve_task(task_id, approve=True, comment="", user_name=user_name, coordinator_id=coordinator_id, set_status_on_success=45)
@@ -80,7 +80,7 @@ async def on_decline_reason(message: types.Message, state: FSMContext):
     reason = message.text.strip()
     session = get_session(message.from_user.id)
     coordinator_id = session.get("intraservice_id") if session else None
-    user_name = message.from_user.full_name
+    user_name = (session.get("name") if session else None)
 
     if not task_id:
         await message.answer("Не выбрана заявка.")
