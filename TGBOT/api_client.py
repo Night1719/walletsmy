@@ -221,6 +221,41 @@ def get_task_comments(task_id: int):
     return []
 
 
+def get_task_lifetime_comments(task_id: int):
+    """
+    Получить комментарии из ленты жизни заявки (/tasklifetime).
+    Возвращает list[dict] с полями Id, Comments, Author/AuthorName/AuthorIsOperator и пр.
+    """
+    base = f"{INTRASERVICE_BASE_URL}/tasklifetime"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"taskid": task_id, "lastcommentsontop": "true"}
+    try_versions = [headers.copy()]
+
+    # Если текущая версия не отдаёт, попробуем без заголовка X-API-Version или с 1.0
+    alt_headers = headers.copy(); alt_headers.pop("X-API-Version", None)
+    try_versions.append(alt_headers)
+    v1_headers = headers.copy(); v1_headers["X-API-Version"] = "1.0"
+    try_versions.append(v1_headers)
+
+    for h in try_versions:
+        try:
+            r = requests.get(base, headers=h, params=params, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                items = data.get("TaskLifetimes", [])
+                if isinstance(items, list):
+                    return items
+            else:
+                logger.warning(f"⚠️ tasklifetime {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            logger.exception("❌ Ошибка tasklifetime для #%s: %s", task_id, e)
+    return []
+
+
 # --- 5. ДОБАВЛЕНИЕ КОММЕНТАРИЯ ---
 def add_comment_to_task(task_id: int, comment: str, public: bool = True):
     """

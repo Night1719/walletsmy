@@ -15,6 +15,7 @@ from api_client import (
     get_task_details,
     get_tasks_awaiting_approval,
     get_task_comments,
+    get_task_lifetime_comments,
 )
 from keyboards import link_to_task_inline, approval_actions_inline
 from metrics import inc_notification, inc_api_error, observe_cycle, set_sessions
@@ -229,7 +230,22 @@ async def _check_comments(
             details = get_task_details(int(task_id)) or {}
             comments = _extract_comments(details)
             if not comments:
+                # пробуем прямой эндпоинт
                 comments = get_task_comments(int(task_id)) or []
+            if not comments:
+                # пробуем tasklifetime
+                lifetimes = get_task_lifetime_comments(int(task_id)) or []
+                # вытаскиваем только пользовательские комментарии
+                comments = []
+                for e in lifetimes:
+                    text = (e.get("Comments") or e.get("Comment") or "").strip()
+                    is_operator = bool(e.get("AuthorIsOperator"))
+                    if text and not is_operator:
+                        comments.append({
+                            "Id": e.get("Id") or e.get("CommentId") or 0,
+                            "CreatorName": e.get("Author") or e.get("AuthorName") or "",
+                            "Text": text,
+                        })
             total = len(comments)
             if not isinstance(comments, list):
                 continue

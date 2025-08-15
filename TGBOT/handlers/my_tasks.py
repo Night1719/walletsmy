@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from api_client import get_user_tasks, get_task_details, get_task_comments, add_comment_to_task
+from api_client import get_user_tasks, get_task_details, get_task_comments, get_task_lifetime_comments, add_comment_to_task
 from keyboards import my_tasks_menu_keyboard, task_actions_inline, link_to_task_inline
 from storage import get_session
 from states import CommentStates
@@ -101,6 +101,18 @@ async def on_task_inline(call: types.CallbackQuery, state: FSMContext):
         comments = _extract_comments(data)
         if not comments:
             comments = get_task_comments(task_id) or []
+        if not comments:
+            lifetimes = get_task_lifetime_comments(task_id) or []
+            comments = []
+            for e in lifetimes:
+                text = (e.get("Comments") or e.get("Comment") or "").strip()
+                is_operator = bool(e.get("AuthorIsOperator"))
+                if text and not is_operator:
+                    comments.append({
+                        "Id": e.get("Id") or e.get("CommentId") or 0,
+                        "CreatorName": e.get("Author") or e.get("AuthorName") or "",
+                        "Text": text,
+                    })
         comments.sort(key=_comment_sort_key)
         last3 = comments[-3:]
         def _ct(c):
