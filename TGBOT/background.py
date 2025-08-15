@@ -225,12 +225,15 @@ async def _check_comments(
         try:
             details = get_task_details(int(task_id)) or {}
             comments = _extract_comments(details)
+            total = len(comments)
             if not isinstance(comments, list):
                 continue
 
             prev_ids: List[str] = cached_tasks.get(task_id, {}).get("last_comment_ids_str", [])
             new_comments = [c for c in comments if (_comment_id(c) not in prev_ids)]
-            if new_comments:
+            new_count = len(new_comments)
+            if new_count:
+                logger.info(f"🛈 Комментарии #{task_id}: всего={total}, новых={new_count}")
                 # Sort and show last three, newest at bottom
                 new_comments.sort(key=_comment_sort_key)
                 to_show = new_comments[-3:]
@@ -310,6 +313,7 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
     cache = get_task_cache(chat_id)
 
     open_tasks = get_user_tasks(intraservice_id, "open") or []
+    logger.info(f"🛈 User {chat_id}: open_tasks={len(open_tasks)}")
 
     await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
     await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)
