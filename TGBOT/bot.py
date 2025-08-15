@@ -1,16 +1,17 @@
 import logging
-from aiogram import Bot, Dispatcher, executor
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import asyncio
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 import os
 
 from config import TELEGRAM_BOT_TOKEN, LOG_DIR, LOG_FILE, METRICS_PORT
-from handlers.start import register_start_handlers
-from handlers.main_menu import register_main_menu_handlers
-from handlers.my_tasks import register_my_tasks_handlers
-from handlers.approval import register_approval_handlers
-from handlers.create_task import register_create_task_handlers
-from handlers.settings import register_settings_handlers
+from handlers import start as start_handlers
+from handlers import main_menu as main_menu_handlers
+from handlers import my_tasks as my_tasks_handlers
+from handlers import approval as approval_handlers
+from handlers import create_task as create_task_handlers
+from handlers import settings as settings_handlers
 from background import background_worker
 from metrics import start_metrics_server
 
@@ -27,14 +28,13 @@ def setup_logging():
     )
 
 
-async def on_startup(dp: Dispatcher):
-    # start background worker and metrics server
-    bot: Bot = dp.bot
+async def on_startup(bot: Bot, dp: Dispatcher):
+    dp.loop = asyncio.get_event_loop()
     dp.loop.create_task(background_worker(bot))
     start_metrics_server(METRICS_PORT)
 
 
-def main():
+async def main_async():
     load_dotenv()
     setup_logging()
 
@@ -43,16 +43,22 @@ def main():
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
 
     bot = Bot(token=token, parse_mode="HTML")
-    dp = Dispatcher(bot, storage=MemoryStorage())
+    dp = Dispatcher(storage=MemoryStorage())
 
-    register_start_handlers(dp)
-    register_main_menu_handlers(dp)
-    register_my_tasks_handlers(dp)
-    register_approval_handlers(dp)
-    register_create_task_handlers(dp)
-    register_settings_handlers(dp)
+    # Include routers
+    dp.include_router(start_handlers.router)
+    dp.include_router(main_menu_handlers.router)
+    dp.include_router(my_tasks_handlers.router)
+    dp.include_router(approval_handlers.router)
+    dp.include_router(create_task_handlers.router)
+    dp.include_router(settings_handlers.router)
 
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    await on_startup(bot, dp)
+    await dp.start_polling(bot, skip_updates=True)
+
+
+def main():
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":

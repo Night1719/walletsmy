@@ -1,9 +1,12 @@
-from aiogram import types, Dispatcher
-from aiogram.dispatcher import FSMContext
+from aiogram import Router, types, F
+from aiogram.fsm.context import FSMContext
 from keyboards import main_menu_keyboard, my_tasks_menu_keyboard
 from storage import get_session
 
+router = Router()
 
+
+@router.message(F.text == "/menu")
 async def main_menu_entry(message: types.Message, state: FSMContext):
     session = get_session(message.from_user.id)
     if not session:
@@ -12,10 +15,6 @@ async def main_menu_entry(message: types.Message, state: FSMContext):
     await message.answer("Главное меню:", reply_markup=main_menu_keyboard())
 
 
+@router.message(F.text == "📋 Мои заявки")
 async def open_my_tasks(message: types.Message, state: FSMContext):
     await message.answer("Выберите список:", reply_markup=my_tasks_menu_keyboard())
-
-
-def register_main_menu_handlers(dp: Dispatcher):
-    dp.register_message_handler(main_menu_entry, commands=["menu"], state="*")
-    dp.register_message_handler(open_my_tasks, lambda m: m.text and m.text.strip() == "📋 Мои заявки", state="*")
