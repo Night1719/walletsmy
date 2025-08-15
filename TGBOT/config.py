@@ -37,3 +37,9 @@ LOG_FILE = os.getenv("LOG_FILE", os.path.join(LOG_DIR, "bot.log"))
 
 # === Metrics ===
 METRICS_PORT = int(os.getenv("METRICS_PORT", "9108"))
+
+# === Task defaults ===
+DEFAULT_TYPE_ID = int(os.getenv("DEFAULT_TYPE_ID", "0"))
+DEFAULT_PRIORITY_ID = int(os.getenv("DEFAULT_PRIORITY_ID", "0"))
+DEFAULT_URGENCY_ID = int(os.getenv("DEFAULT_URGENCY_ID", "0"))
+DEFAULT_IMPACT_ID = int(os.getenv("DEFAULT_IMPACT_ID", "0"))

@@ -4,9 +4,11 @@ from keyboards import services_keyboard, main_menu_keyboard, cancel_keyboard
 from storage import get_session
 from states import CreateTaskStates
 from api_client import create_task
-from config import ALLOWED_SERVICES
+from config import ALLOWED_SERVICES, DEFAULT_TYPE_ID, DEFAULT_PRIORITY_ID, DEFAULT_URGENCY_ID, DEFAULT_IMPACT_ID
+import logging
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.message(F.text == "➕ Создать заявку")
@@ -81,9 +83,20 @@ async def enter_description(message: types.Message, state: FSMContext):
         "StatusId": 27,
     }
 
+    # Проставим дефолты, если требуются системой
+    if DEFAULT_TYPE_ID:
+        payload["TypeId"] = DEFAULT_TYPE_ID
+    if DEFAULT_PRIORITY_ID:
+        payload["PriorityId"] = DEFAULT_PRIORITY_ID
+    if DEFAULT_URGENCY_ID:
+        payload["UrgencyId"] = DEFAULT_URGENCY_ID
+    if DEFAULT_IMPACT_ID:
+        payload["ImpactId"] = DEFAULT_IMPACT_ID
+
     task_id = create_task(**payload)
     if task_id:
         await message.answer(f"✅ Заявка создана: #{task_id}", reply_markup=main_menu_keyboard())
     else:
-        await message.answer("❌ Не удалось создать заявку.", reply_markup=main_menu_keyboard())
+        logger.error(f"Create task failed, payload={payload}")
+        await message.answer("❌ Не удалось создать заявку. Проверьте обязательные поля (тип/приоритет/срочность/влияние) и ServiceId.", reply_markup=main_menu_keyboard())
     await state.clear()
