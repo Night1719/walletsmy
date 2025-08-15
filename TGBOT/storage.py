@@ -54,6 +54,7 @@ _DEFAULT_PREFS = {
     "notify_executor": True,
     "notify_done": True,
     "notify_approval": True,
+    "notify_new_task": True,
 }
 
 
@@ -87,6 +88,8 @@ def get_task_cache(telegram_user_id: int) -> Dict[str, Any]:
     cache = get_all_task_cache().get(str(telegram_user_id), {})
     cache.setdefault("approvals", [])
     cache.setdefault("tasks", {})
+    cache.setdefault("rotation", {})
+    cache.setdefault("initialized", False)
     return cache
 
 

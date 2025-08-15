@@ -30,3 +30,10 @@ TASK_CACHE_FILE = os.path.join(BASE_DIR, "task_cache.json")
 
 HELPDESK_WEB_BASE = os.getenv("HELPDESK_WEB_BASE", "https://helpdesk.bunter.ru/task")
 BACKGROUND_POLL_INTERVAL_SEC = int(os.getenv("BACKGROUND_POLL_INTERVAL_SEC", "30"))
+
+# === Logging ===
+LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "logs"))
+LOG_FILE = os.getenv("LOG_FILE", os.path.join(LOG_DIR, "bot.log"))
+
+# === Metrics ===
+METRICS_PORT = int(os.getenv("METRICS_PORT", "9108"))

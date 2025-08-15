@@ -30,6 +30,7 @@ def settings_menu_keyboard(prefs: Dict[str, bool]) -> InlineKeyboardMarkup:
     kb.add(InlineKeyboardButton(f"Изменён статус {'✔️' if prefs.get('notify_status') else '❌'}", callback_data="toggle:notify_status"))
     kb.add(InlineKeyboardButton(f"Изменён исполнитель {'✔️' if prefs.get('notify_executor') else '❌'}", callback_data="toggle:notify_executor"))
     kb.add(InlineKeyboardButton(f"Заявка выполнена {'✔️' if prefs.get('notify_done') else '❌'}", callback_data="toggle:notify_done"))
+    kb.add(InlineKeyboardButton(f"Новая заявка {'✔️' if prefs.get('notify_new_task') else '❌'}", callback_data="toggle:notify_new_task"))
     kb.add(InlineKeyboardButton(f"Ждёт согласования {'✔️' if prefs.get('notify_approval') else '❌'}", callback_data="toggle:notify_approval"))
     kb.add(InlineKeyboardButton("⬅️ Назад", callback_data="settings:back"))
     return kb

@@ -5,7 +5,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from dotenv import load_dotenv
 import os
 
-from config import TELEGRAM_BOT_TOKEN
+from config import TELEGRAM_BOT_TOKEN, LOG_DIR, LOG_FILE, METRICS_PORT
 from handlers.start import register_start_handlers
 from handlers.main_menu import register_main_menu_handlers
 from handlers.my_tasks import register_my_tasks_handlers
@@ -13,19 +13,26 @@ from handlers.approval import register_approval_handlers
 from handlers.create_task import register_create_task_handlers
 from handlers.settings import register_settings_handlers
 from background import background_worker
+from metrics import start_metrics_server
 
 
 def setup_logging():
+    os.makedirs(LOG_DIR, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        ],
     )
 
 
 async def on_startup(dp: Dispatcher):
-    # start background worker
+    # start background worker and metrics server
     bot: Bot = dp.bot
     dp.loop.create_task(background_worker(bot))
+    start_metrics_server(METRICS_PORT)
 
 
 def main():
