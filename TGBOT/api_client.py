@@ -380,3 +380,27 @@ def create_task(**payload):
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
         return None
+
+
+def search_users_by_name(query: str):
+    """
+    Поиск пользователей по части имени/фамилии.
+    Возвращает список пользователей с основными полями.
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"search": query}
+    try:
+        r = requests.get(url, headers=headers, params=params, verify=False)
+        if r.status_code == 200:
+            return r.json().get("Users", [])
+        else:
+            logger.error(f"❌ Ошибка поиска сотрудников: {r.status_code} {r.text}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ Ошибка поиска сотрудников: {e}")
+        return []

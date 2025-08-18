@@ -74,7 +74,14 @@ def _extract_comments(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _comment_id(c: Dict[str, Any]) -> str | None:
     cid = c.get("Id") or c.get("CommentId") or c.get("ID")
-    return str(cid) if cid is not None else None
+    if cid is not None:
+        return str(cid)
+    # Fallback fingerprint based on timestamp + author + text
+    ts = c.get("CreateDate") or c.get("Date") or c.get("Time") or ""
+    author = c.get("CreatorName") or c.get("UserName") or c.get("Author") or c.get("AuthorName") or ""
+    text = c.get("Text") or c.get("Body") or c.get("CommentText") or c.get("Description") or c.get("Comments") or ""
+    fingerprint = f"{ts}|{author}|{text[:64]}"
+    return fingerprint if fingerprint.strip() else None
 
 
 def _comment_author(c: Dict[str, Any]) -> str:
@@ -245,6 +252,7 @@ async def _check_comments(
                             "Id": e.get("Id") or e.get("CommentId") or 0,
                             "CreatorName": e.get("Author") or e.get("AuthorName") or "",
                             "Text": text,
+                            "CreateDate": e.get("CreateDate") or e.get("Date") or e.get("Time") or "",
                         })
             total = len(comments)
             if not isinstance(comments, list):
@@ -269,10 +277,10 @@ async def _check_comments(
                     )
                     inc_notification("comment")
 
-                # Keep last up to 50 ids from all comments
-                last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
-                entry = cached_tasks.setdefault(task_id, {})
-                entry["last_comment_ids_str"] = last_ids
+            # Always refresh last seen ids to prevent repeat sends on next cycles
+            last_ids = [cid for cid in [_comment_id(c) for c in comments[-50:]] if cid is not None]
+            entry = cached_tasks.setdefault(task_id, {})
+            entry["last_comment_ids_str"] = last_ids
         except Exception:
             logger.exception("Failed to check comments for task %s", task_id)
             inc_api_error("check_comments")

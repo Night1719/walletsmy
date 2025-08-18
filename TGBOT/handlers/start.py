@@ -1,6 +1,7 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from keyboards import phone_request_keyboard, main_menu_keyboard
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from api_client import get_user_by_phone
 from storage import get_session, set_session
 from states import AuthStates
@@ -58,6 +59,13 @@ async def _authorize(message: types.Message, state: FSMContext, phone: str):
 
     await message.answer(
         f"✅ Авторизация успешна!\nЗдравствуйте, {user.get('Name')}",
-        reply_markup=main_menu_keyboard()
+        reply_markup=_post_auth_menu()
     )
     await state.clear()
+
+
+def _post_auth_menu():
+    kb = ReplyKeyboardBuilder()
+    kb.row(types.KeyboardButton(text="🛠 Helpdesk"))
+    kb.row(types.KeyboardButton(text="👤 Справочник сотрудников"))
+    return kb.as_markup(resize_keyboard=True)
