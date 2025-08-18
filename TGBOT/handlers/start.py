@@ -6,7 +6,13 @@ from storage import get_session, set_session
 from api_client import get_user_by_phone
 from states import AuthStates
 from api_client import create_task
-from config import REGISTRATION_SERVICE_ID, REGISTRATION_CREATOR_ID, REGISTRATION_STATUS_ID
+from config import (
+    REGISTRATION_SERVICE_ID,
+    REGISTRATION_CREATOR_ID,
+    REGISTRATION_STATUS_ID,
+    DEFAULT_TYPE_ID,
+    DEFAULT_PRIORITY_ID,
+)
 
 router = Router()
 
@@ -87,12 +93,23 @@ async def reg_collect_name(message: types.Message, state: FSMContext):
     # Создаём заявку в Helpdesk
     name = "Добавить номер телефона"
     description = f"Телефон: {phone}\nФИО: {fio}"
+    # Проверка обязательных полей TypeId/PriorityId
+    if not DEFAULT_TYPE_ID or not DEFAULT_PRIORITY_ID:
+        await message.answer(
+            "❌ Не задан DEFAULT_TYPE_ID или DEFAULT_PRIORITY_ID в конфигурации. Обратитесь к администратору.",
+            reply_markup=_post_auth_menu(),
+        )
+        await state.clear()
+        return
+
     payload = {
         "Name": name,
         "Description": description,
         "CreatorId": int(REGISTRATION_CREATOR_ID) if REGISTRATION_CREATOR_ID else None,
         "ServiceId": int(REGISTRATION_SERVICE_ID) if REGISTRATION_SERVICE_ID else None,
         "StatusId": REGISTRATION_STATUS_ID or 27,
+        "TypeId": int(DEFAULT_TYPE_ID),
+        "PriorityId": int(DEFAULT_PRIORITY_ID),
     }
     task_id = create_task(**payload)
 
