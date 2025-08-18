@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import health, metrics, quotes, trading, positions, pnl
+from app.api.endpoints import health, metrics, quotes, trading, positions, pnl, settings
 
 api_router = APIRouter()
 
@@ -10,3 +10,4 @@ api_router.include_router(quotes.router, tags=["quotes"])
 api_router.include_router(trading.router, tags=["trading"])
 api_router.include_router(positions.router, tags=["positions"])
 api_router.include_router(pnl.router, tags=["pnl"])
+api_router.include_router(settings.router, tags=["settings"])

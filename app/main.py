@@ -10,6 +10,11 @@ from app.config import settings
 from app.api import api_router
 from app.middleware import PrometheusMiddleware
 from app.database import init_db
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.database import get_db
+from app.models.system_settings import SystemSettings
 
 # Настройка логирования
 structlog.configure(
@@ -73,6 +78,17 @@ async def startup_event():
     logger.info("Starting Solana Trading Bot...")
     await init_db()
     logger.info("Database initialized successfully")
+    # Ensure settings row exists
+    try:
+        async for db in get_db():
+            result = await db.execute(select(SystemSettings).order_by(SystemSettings.id.asc()).limit(1))
+            row = result.scalar_one_or_none()
+            if not row:
+                db.add(SystemSettings())
+                await db.commit()
+            break
+    except Exception as e:
+        logger.error("Failed to ensure settings row", error=str(e))
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -90,6 +106,27 @@ async def home(request: Request):
             "enable_real_trades": settings.enable_real_trades
         }
     )
+
+# Settings page route (HTML)
+@app.get("/settings")
+async def settings_page(request: Request):
+    # Fetch current settings via DB to pass into the template
+    try:
+        async for db in get_db():
+            from sqlalchemy import select
+            from app.models.system_settings import SystemSettings
+            result = await db.execute(select(SystemSettings).order_by(SystemSettings.id.asc()).limit(1))
+            row = result.scalar_one_or_none()
+            return templates.TemplateResponse(
+                "settings.html",
+                {"request": request, "settings": row}
+            )
+    except Exception:
+        # Fallback to render without settings (template handles None safely)
+        return templates.TemplateResponse(
+            "settings.html",
+            {"request": request, "settings": None}
+        )
 
 # Health check
 @app.get("/health")

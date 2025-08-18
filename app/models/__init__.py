@@ -4,6 +4,7 @@ from app.models.trade import Trade
 from app.models.position import Position
 from app.models.metric import MetricSnapshot
 from app.models.alert import AlertChannel
+from app.models.system_settings import SystemSettings
 
 __all__ = [
     "Profile",
@@ -11,5 +12,6 @@ __all__ = [
     "Trade",
     "Position",
     "MetricSnapshot",
-    "AlertChannel"
+    "AlertChannel",
+    "SystemSettings"
 ]

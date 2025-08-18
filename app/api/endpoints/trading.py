@@ -129,12 +129,26 @@ async def _get_jupiter_quote(input_mint: str, output_mint: str, amount_usd: floa
     """Получение котировки от Jupiter API"""
     try:
         import httpx
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.system_settings import SystemSettings
         
         # Конвертируем USD в lamports (упрощенно)
         # В реальности нужно получить актуальный курс SOL/USD
         sol_price_usd = 100  # Примерная цена SOL
         amount_lamports = int((amount_usd / sol_price_usd) * 1e9)
         
+        # Load slippage from DB settings (fallback to env)
+        slippage_percent = getattr(settings, "max_slippage_percent", 1.0)
+        try:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(SystemSettings).order_by(SystemSettings.id.asc()).limit(1))
+                row = result.scalar_one_or_none()
+                if row and row.max_slippage_percent is not None:
+                    slippage_percent = row.max_slippage_percent
+        except Exception:
+            pass
+
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{settings.jupiter_api_url}/quote",
@@ -142,7 +156,7 @@ async def _get_jupiter_quote(input_mint: str, output_mint: str, amount_usd: floa
                     "inputMint": input_mint,
                     "outputMint": output_mint,
                     "amount": str(amount_lamports),
-                    "slippageBps": 50
+                    "slippageBps": int(slippage_percent * 100)
                 },
                 timeout=10.0
             )
