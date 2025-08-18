@@ -4,6 +4,8 @@ from keyboards import phone_request_keyboard, main_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session
 from states import AuthStates
+from api_client import create_task
+from config import REGISTRATION_SERVICE_ID, REGISTRATION_CREATOR_ID, REGISTRATION_STATUS_ID
 
 router = Router()
 
@@ -49,8 +51,23 @@ async def reg_collect_name(message: types.Message, state: FSMContext):
     if not phone:
         await message.answer("Сначала отправьте номер телефона.")
         return
-    # TODO: сохранить заявку на регистрацию (в БД/файл/отправка)
-    await message.answer("Запрос на регистрацию отправлен, ожидайте.", reply_markup=_post_auth_menu())
+
+    # Создаём заявку в Helpdesk
+    name = "Добавить номер телефона"
+    description = f"Телефон: {phone}\nФИО: {fio}"
+    payload = {
+        "Name": name,
+        "Description": description,
+        "CreatorId": REGISTRATION_CREATOR_ID or 0,
+        "ServiceId": REGISTRATION_SERVICE_ID or 0,
+        "StatusId": REGISTRATION_STATUS_ID or 27,
+    }
+    task_id = create_task(**payload)
+
+    if task_id:
+        await message.answer(f"Запрос на регистрацию отправлен, ожидайте.\nЗаявка #{task_id}", reply_markup=_post_auth_menu())
+    else:
+        await message.answer("Запрос на регистрацию отправлен, ожидайте.", reply_markup=_post_auth_menu())
     await state.clear()
 
 

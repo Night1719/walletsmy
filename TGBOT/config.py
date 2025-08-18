@@ -43,3 +43,8 @@ DEFAULT_TYPE_ID = int(os.getenv("DEFAULT_TYPE_ID", "0"))
 DEFAULT_PRIORITY_ID = int(os.getenv("DEFAULT_PRIORITY_ID", "0"))
 DEFAULT_URGENCY_ID = int(os.getenv("DEFAULT_URGENCY_ID", "0"))
 DEFAULT_IMPACT_ID = int(os.getenv("DEFAULT_IMPACT_ID", "0"))
+
+# === Registration request defaults ===
+REGISTRATION_SERVICE_ID = int(os.getenv("REGISTRATION_SERVICE_ID", "0"))
+REGISTRATION_CREATOR_ID = int(os.getenv("REGISTRATION_CREATOR_ID", "0"))
+REGISTRATION_STATUS_ID = int(os.getenv("REGISTRATION_STATUS_ID", "27"))
