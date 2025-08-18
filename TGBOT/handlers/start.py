@@ -90,8 +90,8 @@ async def reg_collect_name(message: types.Message, state: FSMContext):
     payload = {
         "Name": name,
         "Description": description,
-        "CreatorId": REGISTRATION_CREATOR_ID or 0,
-        "ServiceId": REGISTRATION_SERVICE_ID or 0,
+        "CreatorId": int(REGISTRATION_CREATOR_ID) if REGISTRATION_CREATOR_ID else None,
+        "ServiceId": int(REGISTRATION_SERVICE_ID) if REGISTRATION_SERVICE_ID else None,
         "StatusId": REGISTRATION_STATUS_ID or 27,
     }
     task_id = create_task(**payload)

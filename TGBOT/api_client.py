@@ -19,13 +19,8 @@ def get_user_by_phone(phone: str):
     if not digits:
         return None
 
-    search_query = None
-    if digits.startswith('8') and len(digits) == 11:
-        search_query = digits[1:]  # 89506459087 → 9506459087
-    elif digits.startswith('7') and len(digits) == 11:
-        search_query = digits[1:]  # 79506459087 → 9506459087
-    elif len(digits) == 10:
-        search_query = digits  # 9506459087
+    # Берём последние 10 цифр для поиска
+    search_query = digits[-10:] if len(digits) >= 10 else None
 
     if not search_query:
         return None
@@ -50,9 +45,8 @@ def get_user_by_phone(phone: str):
                 if not mp:
                     continue
                 mp_digits = ''.join(filter(str.isdigit, mp))
-                if mp_digits.startswith('8') and len(mp_digits) == 11:
-                    mp_digits = '7' + mp_digits[1:]
-                if mp_digits == '7' + search_query:
+                last10 = mp_digits[-10:] if len(mp_digits) >= 10 else mp_digits
+                if last10 == search_query:
                     logger.info(f"✅ Найден пользователь: {user['Name']} (ID={user['Id']})")
                     return user
         else:
@@ -381,7 +375,9 @@ def create_task(**payload):
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload, verify=False)
+        # Удалим None, чтобы не отправлять null на сервер для non-null полей
+        clean_payload = {k: v for k, v in payload.items() if v is not None}
+        response = requests.post(url, headers=headers, json=clean_payload, verify=False)
         if response.status_code == 201:
             task_id = response.json().get("Id")
             logger.info(f"✅ Заявка создана: #{task_id}")
