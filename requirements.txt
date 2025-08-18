@@ -1,0 +1,47 @@
+# FastAPI и веб-фреймворки
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+jinja2==3.1.2
+python-multipart==0.0.6
+
+# База данных
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Celery и Redis
+celery==5.3.4
+redis==5.0.1
+
+# Solana и Jupiter
+solana==0.30.2
+httpx==0.25.2
+base58==2.1.1
+
+# Метрики и логирование
+prometheus-client==0.19.0
+structlog==23.2.0
+python-json-logger==2.0.7
+
+# Утилиты
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+aiofiles==23.2.1
+
+# Валидация и безопасность
+cryptography==41.0.8
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# HTTP клиент
+httpx==0.25.2
+aiohttp==3.9.1
+
+# Временные зоны
+pytz==2023.3
+
+# Математические вычисления
+numpy==1.24.3
+pandas==2.0.3

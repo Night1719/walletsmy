@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Settings - Solana Trading Bot{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+  <!-- Risk Engine -->
+  <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-4">Risk Engine</h2>
+    <form hx-post="/api/settings" hx-trigger="change delay:400ms" hx-target="#risk-status" hx-swap="innerHTML" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm text-gray-300">Min TVL USD</label>
+        <input name="min_tvl_usd" type="number" step="0.01" value="{{ settings.min_tvl_usd }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Max Fee %</label>
+        <input name="max_fee_percent" type="number" step="0.01" value="{{ settings.max_fee_percent }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Max Slippage %</label>
+        <input name="max_slippage_percent" type="number" step="0.01" value="{{ settings.max_slippage_percent }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div class="flex items-center space-x-2 mt-6">
+        <input name="enable_honeypot_check" type="checkbox" {% if settings.enable_honeypot_check %}checked{% endif %} />
+        <span class="text-sm">Honeypot Check</span>
+      </div>
+      <div class="flex items-center space-x-2 mt-6">
+        <input name="enable_rugpull_check" type="checkbox" {% if settings.enable_rugpull_check %}checked{% endif %} />
+        <span class="text-sm">Rugpull Check</span>
+      </div>
+      <div id="risk-status" class="col-span-full text-xs text-gray-400"></div>
+    </form>
+  </section>
+
+  <!-- Execution -->
+  <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-4">Execution / Solana</h2>
+    <form hx-post="/api/settings" hx-trigger="change delay:400ms" hx-target="#exec-status" hx-swap="innerHTML" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex items-center space-x-2">
+        <input name="use_jito_bundles" type="checkbox" {% if settings.use_jito_bundles %}checked{% endif %} />
+        <span class="text-sm">Use Jito Bundles</span>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Priority Fee (µLamports)</label>
+        <input name="priority_fee_micro_lamports" type="number" value="{{ settings.priority_fee_micro_lamports }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Compute Unit Limit</label>
+        <input name="compute_unit_limit" type="number" value="{{ settings.compute_unit_limit }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Primary RPC</label>
+        <input name="rpc_primary_url" type="text" value="{{ settings.rpc_primary_url }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div class="md:col-span-2">
+        <label class="text-sm text-gray-300">Fallback RPCs (comma-separated)</label>
+        <input name="rpc_fallback_urls" type="text" value="{{ settings.rpc_fallback_urls or '' }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div id="exec-status" class="col-span-full text-xs text-gray-400"></div>
+    </form>
+  </section>
+
+  <!-- Capital & Risk -->
+  <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-4">Capital & Risk</h2>
+    <form hx-post="/api/settings" hx-trigger="change delay:400ms" hx-target="#riskcap-status" hx-swap="innerHTML" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="flex items-center space-x-2">
+        <input name="use_dynamic_position_sizing" type="checkbox" {% if settings.use_dynamic_position_sizing %}checked{% endif %} />
+        <span class="text-sm">Dynamic Position Sizing</span>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Position Size USD</label>
+        <input name="position_size_usd" type="number" step="0.01" value="{{ settings.position_size_usd }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Kelly Fraction</label>
+        <input name="kelly_fraction" type="number" step="0.01" value="{{ settings.kelly_fraction }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">TP1 %</label>
+        <input name="tp1_percent" type="number" step="0.01" value="{{ settings.tp1_percent }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">TP1 Size %</label>
+        <input name="tp1_size_percent" type="number" step="0.01" value="{{ settings.tp1_size_percent }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div class="flex items-center space-x-2">
+        <input name="trailing_stop_enabled" type="checkbox" {% if settings.trailing_stop_enabled %}checked{% endif %} />
+        <span class="text-sm">Trailing Stop</span>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Trail Stop %</label>
+        <input name="trailing_stop_pct" type="number" step="0.01" value="{{ settings.trailing_stop_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Hard SL %</label>
+        <input name="hard_stop_loss_pct" type="number" step="0.01" value="{{ settings.hard_stop_loss_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div id="riskcap-status" class="col-span-full text-xs text-gray-400"></div>
+    </form>
+  </section>
+
+  <!-- Sniper Bot -->
+  <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-4">Sniper Bot</h2>
+    <form hx-post="/api/settings" hx-trigger="change delay:400ms" hx-target="#sniper-status" hx-swap="innerHTML" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="flex items-center space-x-2">
+        <input name="sniper_enabled" type="checkbox" {% if settings.sniper_enabled %}checked{% endif %} />
+        <span class="text-sm">Enabled</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <input name="sniper_auto_trading" type="checkbox" {% if settings.sniper_auto_trading %}checked{% endif %} />
+        <span class="text-sm">Auto Trading</span>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Min Liquidity USD</label>
+        <input name="sniper_min_liquidity_usd" type="number" step="0.01" value="{{ settings.sniper_min_liquidity_usd }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Max Slippage %</label>
+        <input name="sniper_max_slippage_percent" type="number" step="0.01" value="{{ settings.sniper_max_slippage_percent }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Quick Exit TP %</label>
+        <input name="sniper_quick_exit_tp_pct" type="number" step="0.01" value="{{ settings.sniper_quick_exit_tp_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Quick Exit SL %</label>
+        <input name="sniper_quick_exit_sl_pct" type="number" step="0.01" value="{{ settings.sniper_quick_exit_sl_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Min Token Age (min)</label>
+        <input name="sniper_min_token_age_minutes" type="number" value="{{ settings.sniper_min_token_age_minutes }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Min Volume USD</label>
+        <input name="sniper_min_volume_usd" type="number" step="0.01" value="{{ settings.sniper_min_volume_usd }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div class="md:col-span-3">
+        <label class="text-sm text-gray-300">Token Denylist (comma-separated mints)</label>
+        <textarea name="token_denylist" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded p-2">{{ settings.token_denylist or '' }}</textarea>
+      </div>
+      <div id="sniper-status" class="col-span-full text-xs text-gray-400"></div>
+    </form>
+  </section>
+
+  <!-- Kill Switch -->
+  <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h2 class="text-lg font-semibold mb-4">Kill Switch</h2>
+    <form hx-post="/api/settings" hx-trigger="change delay:400ms" hx-target="#kill-status" hx-swap="innerHTML" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="flex items-center space-x-2">
+        <input name="kill_switch_enabled" type="checkbox" {% if settings.kill_switch_enabled %}checked{% endif %} />
+        <span class="text-sm">Enabled</span>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Kill on Error Rate %</label>
+        <input name="kill_on_error_rate_pct" type="number" step="0.01" value="{{ settings.kill_on_error_rate_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div>
+        <label class="text-sm text-gray-300">Kill on Block Rate %</label>
+        <input name="kill_on_block_rate_pct" type="number" step="0.01" value="{{ settings.kill_on_block_rate_pct }}" class="w-full bg-gray-900 border border-gray-700 rounded p-2"/>
+      </div>
+      <div id="kill-status" class="col-span-full text-xs text-gray-400"></div>
+    </form>
+  </section>
+</div>
+
+<script>
+document.body.addEventListener('htmx:afterRequest', function (evt) {
+  if (evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300) {
+    showToast('Settings saved', 'success');
+  }
+});
+</script>
+
+{% endblock %}
