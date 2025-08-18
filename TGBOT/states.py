@@ -18,3 +18,13 @@ class CommentStates(StatesGroup):
 
 class DeclineStates(StatesGroup):
     entering_reason = State()
+
+
+class DirectoryStates(StatesGroup):
+    searching = State()
+
+
+class RegistrationStates(StatesGroup):
+    awaiting_phone = State()
+    awaiting_name = State()
+    confirming = State()

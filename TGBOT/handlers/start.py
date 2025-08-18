@@ -2,8 +2,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from keyboards import phone_request_keyboard, main_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from api_client import get_user_by_phone
-from storage import get_session, set_session
+from storage import get_session
 from states import AuthStates
 
 router = Router()
@@ -19,48 +18,39 @@ async def cmd_start(message: types.Message, state: FSMContext):
         )
         return
 
+    # Меню регистрации
+    kb = ReplyKeyboardBuilder()
+    kb.row(types.KeyboardButton(text="📝 Регистрация", request_contact=False))
+    await message.answer("Добро пожаловать! Для продолжения нажмите ‘📝 Регистрация’.", reply_markup=kb.as_markup(resize_keyboard=True))
+
+
+@router.message(F.text == "📝 Регистрация")
+async def reg_start(message: types.Message, state: FSMContext):
     await state.set_state(AuthStates.awaiting_phone)
-    await message.answer(
-        "Добро пожаловать! Отправьте номер телефона для авторизации в Helpdesk.",
-        reply_markup=phone_request_keyboard()
-    )
+    kb = ReplyKeyboardBuilder()
+    kb.row(types.KeyboardButton(text="📱 Отправить телефон", request_contact=True))
+    await message.answer("Отправьте ваш номер телефона кнопкой ниже.", reply_markup=kb.as_markup(resize_keyboard=True))
 
 
 @router.message(AuthStates.awaiting_phone, F.contact)
-async def handle_contact(message: types.Message, state: FSMContext):
+async def reg_collect_phone(message: types.Message, state: FSMContext):
     if not message.contact or not message.contact.phone_number:
-        await message.answer("Не удалось получить телефон. Отправьте контакт или введите номер вручную.")
+        await message.answer("Не удалось получить телефон. Попробуйте снова.")
         return
-    await _authorize(message, state, message.contact.phone_number)
+    await state.update_data(reg_phone=message.contact.phone_number)
+    await message.answer("Введите ваше ФИО полностью:")
 
 
 @router.message(AuthStates.awaiting_phone, F.text)
-async def handle_manual_phone(message: types.Message, state: FSMContext):
-    text = (message.text or "").strip()
-    if text.startswith("✍️"):
-        await message.answer("Введите номер телефона в формате +7XXXXXXXXXX или 8XXXXXXXXXX")
+async def reg_collect_name(message: types.Message, state: FSMContext):
+    fio = message.text.strip()
+    data = await state.get_data()
+    phone = data.get("reg_phone")
+    if not phone:
+        await message.answer("Сначала отправьте номер телефона.")
         return
-    await _authorize(message, state, text)
-
-
-async def _authorize(message: types.Message, state: FSMContext, phone: str):
-    user = get_user_by_phone(phone)
-    if not user:
-        await message.answer("Пользователь с таким номером не найден. Проверьте номер и попробуйте снова.")
-        return
-
-    session = {
-        "intraservice_id": user.get("Id"),
-        "phone": phone,
-        "name": user.get("Name"),
-        "stage": "main_menu",
-    }
-    set_session(message.from_user.id, session)
-
-    await message.answer(
-        f"✅ Авторизация успешна!\nЗдравствуйте, {user.get('Name')}",
-        reply_markup=_post_auth_menu()
-    )
+    # TODO: сохранить заявку на регистрацию (в БД/файл/отправка)
+    await message.answer("Запрос на регистрацию отправлен, ожидайте.", reply_markup=_post_auth_menu())
     await state.clear()
 
 

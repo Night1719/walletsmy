@@ -21,6 +21,7 @@ def main_menu_keyboard():
         KeyboardButton(text="➕ Создать заявку"),
         KeyboardButton(text="⚙️ Настройки"),
     )
+    kb.row(KeyboardButton(text="🏠 Главное меню"))
     return kb.as_markup(resize_keyboard=True)
 
 
