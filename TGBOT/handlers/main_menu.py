@@ -4,6 +4,7 @@ from keyboards import main_menu_keyboard, my_tasks_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from api_client import search_users_by_name
 from storage import get_session
+from storage import get_session
 
 router = Router()
 
@@ -19,6 +20,10 @@ async def main_menu_entry(message: types.Message, state: FSMContext):
 
 @router.message(F.text == "📋 Мои заявки")
 async def open_my_tasks(message: types.Message, state: FSMContext):
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
     await message.answer("Выберите список:", reply_markup=my_tasks_menu_keyboard())
 
 
@@ -30,12 +35,20 @@ async def back_to_menu(message: types.Message, state: FSMContext):
 
 @router.message(F.text == "🛠 Helpdesk")
 async def go_helpdesk(message: types.Message, state: FSMContext):
-    await message.answer("Главное меню:", reply_markup=main_menu_keyboard())
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
+    await message.answer("Меню Helpdesk:", reply_markup=main_menu_keyboard())
 
 
 @router.message(F.text == "👤 Справочник сотрудников")
 async def employee_directory_prompt(message: types.Message, state: FSMContext):
-    await message.answer("Введите фамилию или имя сотрудника для поиска:")
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
+    await message.answer("Введите фамилию или имя сотрудника для поиска:\n(или нажмите 🏠 Главное меню)")
 
 
 @router.message(F.text.regexp(r"^[A-Za-zА-Яа-яЁё\-\s]{2,}$"))
