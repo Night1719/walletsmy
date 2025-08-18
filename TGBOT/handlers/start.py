@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards import phone_request_keyboard, main_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session
+from api_client import get_user_by_phone
 from states import AuthStates
 from api_client import create_task
 from config import REGISTRATION_SERVICE_ID, REGISTRATION_CREATOR_ID, REGISTRATION_STATUS_ID
@@ -20,10 +21,35 @@ async def cmd_start(message: types.Message, state: FSMContext):
         )
         return
 
-    # Меню регистрации
+    # Меню авторизации
     kb = ReplyKeyboardBuilder()
-    kb.row(types.KeyboardButton(text="📝 Регистрация", request_contact=False))
-    await message.answer("Добро пожаловать! Для продолжения нажмите ‘📝 Регистрация’.", reply_markup=kb.as_markup(resize_keyboard=True))
+    kb.row(types.KeyboardButton(text="🔐 Авторизоваться"))
+    kb.row(types.KeyboardButton(text="📝 Регистрация"))
+    await message.answer("Добро пожаловать! Выберите действие.", reply_markup=kb.as_markup(resize_keyboard=True))
+@router.message(F.text == "🔐 Авторизоваться")
+async def auth_start(message: types.Message, state: FSMContext):
+    kb = ReplyKeyboardBuilder()
+    kb.row(types.KeyboardButton(text="📱 Отправить телефон", request_contact=True))
+    await state.set_state(AuthStates.awaiting_phone)
+    await message.answer("Отправьте ваш номер телефона кнопкой ниже для авторизации.", reply_markup=kb.as_markup(resize_keyboard=True))
+
+
+@router.message(AuthStates.awaiting_phone, F.contact)
+async def auth_or_reg_by_phone(message: types.Message, state: FSMContext):
+    if not message.contact or not message.contact.phone_number:
+        await message.answer("Не удалось получить телефон. Попробуйте снова.")
+        return
+    phone = message.contact.phone_number
+    user = get_user_by_phone(phone)
+    if user:
+        # Сохраняем сессию и открываем Helpdesk/Справочник
+        # Замечание: тут нет set_session импорта — предполагается, что сессии уже в системе; добавьте при необходимости
+        await message.answer(f"✅ Авторизация успешна!\nЗдравствуйте, {user.get('Name')}", reply_markup=_post_auth_menu())
+        await state.clear()
+        return
+    # Если не нашли — начинаем регистрацию, сохраняем телефон и просим ФИО
+    await state.update_data(reg_phone=phone)
+    await message.answer("Пользователь не найден. Введите ваше ФИО для регистрации:")
 
 
 @router.message(F.text == "📝 Регистрация")

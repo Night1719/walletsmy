@@ -79,16 +79,28 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
     open_ids = "27,31,35,44"   # Новая, Открыта, В работе, Ожидает
     closed_ids = "28,29,30,45"     # Завершена, Выполнена, Отклонена, Согласовано
 
-    params = {
-        "creatorids": user_id,
+    base_params = {
         "statusids": open_ids if status_filter == "open" else closed_ids,
         "count": "false"
     }
 
     try:
-        response = requests.get(url, headers=headers, params=params, verify=False)
+        # 1) Поиск по создателю
+        params1 = dict(base_params, creatorids=user_id)
+        response = requests.get(url, headers=headers, params=params1, verify=False)
         logger.info(f"📡 GET /task | URL: {response.url}")
 
+        if response.status_code == 200:
+            tasks = response.json().get("Tasks", [])
+            if tasks:
+                return tasks
+        else:
+            logger.error(f"❌ Ошибка получения заявок: {response.status_code} {response.text}")
+
+        # 2) Фолбек по участию (memberids)
+        params2 = dict(base_params, memberids=user_id)
+        response = requests.get(url, headers=headers, params=params2, verify=False)
+        logger.info(f"📡 GET /task (memberids) | URL: {response.url}")
         if response.status_code == 200:
             return response.json().get("Tasks", [])
         else:
