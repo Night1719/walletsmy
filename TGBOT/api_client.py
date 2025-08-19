@@ -100,6 +100,29 @@ def get_user_by_phone(phone: str):
     return None
 
 
+def update_user(user_id: int, **fields) -> bool:
+    """
+    Изменить поля пользователя: PUT /api/user/{user_id}
+    Пример: update_user(35, CompanyId=64, Name="Имя35")
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user/{user_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    payload = {k: v for k, v in fields.items() if v is not None}
+    try:
+        r = requests.put(url, headers=headers, json=payload, verify=False)
+        if r.status_code == 200:
+            return True
+        logger.error(f"❌ Ошибка обновления пользователя {user_id}: {r.status_code} {r.text}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка обновления пользователя: {e}")
+        return False
+
 # --- 2. ПОЛУЧЕНИЕ ЗАЯВОК ПОЛЬЗОВАТЕЛЯ ---
 def get_user_tasks(user_id: int, status_filter: str = "open"):
     """

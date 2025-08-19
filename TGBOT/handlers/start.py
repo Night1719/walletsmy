@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session, set_session
 from api_client import get_user_by_phone
 from states import AuthStates
-from api_client import create_task
+from api_client import create_task, get_user_by_email, update_user
 from config import (
     REGISTRATION_SERVICE_ID,
     REGISTRATION_CREATOR_ID,
@@ -59,9 +59,9 @@ async def auth_or_reg_by_phone(message: types.Message, state: FSMContext):
         await message.answer(f"✅ Авторизация успешна!\nЗдравствуйте, {user.get('Name')}", reply_markup=_post_auth_menu())
         await state.clear()
         return
-    # Если не нашли — начинаем регистрацию, сохраняем телефон и просим ФИО
+    # Если не нашли — начинаем регистрацию, сохраняем телефон и просим email
     await state.update_data(reg_phone=phone)
-    await message.answer("Пользователь не найден. Введите ваше ФИО для регистрации:")
+    await message.answer("Пользователь не найден. Введите ваш корпоративный email:")
 
 
 @router.message(F.text == "📝 Регистрация")
@@ -83,40 +83,24 @@ async def reg_collect_phone(message: types.Message, state: FSMContext):
 
 @router.message(AuthStates.awaiting_phone, F.text)
 async def reg_collect_name(message: types.Message, state: FSMContext):
-    fio = message.text.strip()
+    email = message.text.strip()
     data = await state.get_data()
     phone = data.get("reg_phone")
     if not phone:
         await message.answer("Сначала отправьте номер телефона.")
         return
-
-    # Создаём заявку в Helpdesk
-    name = "Добавить номер телефона"
-    description = f"Телефон: {phone}\nФИО: {fio}"
-    # Проверка обязательных полей TypeId/PriorityId
-    if not DEFAULT_TYPE_ID or not DEFAULT_PRIORITY_ID:
-        await message.answer(
-            "❌ Не задан DEFAULT_TYPE_ID или DEFAULT_PRIORITY_ID в конфигурации. Обратитесь к администратору.",
-            reply_markup=_post_auth_menu(),
-        )
-        await state.clear()
+    # Ищем пользователя по email
+    user = get_user_by_email(email)
+    if not user:
+        await message.answer("Пользователь с таким email не найден. Проверьте адрес.")
         return
-
-    payload = {
-        "Name": name,
-        "Description": description,
-        "CreatorId": int(REGISTRATION_CREATOR_ID) if REGISTRATION_CREATOR_ID else None,
-        "ServiceId": int(REGISTRATION_SERVICE_ID) if REGISTRATION_SERVICE_ID else None,
-        "StatusId": REGISTRATION_STATUS_ID or 27,
-        "TypeId": int(DEFAULT_TYPE_ID),
-        "PriorityId": int(DEFAULT_PRIORITY_ID),
-    }
-    task_id = create_task(**payload)
-
-    if task_id:
-        await message.answer(f"Запрос на регистрацию отправлен, ожидайте.\nЗаявка #{task_id}", reply_markup=_post_auth_menu())
+    user_id = user.get("Id")
+    # Привязываем номер телефону у найденного пользователя
+    ok = update_user(int(user_id), MobilePhone=phone)
+    if ok:
+        await message.answer("Телефон успешно привязан. Теперь нажмите ‘🔐 Авторизоваться’.", reply_markup=_post_auth_menu())
     else:
-        await message.answer("Запрос на регистрацию отправлен, ожидайте.", reply_markup=_post_auth_menu())
+        await message.answer("Не удалось привязать телефон. Обратитесь к администратору.", reply_markup=_post_auth_menu())
     await state.clear()
 
 
