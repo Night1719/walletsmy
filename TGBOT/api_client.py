@@ -41,14 +41,29 @@ def get_user_by_phone(phone: str):
             data = response.json()
             users = data.get("Users", [])
             for user in users:
-                mp = user.get("MobilePhone", "")
-                if not mp:
-                    continue
-                mp_digits = ''.join(filter(str.isdigit, mp))
-                last10 = mp_digits[-10:] if len(mp_digits) >= 10 else mp_digits
-                if last10 == search_query:
-                    logger.info(f"✅ Найден пользователь: {user['Name']} (ID={user['Id']})")
+                # Проверяем все возможные телефонные поля
+                phones = []
+                for k in ("MobilePhone", "Mobile", "Phone", "Phones", "WorkPhone", "InternalPhone"):
+                    v = user.get(k)
+                    if isinstance(v, str) and v:
+                        phones.append(v)
+                match = False
+                for p in phones:
+                    d = ''.join(filter(str.isdigit, p))
+                    if not d:
+                        continue
+                    last10 = d[-10:] if len(d) >= 10 else d
+                    if last10 == search_query or ('7'+last10) == d or ('8'+last10) == d:
+                        match = True
+                        break
+                if match:
+                    logger.info(f"✅ Найден пользователь: {user.get('Name')} (ID={user.get('Id')})")
                     return user
+            # Если единственный результат и не удалось сопоставить номер — вернём первого как фолбек
+            if len(users) == 1:
+                u = users[0]
+                logger.info(f"ℹ️ Фолбек: возвращаю первого пользователя {u.get('Name')} (ID={u.get('Id')})")
+                return u
         else:
             logger.error(f"❌ Ошибка API: {response.status_code} {response.text}")
     except Exception as e:
