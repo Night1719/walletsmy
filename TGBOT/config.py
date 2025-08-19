@@ -48,3 +48,14 @@ DEFAULT_IMPACT_ID = int(os.getenv("DEFAULT_IMPACT_ID", "0"))
 REGISTRATION_SERVICE_ID = int(os.getenv("REGISTRATION_SERVICE_ID", "0"))
 REGISTRATION_CREATOR_ID = int(os.getenv("REGISTRATION_CREATOR_ID", "0"))
 REGISTRATION_STATUS_ID = int(os.getenv("REGISTRATION_STATUS_ID", "27"))
+
+# === Email/OTP ===
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "noreply@example.com")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
+CORP_EMAIL_DOMAIN = os.getenv("CORP_EMAIL_DOMAIN", "")  # например bunter.ru
+OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "10"))

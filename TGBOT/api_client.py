@@ -8,6 +8,35 @@ requests.packages.urllib3.disable_warnings()
 logger = logging.getLogger(__name__)
 
 
+def get_user_by_email(email: str):
+    url = f"{INTRASERVICE_BASE_URL}/user"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"search": email}
+    try:
+        r = requests.get(url, headers=headers, params=params, verify=False)
+        if r.status_code == 200:
+            users = r.json().get("Users", [])
+            # фильтруем по точному совпадению email, если поле доступно
+            for u in users:
+                ue = u.get("Email") or u.get("EMail")
+                if isinstance(ue, str) and ue.strip().lower() == email.strip().lower():
+                    return u
+            # если одно совпадение — вернём его
+            if len(users) == 1:
+                return users[0]
+            return None
+        else:
+            logger.error(f"❌ Ошибка поиска по email: {r.status_code} {r.text}")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Ошибка поиска по email: {e}")
+        return None
+
+
 # --- 1. ПОИСК ПОЛЬЗОВАТЕЛЯ ПО ТЕЛЕФОНУ ---
 def get_user_by_phone(phone: str):
     """
