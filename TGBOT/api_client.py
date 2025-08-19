@@ -103,7 +103,7 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
             ("performerids", user_id),
         ]
 
-        combined: dict[int, dict] = {}
+        combined_ids: dict[int, None] = {}
         for key, val in roles:
             params = dict(base_params)
             params[key] = val
@@ -115,11 +115,18 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
                 for t in batch:
                     tid = t.get("Id")
                     if tid is not None:
-                        combined[tid] = t
+                        combined_ids[tid] = None
             else:
                 logger.error(f"❌ Ошибка получения заявок ({key}): {response.status_code} {response.text}")
 
-        return list(combined.values())
+        # Теперь вытаскиваем полные карточки по каждому Id
+        full_tasks: list[dict] = []
+        for tid in combined_ids.keys():
+            details = get_task_details(tid)
+            if details:
+                full_tasks.append(details)
+        logger.info(f"📦 Собрано полных карточек: {len(full_tasks)}")
+        return full_tasks
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
         return []
@@ -201,6 +208,9 @@ def get_task_details(task_id: int):
             response = requests.get(base_url, headers=headers, params=params, verify=False)
             if response.status_code == 200:
                 data = response.json()
+                # Unwrap if server returns {"Task": {...}}
+                if isinstance(data, dict) and "Task" in data and isinstance(data.get("Task"), dict):
+                    data = data["Task"]
                 # Если видим поле Comments в любом виде — возвращаем
                 if any(k in data for k in ("Comments", "TaskComments", "CommentsList")):
                     return data
