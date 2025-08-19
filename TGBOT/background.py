@@ -11,7 +11,7 @@ from storage import (
     set_task_cache,
 )
 from api_client import (
-    get_user_tasks,
+    get_user_tasks_by_creator,
     get_task_details,
     get_tasks_awaiting_approval,
     get_task_comments,
@@ -354,8 +354,9 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
     prefs = get_preferences(chat_id)
     cache = get_task_cache(chat_id)
 
-    open_tasks = get_user_tasks(intraservice_id, "open") or []
-    logger.info(f"🛈 User {chat_id}: open_tasks={len(open_tasks)}")
+    # Уведомления только по заявкам, созданным пользователем
+    open_tasks = get_user_tasks_by_creator(intraservice_id, "open") or []
+    logger.info(f"🛈 User {chat_id}: open_tasks_by_creator={len(open_tasks)}")
 
     await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
     await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)

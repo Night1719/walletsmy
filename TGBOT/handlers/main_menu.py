@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from keyboards import main_menu_keyboard, my_tasks_menu_keyboard
+from keyboards import main_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from api_client import search_users_by_name
 from storage import get_session
@@ -20,11 +20,10 @@ async def main_menu_entry(message: types.Message, state: FSMContext):
 
 @router.message(F.text == "📋 Мои заявки")
 async def open_my_tasks(message: types.Message, state: FSMContext):
-    session = get_session(message.from_user.id)
-    if not session:
-        await message.answer("Сначала авторизуйтесь: /start")
-        return
-    await message.answer("Выберите список:", reply_markup=my_tasks_menu_keyboard())
+    # Сразу показываем открытые заявки по CreatorId
+    await state.clear()
+    from handlers.my_tasks import send_my_open_tasks
+    await send_my_open_tasks(message, state)
 
 
 @router.message(F.text == "⬅️ Назад")

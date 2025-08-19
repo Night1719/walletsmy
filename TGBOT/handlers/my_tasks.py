@@ -8,7 +8,7 @@ from api_client import (
     get_task_lifetime_comments,
     add_comment_to_task,
 )
-from keyboards import my_tasks_menu_keyboard, task_actions_inline, link_to_task_inline
+from keyboards import task_actions_inline, link_to_task_inline
 from storage import get_session
 from states import CommentStates
 from config import HELPDESK_WEB_BASE
@@ -48,30 +48,23 @@ def _comment_sort_key(c: dict):
         return 0
 
 
-@router.message(F.text.in_({"Открытые", "Завершённые", "⬅️ Назад"}))
-async def my_tasks_menu(message: types.Message, state: FSMContext):
-    text = message.text.strip()
+async def send_my_open_tasks(message: types.Message, state: FSMContext) -> None:
     session = get_session(message.from_user.id)
     if not session:
         await message.answer("Сначала авторизуйтесь: /start")
         return
 
-    if text == "⬅️ Назад":
-        await message.answer("Возврат в главное меню. /menu")
-        return
-
-    status = "open" if text == "Открытые" else "closed"
-    # Согласно требованию: «Мои заявки» — только по CreatorId и без комментариев
-    tasks = get_user_tasks_by_creator(session["intraservice_id"], status)
+    tasks = get_user_tasks_by_creator(session["intraservice_id"], "open")
     if not tasks:
-        await message.answer("Заявок не найдено.")
+        from keyboards import main_menu_keyboard
+        await message.answer("Заявок не найдено.", reply_markup=main_menu_keyboard())
         return
 
     for t in tasks[:30]:
         task_id = t.get("Id")
         name = t.get("Name", "Без названия")
         status_name = _status_name_from(t)
-        creator_date = t.get("CreateDate", "")
+        creator_date = t.get("CreateDate") or t.get("Created") or ""
         description = (t.get("Description") or "").strip()
         if len(description) > 300:
             description = description[:300] + "…"
@@ -83,10 +76,21 @@ async def my_tasks_menu(message: types.Message, state: FSMContext):
             f"📅 Создана: {creator_date}\n"
             f"📄 Описание: {description}"
         )
-        # В меню «Мои заявки» не показываем кнопки деталей/комментариев
         await message.answer(text_msg)
 
-    await message.answer("🔚 Конец списка.", reply_markup=my_tasks_menu_keyboard())
+    from keyboards import main_menu_keyboard
+    await message.answer("🔚 Конец списка.", reply_markup=main_menu_keyboard())
+
+
+@router.message(F.text.in_({"Открытые", "Завершённые"}))
+async def my_tasks_menu(message: types.Message, state: FSMContext):
+    text = message.text.strip()
+    if text == "Открытые":
+        await send_my_open_tasks(message, state)
+        return
+    # «Завершённые» пока не выводим по запросу, можно включить позже
+    from keyboards import main_menu_keyboard
+    await message.answer("Показываю только открытые заявки.", reply_markup=main_menu_keyboard())
 
 
 @router.callback_query(F.data.startswith("task:"))
