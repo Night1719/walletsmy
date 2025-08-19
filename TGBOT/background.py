@@ -107,8 +107,6 @@ async def _check_new_tasks(
     task_cache: Dict[str, Any],
     prefs: Dict[str, Any],
 ) -> None:
-    if not prefs.get("notify_new_task"):
-        return
     known_ids = set(task_cache.get("tasks", {}).keys())
     current_ids = {str(t.get("Id")) for t in open_tasks if t.get("Id") is not None}
 
@@ -123,6 +121,10 @@ async def _check_new_tasks(
             last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
             entry = task_cache.setdefault("tasks", {}).setdefault(tid, {})
             entry["last_comment_ids_str"] = last_ids
+        # На первом проходе не отправляем никакие уведомления о новых задачах
+        return
+
+    if not prefs.get("notify_new_task"):
         return
 
     new_ids = [tid for tid in current_ids if tid not in known_ids]
@@ -258,6 +260,12 @@ async def _check_comments(
             if not isinstance(comments, list):
                 continue
 
+            # Если задача видится впервые после инициализации — считаем текущие комментарии базовой линией
+            if task_id not in cached_tasks and task_cache.get("initialized"):
+                last_ids_seed = [cid for cid in [_comment_id(c) for c in comments[-50:]] if cid is not None]
+                cached_tasks[task_id] = {"last_comment_ids_str": last_ids_seed}
+                continue
+
             prev_ids: List[str] = cached_tasks.get(task_id, {}).get("last_comment_ids_str", [])
             new_comments = [c for c in comments if (_comment_id(c) not in prev_ids)]
             new_count = len(new_comments)
@@ -308,6 +316,11 @@ async def _check_approvals(
 
     cached_approvals: List[int] = task_cache.get("approvals", [])
     current_ids = [t.get("Id") for t in tasks if t.get("Id") is not None]
+
+    # На первом запуске не шлем исторические согласования
+    if not task_cache.get("initialized"):
+        task_cache["approvals"] = current_ids
+        return
 
     # New tasks awaiting approval
     new_ids = [tid for tid in current_ids if tid not in cached_approvals]

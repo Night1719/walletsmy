@@ -184,6 +184,39 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
         return []
 
 
+def get_user_tasks_by_creator(user_id: int, status_filter: str = "open"):
+    """
+    Получить список заявок ТОЛЬКО созданных пользователем (CreatorId = user_id)
+    c фильтром по статусам (открытые/завершённые). Возвращает краткие карточки из /task.
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+
+    open_ids = "27,31,35,44"
+    closed_ids = "28,29,30,45"
+    params = {
+        "creatorids": user_id,
+        "statusids": open_ids if status_filter == "open" else closed_ids,
+        "count": "false",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=params, verify=False)
+        logger.info(f"📡 GET /task (creatorids) | URL: {response.url}")
+        if response.status_code == 200:
+            return response.json().get("Tasks", [])
+        else:
+            logger.error(f"❌ Ошибка получения заявок по creator: {response.status_code} {response.text}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения заявок по creator: {e}")
+        return []
+
+
 # --- 3. ПОЛУЧЕНИЕ ЗАЯВОК НА СОГЛАСОВАНИЕ ---
 def get_tasks_awaiting_approval(user_intraservice_id: int):
     """

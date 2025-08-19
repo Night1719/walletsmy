@@ -1,6 +1,13 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from api_client import get_user_tasks, get_task_details, get_task_comments, get_task_lifetime_comments, add_comment_to_task
+from api_client import (
+    get_user_tasks,
+    get_user_tasks_by_creator,
+    get_task_details,
+    get_task_comments,
+    get_task_lifetime_comments,
+    add_comment_to_task,
+)
 from keyboards import my_tasks_menu_keyboard, task_actions_inline, link_to_task_inline
 from storage import get_session
 from states import CommentStates
@@ -54,7 +61,8 @@ async def my_tasks_menu(message: types.Message, state: FSMContext):
         return
 
     status = "open" if text == "Открытые" else "closed"
-    tasks = get_user_tasks(session["intraservice_id"], status)
+    # Согласно требованию: «Мои заявки» — только по CreatorId и без комментариев
+    tasks = get_user_tasks_by_creator(session["intraservice_id"], status)
     if not tasks:
         await message.answer("Заявок не найдено.")
         return
@@ -75,7 +83,8 @@ async def my_tasks_menu(message: types.Message, state: FSMContext):
             f"📅 Создана: {creator_date}\n"
             f"📄 Описание: {description}"
         )
-        await message.answer(text_msg, reply_markup=task_actions_inline(task_id))
+        # В меню «Мои заявки» не показываем кнопки деталей/комментариев
+        await message.answer(text_msg)
 
     await message.answer("🔚 Конец списка.", reply_markup=my_tasks_menu_keyboard())
 

@@ -14,6 +14,12 @@ import time
 router = Router()
 
 
+def _auth_or_reg_menu():
+    kb = ReplyKeyboardBuilder()
+    kb.row(types.KeyboardButton(text="🔐 Авторизоваться"))
+    kb.row(types.KeyboardButton(text="📝 Регистрация"))
+    return kb.as_markup(resize_keyboard=True)
+
 @router.message(F.text.in_({"/start", "/help"}))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
@@ -25,10 +31,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         return
 
     # Меню авторизации
-    kb = ReplyKeyboardBuilder()
-    kb.row(types.KeyboardButton(text="🔐 Авторизоваться"))
-    kb.row(types.KeyboardButton(text="📝 Регистрация"))
-    await message.answer("Добро пожаловать! Выберите действие.", reply_markup=kb.as_markup(resize_keyboard=True))
+    await message.answer("Добро пожаловать! Выберите действие.", reply_markup=_auth_or_reg_menu())
 @router.message(F.text == "🔐 Авторизоваться")
 async def auth_start(message: types.Message, state: FSMContext):
     kb = ReplyKeyboardBuilder()
@@ -142,9 +145,9 @@ async def reg_verify_otp(message: types.Message, state: FSMContext):
     # Привязываем номер
     ok = update_user(int(user_id), MobilePhone=phone)
     if ok:
-        await message.answer("Телефон успешно привязан. Теперь нажмите ‘🔐 Авторизоваться’.", reply_markup=_post_auth_menu())
+        await message.answer("Телефон успешно привязан. Теперь нажмите ‘🔐 Авторизоваться’.", reply_markup=_auth_or_reg_menu())
     else:
-        await message.answer("Не удалось привязать телефон. Обратитесь к администратору.", reply_markup=_post_auth_menu())
+        await message.answer("Не удалось привязать телефон. Обратитесь к администратору.", reply_markup=_auth_or_reg_menu())
     await state.clear()
 
 
