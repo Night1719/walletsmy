@@ -26,5 +26,5 @@ class DirectoryStates(StatesGroup):
 
 class RegistrationStates(StatesGroup):
     awaiting_phone = State()
-    awaiting_name = State()
+    awaiting_email = State()
     confirming = State()
