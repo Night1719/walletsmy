@@ -90,31 +90,36 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
 
     base_params = {
         "statusids": open_ids if status_filter == "open" else closed_ids,
-        "count": "false"
+        "count": "false",
     }
 
     try:
-        # 1) Поиск по создателю
-        params1 = dict(base_params, creatorids=user_id)
-        response = requests.get(url, headers=headers, params=params1, verify=False)
-        logger.info(f"📡 GET /task | URL: {response.url}")
+        roles = [
+            ("creatorids", user_id),
+            ("memberids", user_id),
+            ("executorids", user_id),
+            ("requesterids", user_id),
+            ("authorids", user_id),
+            ("performerids", user_id),
+        ]
 
-        if response.status_code == 200:
-            tasks = response.json().get("Tasks", [])
-            if tasks:
-                return tasks
-        else:
-            logger.error(f"❌ Ошибка получения заявок: {response.status_code} {response.text}")
+        combined: dict[int, dict] = {}
+        for key, val in roles:
+            params = dict(base_params)
+            params[key] = val
+            response = requests.get(url, headers=headers, params=params, verify=False)
+            logger.info(f"📡 GET /task ({key}) | URL: {response.url}")
+            if response.status_code == 200:
+                batch = response.json().get("Tasks", [])
+                logger.info(f"✅ Найдено {len(batch)} заявок по {key}")
+                for t in batch:
+                    tid = t.get("Id")
+                    if tid is not None:
+                        combined[tid] = t
+            else:
+                logger.error(f"❌ Ошибка получения заявок ({key}): {response.status_code} {response.text}")
 
-        # 2) Фолбек по участию (memberids)
-        params2 = dict(base_params, memberids=user_id)
-        response = requests.get(url, headers=headers, params=params2, verify=False)
-        logger.info(f"📡 GET /task (memberids) | URL: {response.url}")
-        if response.status_code == 200:
-            return response.json().get("Tasks", [])
-        else:
-            logger.error(f"❌ Ошибка получения заявок: {response.status_code} {response.text}")
-            return []
+        return list(combined.values())
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
         return []
