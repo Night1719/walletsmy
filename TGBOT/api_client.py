@@ -184,6 +184,32 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
         return []
 
 
+def get_user_by_id(user_id: int):
+    """
+    Получить пользователя по Id: GET /user/{id}
+    Возвращает dict пользователя или None
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user/{user_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    try:
+        r = requests.get(url, headers=headers, verify=False)
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, dict) and "User" in data and isinstance(data.get("User"), dict):
+                return data["User"]
+            return data if isinstance(data, dict) else None
+        else:
+            logger.error(f"❌ Ошибка получения пользователя {user_id}: {r.status_code} {r.text}")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения пользователя {user_id}: {e}")
+        return None
+
+
 def get_user_tasks_by_creator(user_id: int, status_filter: str = "open"):
     """
     Получить список заявок ТОЛЬКО созданных пользователем (CreatorId = user_id)

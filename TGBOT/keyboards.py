@@ -25,6 +25,13 @@ def main_menu_keyboard():
     return kb.as_markup(resize_keyboard=True)
 
 
+def main_menu_after_auth_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="🛠 Helpdesk"))
+    kb.row(KeyboardButton(text="👤 Справочник сотрудников"))
+    return kb.as_markup(resize_keyboard=True)
+
+
 def my_tasks_menu_keyboard():
     kb = ReplyKeyboardBuilder()
     kb.row(KeyboardButton(text="Открытые"), KeyboardButton(text="Завершённые"))
@@ -78,4 +85,11 @@ def approval_actions_inline(task_id: int):
 def link_to_task_inline(task_id: int, web_base: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔗 Открыть в Helpdesk", url=f"{web_base}/{task_id}")
+    return kb.as_markup()
+
+
+def reply_to_task_inline(task_id: int):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💬 Ответить", callback_data=f"task:comment:{task_id}")
+    kb.adjust(1)
     return kb.as_markup()

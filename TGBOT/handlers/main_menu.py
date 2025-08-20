@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from keyboards import main_menu_keyboard
+from keyboards import main_menu_keyboard, main_menu_after_auth_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from api_client import search_users_by_name
 from storage import get_session
@@ -48,6 +48,16 @@ async def employee_directory_prompt(message: types.Message, state: FSMContext):
         await message.answer("Сначала авторизуйтесь: /start")
         return
     await message.answer("Введите фамилию или имя сотрудника для поиска:\n(или нажмите 🏠 Главное меню)")
+
+
+@router.message(F.text == "🏠 Главное меню")
+async def go_root_menu(message: types.Message, state: FSMContext):
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
+    await state.clear()
+    await message.answer("Главное меню:", reply_markup=main_menu_after_auth_keyboard())
 
 
 @router.message(F.text.regexp(r"^[A-Za-zА-Яа-яЁё\-\s]{2,}$"))

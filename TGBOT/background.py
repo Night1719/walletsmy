@@ -17,7 +17,7 @@ from api_client import (
     get_task_comments,
     get_task_lifetime_comments,
 )
-from keyboards import link_to_task_inline, approval_actions_inline
+from keyboards import reply_to_task_inline, approval_actions_inline
 from metrics import inc_notification, inc_api_error, observe_cycle, set_sessions
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,29 @@ def _comment_id(c: Dict[str, Any]) -> str | None:
 
 
 def _comment_author(c: Dict[str, Any]) -> str:
-    return c.get("CreatorName") or c.get("UserName") or c.get("AuthorName") or c.get("Creator") or "Кто-то"
+    # Nested structures first
+    creator = c.get("Creator")
+    if isinstance(creator, dict):
+        for k in ("Name", "FullName", "FIO", "DisplayName"):
+            v = creator.get(k)
+            if isinstance(v, str) and v.strip():
+                return v
+    user = c.get("User")
+    if isinstance(user, dict):
+        for k in ("Name", "FullName", "FIO", "DisplayName"):
+            v = user.get(k)
+            if isinstance(v, str) and v.strip():
+                return v
+    # Flat fields
+    return (
+        c.get("CreatorName")
+        or c.get("UserName")
+        or c.get("AuthorName")
+        or c.get("Author")
+        or c.get("Creator")
+        or c.get("User")
+        or "Кто-то"
+    )
 
 
 def _comment_text(c: Dict[str, Any]) -> str:
@@ -281,7 +303,7 @@ async def _check_comments(
                         bot,
                         chat_id,
                         f"💬 Новый комментарий в заявке #{task_id}\n— {author}: {text}",
-                        reply_markup=link_to_task_inline(int(task_id), HELPDESK_WEB_BASE),
+                        reply_markup=reply_to_task_inline(int(task_id)),
                     )
                     inc_notification("comment")
 
