@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session, set_session
 from api_client import get_user_by_phone, get_user_by_email, update_user_phone
 from states import AuthStates, RegistrationStates
-from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_USE_TLS, CORP_EMAIL_DOMAIN, OTP_EXPIRE_MINUTES
+from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_USE_TLS, SMTP_USE_SSL, CORP_EMAIL_DOMAIN, OTP_EXPIRE_MINUTES
 import smtplib
 from email.message import EmailMessage
 import random
@@ -117,11 +117,35 @@ async def reg_collect_email(message: types.Message, state: FSMContext):
         msg['From'] = SMTP_FROM
         msg['To'] = email
         msg.set_content(f"Ваш код подтверждения: {otp}. Действителен {OTP_EXPIRE_MINUTES} минут.")
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-            if SMTP_USE_TLS:
+        if SMTP_USE_SSL:
+            server_cls = smtplib.SMTP_SSL
+        else:
+            server_cls = smtplib.SMTP
+        with server_cls(SMTP_HOST, SMTP_PORT) as s:
+            if SMTP_USE_TLS and not SMTP_USE_SSL:
                 s.starttls()
             if SMTP_USER:
-                s.login(SMTP_USER, SMTP_PASS)
+                try:
+                    s.login(SMTP_USER, SMTP_PASS)
+                except smtplib.SMTPAuthenticationError:
+                    # Попробуем без домена или с доменом, если указан
+                    user_variants = {SMTP_USER}
+                    if "@" in SMTP_USER:
+                        user_variants.add(SMTP_USER.split("@")[0])
+                    else:
+                        # для доменных логинов вида domain\\user
+                        if "\\" in SMTP_USER:
+                            user_variants.add(SMTP_USER.split("\\")[-1])
+                    authed = False
+                    for u in user_variants:
+                        try:
+                            s.login(u, SMTP_PASS)
+                            authed = True
+                            break
+                        except smtplib.SMTPAuthenticationError:
+                            continue
+                    if not authed:
+                        raise
             s.send_message(msg)
         await state.set_state(RegistrationStates.confirming)
         await message.answer("Код отправлен на почту. Введите 6-значный код:")
