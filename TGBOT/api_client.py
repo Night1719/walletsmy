@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import logging
 from config import INTRASERVICE_BASE_URL, ENCODED_CREDENTIALS, API_VERSION
 
@@ -6,6 +8,32 @@ from config import INTRASERVICE_BASE_URL, ENCODED_CREDENTIALS, API_VERSION
 requests.packages.urllib3.disable_warnings()
 
 logger = logging.getLogger(__name__)
+
+# Connection pooling, retries and timeouts
+_TIMEOUT = (5, 20)  # (connect, read) seconds
+_session = requests.Session()
+_retry = Retry(
+    total=3,
+    backoff_factor=0.3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST", "PUT"],
+    raise_on_status=False,
+)
+_adapter = HTTPAdapter(max_retries=_retry, pool_connections=200, pool_maxsize=200)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
+
+
+def _get(url, *, headers=None, params=None):
+    return _session.get(url, headers=headers, params=params, verify=False, timeout=_TIMEOUT)
+
+
+def _post(url, *, headers=None, json=None):
+    return _session.post(url, headers=headers, json=json, verify=False, timeout=_TIMEOUT)
+
+
+def _put(url, *, headers=None, json=None):
+    return _session.put(url, headers=headers, json=json, verify=False, timeout=_TIMEOUT)
 
 
 def get_user_by_email(email: str):
@@ -17,7 +45,7 @@ def get_user_by_email(email: str):
     }
     params = {"search": email}
     try:
-        r = requests.get(url, headers=headers, params=params, verify=False)
+        r = _get(url, headers=headers, params=params)
         if r.status_code == 200:
             users = r.json().get("Users", [])
             # фильтруем по точному совпадению email, если поле доступно
@@ -63,7 +91,7 @@ def get_user_by_phone(phone: str):
     params = {"search": search_query}
 
     try:
-        response = requests.get(url, headers=headers, params=params, verify=False)
+        response = _get(url, headers=headers, params=params)
         logger.info(f"🔍 Поиск пользователя: {params} → статус {response.status_code}")
 
         if response.status_code == 200:
@@ -114,7 +142,7 @@ def update_user(user_id: int, **fields) -> bool:
     }
     payload = {k: v for k, v in fields.items() if v is not None}
     try:
-        r = requests.put(url, headers=headers, json=payload, verify=False)
+        r = _put(url, headers=headers, json=payload)
         if r.status_code in (200, 204):
             return True
         logger.error(f"❌ Ошибка обновления пользователя {user_id}: {r.status_code} {r.text}")
@@ -159,7 +187,7 @@ def get_user_tasks(user_id: int, status_filter: str = "open"):
         for key, val in roles:
             params = dict(base_params)
             params[key] = val
-            response = requests.get(url, headers=headers, params=params, verify=False)
+            response = _get(url, headers=headers, params=params)
             logger.info(f"📡 GET /task ({key}) | URL: {response.url}")
             if response.status_code == 200:
                 batch = response.json().get("Tasks", [])
@@ -196,7 +224,7 @@ def get_user_by_id(user_id: int):
         "X-API-Version": API_VERSION,
     }
     try:
-        r = requests.get(url, headers=headers, verify=False)
+        r = _get(url, headers=headers)
         if r.status_code == 200:
             data = r.json()
             if isinstance(data, dict) and "User" in data and isinstance(data.get("User"), dict):
@@ -231,7 +259,7 @@ def get_user_tasks_by_creator(user_id: int, status_filter: str = "open"):
     }
 
     try:
-        response = requests.get(url, headers=headers, params=params, verify=False)
+        response = _get(url, headers=headers, params=params)
         logger.info(f"📡 GET /task (creatorids) | URL: {response.url}")
         if response.status_code == 200:
             return response.json().get("Tasks", [])
@@ -263,7 +291,7 @@ def get_tasks_awaiting_approval(user_intraservice_id: int):
 
     try:
         # 1) Пытаемся сузить сразу по coordinatorids
-        response = requests.get(url, headers=headers, params=params_direct, verify=False)
+        response = _get(url, headers=headers, params=params_direct)
         tasks = []
         if response.status_code == 200:
             tasks = response.json().get("Tasks", [])
@@ -273,7 +301,7 @@ def get_tasks_awaiting_approval(user_intraservice_id: int):
         # 2) Если ничего не нашли — делаем fallback: все в статусе согласования и фильтруем вручную
         if not tasks:
             params_fallback = {"statusids": "36", "count": "false"}
-            r2 = requests.get(url, headers=headers, params=params_fallback, verify=False)
+            r2 = _get(url, headers=headers, params=params_fallback)
             if r2.status_code == 200:
                 tasks = r2.json().get("Tasks", [])
                 logger.info(f"ℹ️ Fallback approvals: получили {len(tasks)} заявок со статусом 36, фильтруем по координатору")
@@ -328,7 +356,7 @@ def get_task_details(task_id: int):
     for inc in include_variants:
         try:
             params = {"include": inc}
-            response = requests.get(base_url, headers=headers, params=params, verify=False)
+            response = _get(base_url, headers=headers, params=params)
             if response.status_code == 200:
                 data = response.json()
                 # Unwrap if server returns {"Task": {...}}
@@ -365,7 +393,7 @@ def get_task_comments(task_id: int):
     ]
     for url in paths:
         try:
-            r = requests.get(url, headers=headers, verify=False)
+            r = _get(url, headers=headers)
             if r.status_code == 200:
                 data = r.json()
                 if isinstance(data, list):
@@ -402,7 +430,7 @@ def get_task_lifetime_comments(task_id: int):
 
     for h in try_versions:
         try:
-            r = requests.get(base, headers=h, params=params, verify=False)
+            r = _get(base, headers=h, params=params)
             if r.status_code == 200:
                 data = r.json()
                 items = data.get("TaskLifetimes", [])
@@ -441,7 +469,7 @@ def add_comment_to_task(task_id: int, comment: str, public: bool = True):
         })
 
     try:
-        response = requests.put(url, headers=headers, json=payload, verify=False)
+        response = _put(url, headers=headers, json=payload)
         if response.status_code == 200:
             logger.info(f"✅ Комментарий добавлен к заявке #{task_id}")
             return True
@@ -505,7 +533,7 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         payload["Comment"] = full_comment
 
     try:
-        response = requests.put(url, headers=headers, json=payload, verify=False)
+        response = _put(url, headers=headers, json=payload)
         if response.status_code == 200:
             logger.info(f"✅ Заявка #{task_id} {'согласована' if approve else 'отклонена'}")
 
@@ -513,7 +541,7 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
             if set_status_on_success is not None and approve:
                 try:
                     force_payload = {"StatusId": set_status_on_success}
-                    r2 = requests.put(url, headers=headers, json=force_payload, verify=False)
+                    r2 = _put(url, headers=headers, json=force_payload)
                     if r2.status_code != 200:
                         logger.warning(f"⚠️ Не удалось принудительно установить статус {set_status_on_success} для #{task_id}: {r2.status_code} {r2.text}")
                 except Exception as ie:
@@ -551,7 +579,7 @@ def create_task(**payload):
     try:
         # Удалим None, чтобы не отправлять null на сервер для non-null полей
         clean_payload = {k: v for k, v in payload.items() if v is not None}
-        response = requests.post(url, headers=headers, json=clean_payload, verify=False)
+        response = _post(url, headers=headers, json=clean_payload)
         if response.status_code == 201:
             task_id = response.json().get("Id")
             logger.info(f"✅ Заявка создана: #{task_id}")
@@ -577,7 +605,7 @@ def search_users_by_name(query: str):
     }
     params = {"search": query}
     try:
-        r = requests.get(url, headers=headers, params=params, verify=False)
+        r = _get(url, headers=headers, params=params)
         if r.status_code == 200:
             return r.json().get("Users", [])
         else:

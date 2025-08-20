@@ -398,6 +398,8 @@ async def background_worker(bot: Bot):
                 try:
                     chat_id = int(chat_id_str)
                     await run_user_checks(bot, chat_id)
+                    # маленькая пауза между пользователями, чтобы не забивать петлю
+                    await asyncio.sleep(0.05)
                 except Exception:
                     logger.exception("background loop error for user %s", chat_id_str)
                     inc_api_error("user_loop")

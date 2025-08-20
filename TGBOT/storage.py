@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from typing import Any, Dict, Optional
 from config import USER_DATA_FILE, USER_PREFERENCES_FILE, TASK_CACHE_FILE
 
@@ -22,12 +23,25 @@ def _read_json(path: str) -> Dict[str, Any]:
         return {}
 
 
+_locks: Dict[str, threading.Lock] = {}
+
+
+def _get_lock(path: str) -> threading.Lock:
+    lock = _locks.get(path)
+    if lock is None:
+        lock = threading.Lock()
+        _locks[path] = lock
+    return lock
+
+
 def _write_json(path: str, data: Dict[str, Any]) -> None:
     _ensure_file(path)
     tmp_path = path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, path)
+    lock = _get_lock(path)
+    with lock:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
 
 
 # === Sessions (authorized users) ===
