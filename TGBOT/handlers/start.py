@@ -3,15 +3,17 @@ from aiogram.fsm.context import FSMContext
 from keyboards import phone_request_keyboard, main_menu_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session, set_session
-from api_client import get_user_by_phone, get_user_by_email, update_user
+from api_client import get_user_by_phone, get_user_by_email, update_user_phone
 from states import AuthStates, RegistrationStates
 from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_USE_TLS, CORP_EMAIL_DOMAIN, OTP_EXPIRE_MINUTES
 import smtplib
 from email.message import EmailMessage
 import random
 import time
+import logging
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 def _auth_or_reg_menu():
@@ -107,6 +109,9 @@ async def reg_collect_email(message: types.Message, state: FSMContext):
     otp = str(random.randint(100000, 999999))
     await state.update_data(reg_otp=otp, reg_otp_ts=int(time.time()))
     try:
+        if not SMTP_HOST or not SMTP_FROM:
+            logger.error("SMTP is not configured (SMTP_HOST/SMTP_FROM missing)")
+            raise RuntimeError("SMTP not configured")
         msg = EmailMessage()
         msg['Subject'] = 'Код подтверждения'
         msg['From'] = SMTP_FROM
@@ -120,7 +125,8 @@ async def reg_collect_email(message: types.Message, state: FSMContext):
             s.send_message(msg)
         await state.set_state(RegistrationStates.confirming)
         await message.answer("Код отправлен на почту. Введите 6-значный код:")
-    except Exception:
+    except Exception as e:
+        logger.exception("Failed to send OTP to %s: %s", email, e)
         await message.answer("Не удалось отправить код. Обратитесь к администратору.")
 
 
@@ -143,7 +149,7 @@ async def reg_verify_otp(message: types.Message, state: FSMContext):
         await message.answer("Неверный код. Повторите попытку.")
         return
     # Привязываем номер
-    ok = update_user(int(user_id), MobilePhone=phone)
+    ok = update_user_phone(int(user_id), phone)
     if ok:
         await message.answer("Телефон успешно привязан. Теперь нажмите ‘🔐 Авторизоваться’.", reply_markup=_auth_or_reg_menu())
     else:

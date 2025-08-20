@@ -115,7 +115,7 @@ def update_user(user_id: int, **fields) -> bool:
     payload = {k: v for k, v in fields.items() if v is not None}
     try:
         r = requests.put(url, headers=headers, json=payload, verify=False)
-        if r.status_code == 200:
+        if r.status_code in (200, 204):
             return True
         logger.error(f"❌ Ошибка обновления пользователя {user_id}: {r.status_code} {r.text}")
         return False
@@ -255,19 +255,31 @@ def get_tasks_awaiting_approval(user_intraservice_id: int):
         "Accept": "application/json",
         "X-API-Version": API_VERSION,
     }
-    params = {
+    params_direct = {
         "coordinatorids": user_intraservice_id,
         "statusids": "36",  # Статус "Согласование"
         "count": "false"
     }
 
     try:
-        response = requests.get(url, headers=headers, params=params, verify=False)
-        if response.status_code != 200:
-            logger.error(f"❌ Ошибка получения заявок на согласование: {response.status_code}")
-            return []
+        # 1) Пытаемся сузить сразу по coordinatorids
+        response = requests.get(url, headers=headers, params=params_direct, verify=False)
+        tasks = []
+        if response.status_code == 200:
+            tasks = response.json().get("Tasks", [])
+        else:
+            logger.error(f"❌ Ошибка получения заявок на согласование (direct): {response.status_code}")
 
-        tasks = response.json().get("Tasks", [])
+        # 2) Если ничего не нашли — делаем fallback: все в статусе согласования и фильтруем вручную
+        if not tasks:
+            params_fallback = {"statusids": "36", "count": "false"}
+            r2 = requests.get(url, headers=headers, params=params_fallback, verify=False)
+            if r2.status_code == 200:
+                tasks = r2.json().get("Tasks", [])
+                logger.info(f"ℹ️ Fallback approvals: получили {len(tasks)} заявок со статусом 36, фильтруем по координатору")
+            else:
+                logger.error(f"❌ Ошибка получения заявок на согласование (fallback): {r2.status_code}")
+                return []
         result = []
 
         for task in tasks:
@@ -440,6 +452,27 @@ def add_comment_to_task(task_id: int, comment: str, public: bool = True):
         logger.error(f"❌ Ошибка: {e}")
         return False
 
+
+# Convenience helper: update phone in multiple common fields
+def update_user_phone(user_id: int, phone: str) -> bool:
+    try:
+        # Normalize to digits, keep original as-is for display
+        digits = ''.join(filter(str.isdigit, phone or ''))
+        value = phone
+        # Prefer +7XXXXXXXXXX for RU if 11 with 7/8
+        if len(digits) == 11 and digits[0] in ('7', '8'):
+            value = '+7' + digits[1:]
+        elif len(digits) == 10:
+            value = '+7' + digits
+        # Try set multiple fields in one call
+        ok = update_user(user_id, MobilePhone=value, Mobile=value)
+        if not ok:
+            # Fallback attempts with alternative names
+            ok = update_user(user_id, Phone=value)
+        return ok
+    except Exception as e:
+        logger.error(f"❌ Ошибка установки телефона пользователю {user_id}: {e}")
+        return False
 
 # --- 6. СОГЛАСОВАНИЕ / ОТКЛОНЕНИЕ ЗАЯВКИ ---
 def approve_task(task_id: int, approve: bool = True, comment: str = "", user_name: str = None, coordinator_id: int = None, set_status_on_success: int | None = None):
