@@ -169,7 +169,7 @@ async def _check_new_tasks(
     if not task_cache.get("initialized"):
         # First run for user: just mark as seen to avoid flood
         task_cache["initialized"] = True
-        # Initialize last_comment_ids to avoid sending old comments as new
+        # Initialize last_comment_ids and mark tasks as known to avoid sending old events
         for t in open_tasks:
             tid = str(t.get("Id"))
             details = get_task_details(int(tid)) or {}
@@ -177,6 +177,8 @@ async def _check_new_tasks(
             last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
             entry = task_cache.setdefault("tasks", {}).setdefault(tid, {})
             entry["last_comment_ids_str"] = last_ids
+            # also seed core to prevent first-cycle status spam
+            entry.update(_extract_task_core(t))
         # На первом проходе не отправляем никакие уведомления о новых задачах
         return
 
@@ -325,7 +327,14 @@ async def _check_comments(
                 cached_tasks[task_id] = {"last_comment_ids_str": last_ids_seed}
                 continue
 
-            prev_ids: List[str] = cached_tasks.get(task_id, {}).get("last_comment_ids_str", [])
+            entry = cached_tasks.setdefault(task_id, {})
+            prev_ids: List[str] = entry.get("last_comment_ids_str", [])
+            # Если база не инициализирована для этой задачи — зафиксируем текущие и пропустим
+            if not prev_ids:
+                last_seed = [cid for cid in [_comment_id(c) for c in comments[-50:]] if cid is not None]
+                entry["last_comment_ids_str"] = last_seed
+                continue
+
             new_comments = [c for c in comments if (_comment_id(c) not in prev_ids)]
             new_count = len(new_comments)
             if new_count:
@@ -376,7 +385,7 @@ async def _check_approvals(
     cached_approvals: List[int] = task_cache.get("approvals", [])
     current_ids = [t.get("Id") for t in tasks if t.get("Id") is not None]
 
-    # На первом запуске не шлем исторические согласования
+    # На первом запуске инициализируем и не шлем исторические согласования
     if not task_cache.get("initialized"):
         task_cache["approvals"] = current_ids
         return
