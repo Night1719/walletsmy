@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from typing import Dict, Any, List, Tuple
+import asyncio
 from aiogram import Bot
 from config import BACKGROUND_POLL_INTERVAL_SEC, HELPDESK_WEB_BASE
 from storage import (
@@ -72,6 +73,23 @@ def _extract_task_core(task: Dict[str, Any]) -> Dict[str, Any]:
         "name": task.get("Name"),
         "create_date": task.get("CreateDate"),
     }
+
+
+_STATUS_MAP = {
+    27: "В работе",
+    31: "Открыта",
+    35: "Требует уточнения",
+    36: "Согласование",
+    44: "Отказано",
+}
+
+
+def _status_to_name(status_id: Any, fallback: str | None = None) -> str:
+    try:
+        sid = int(status_id)
+    except Exception:
+        return fallback or "?"
+    return _STATUS_MAP.get(sid, fallback or str(sid))
 
 
 def _truncate(text: str, limit: int = 400) -> str:
@@ -216,8 +234,8 @@ async def _check_status_and_executor(
         # Status change
         if prefs.get("notify_status") and prev.get("status_id") is not None:
             if core.get("status_id") != prev.get("status_id") and status_notifies < max_status_notifies:
-                old_name = prev.get('status_name') or str(prev.get('status_id'))
-                new_name = core.get('status_name') or str(core.get('status_id'))
+                old_name = prev.get('status_name') or _status_to_name(prev.get('status_id'))
+                new_name = core.get('status_name') or _status_to_name(core.get('status_id'))
                 await send_safe(
                     bot,
                     chat_id,
@@ -226,6 +244,7 @@ async def _check_status_and_executor(
                 )
                 inc_notification("status")
                 status_notifies += 1
+                await asyncio.sleep(0)
 
         # Executor change
         if prefs.get("notify_executor") and prev.get("executor_id") is not None:
@@ -241,11 +260,12 @@ async def _check_status_and_executor(
         # Save current core
         cached_entry = cached_tasks.get(task_id, {})
         cached_entry.update(core)
+        cached_entry["owned_by_creator"] = True
         cached_tasks[task_id] = cached_entry
 
-    # Detect tasks that left open set (potentially done)
+    # Detect creator-owned tasks that left open set (potentially done)
     current_ids = {str(t.get("Id")) for t in open_tasks}
-    previously_open_ids = set(cached_tasks.keys())
+    previously_open_ids = {tid for tid, ent in cached_tasks.items() if ent.get("owned_by_creator")}
     closed_now = list(previously_open_ids - current_ids)
 
     if prefs.get("notify_done"):
@@ -253,7 +273,7 @@ async def _check_status_and_executor(
         for task_id in closed_now[:10]:
             try:
                 details = get_task_details(int(task_id))
-                status_name = (details or {}).get("StatusName", "завершена")
+                status_name = (details or {}).get("StatusName") or _status_to_name((details or {}).get("StatusId"), "завершена")
                 await send_safe(
                     bot,
                     chat_id,
@@ -261,6 +281,7 @@ async def _check_status_and_executor(
                     reply_markup=link_to_task_inline(int(task_id), HELPDESK_WEB_BASE),
                 )
                 inc_notification("done")
+                await asyncio.sleep(0)
             except Exception:
                 logger.exception("Failed to notify done for task %s", task_id)
                 inc_api_error("notify_done")
@@ -427,6 +448,7 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
     logger.info(f"🛈 User {chat_id}: open_tasks_by_creator={len(open_tasks)}")
 
     # Уведомления о комментариях — по всем ролям пользователя
+    # Комментарии: ограничим только теми задачами, где пользователь участвует, но исключим чужие, где он вообще не фигурирует
     open_tasks_for_comments = get_user_tasks(intraservice_id, "open") or open_tasks
 
     await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
