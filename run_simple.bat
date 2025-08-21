@@ -11,6 +11,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Проверяем наличие manage.py
+if not exist "manage.py" (
+    echo ОШИБКА: Файл manage.py не найден!
+    echo Убедитесь, что вы в папке survey_platform
+    echo.
+    echo Текущая папка:
+    cd
+    echo.
+    echo Содержимое папки:
+    dir
+    pause
+    exit /b 1
+)
+
 REM Создаем виртуальное окружение
 if not exist "venv" (
     echo Создание виртуального окружения...
