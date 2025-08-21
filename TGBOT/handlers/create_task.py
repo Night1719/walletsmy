@@ -5,6 +5,7 @@ from storage import get_session
 from states import CreateTaskStates
 from api_client import create_task, get_user_by_id
 from config import ALLOWED_SERVICES, DEFAULT_TYPE_ID, DEFAULT_PRIORITY_ID, DEFAULT_URGENCY_ID, DEFAULT_IMPACT_ID, SERVICE_ID_REMOTE_ACCESS, SERVICE_ID_MISC
+from config import REMOTE_ACCESS_TYPE_ID, REMOTE_ACCESS_PRIORITY_ID, REMOTE_ACCESS_WORKFLOW_ID
 import logging
 
 router = Router()
@@ -154,7 +155,10 @@ async def enter_remote_end(message: types.Message, state: FSMContext):
         "Description": data.get("description") or "Оформление удаленного доступа",
         "CreatorId": session["intraservice_id"],
         "ServiceId": SERVICE_ID_REMOTE_ACCESS,
-        "StatusId": 36,  # Согласование
+        # Бизнес-процесс из эталонной заявки
+        "TypeId": REMOTE_ACCESS_TYPE_ID,
+        "PriorityId": REMOTE_ACCESS_PRIORITY_ID,
+        "WorkflowId": REMOTE_ACCESS_WORKFLOW_ID,
         # Поля формы:
         "Field1075": data.get("remote_start"),  # дата начала
         "Field1076": end_date,                   # дата окончания
@@ -193,15 +197,6 @@ async def enter_remote_end(message: types.Message, state: FSMContext):
             payload["CoordinatorId"] = manager_id
     except Exception:
         logger.exception("Не удалось определить руководителя для согласования")
-    # Дефолты
-    if DEFAULT_TYPE_ID:
-        payload["TypeId"] = DEFAULT_TYPE_ID
-    if DEFAULT_PRIORITY_ID:
-        payload["PriorityId"] = DEFAULT_PRIORITY_ID
-    if DEFAULT_URGENCY_ID:
-        payload["UrgencyId"] = DEFAULT_URGENCY_ID
-    if DEFAULT_IMPACT_ID:
-        payload["ImpactId"] = DEFAULT_IMPACT_ID
 
     task_id = create_task(**payload)
     if task_id:

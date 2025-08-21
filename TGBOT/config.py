@@ -25,6 +25,11 @@ ALLOWED_SERVICE_IDS = list(ALLOWED_SERVICES.keys())
 SERVICE_ID_REMOTE_ACCESS = int(os.getenv("SERVICE_ID_REMOTE_ACCESS", "67"))
 SERVICE_ID_MISC = int(os.getenv("SERVICE_ID_MISC", "61"))
 
+# Remote access process specifics
+REMOTE_ACCESS_TYPE_ID = int(os.getenv("REMOTE_ACCESS_TYPE_ID", "1022"))
+REMOTE_ACCESS_PRIORITY_ID = int(os.getenv("REMOTE_ACCESS_PRIORITY_ID", "17"))
+REMOTE_ACCESS_WORKFLOW_ID = int(os.getenv("REMOTE_ACCESS_WORKFLOW_ID", "4"))
+
 # === Files & misc ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USER_DATA_FILE = os.path.join(BASE_DIR, "user_data.json")
