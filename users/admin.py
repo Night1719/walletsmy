@@ -8,20 +8,19 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Профиль'
-    fields = ('bio', 'avatar', 'theme_preference')
+    fk_name = 'user'
 
 
-@admin.register(CustomUser)
 class CustomUserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
     
     list_display = (
-        'username', 'email', 'first_name', 'last_name', 'role', 
-        'department', 'can_create_surveys', 'is_active', 'date_joined'
+        'username', 'email', 'first_name', 'last_name', 'role',
+        'department', 'position', 'can_create_surveys', 'is_active'
     )
     
     list_filter = (
-        'role', 'department', 'can_create_surveys', 'is_active', 
+        'role', 'department', 'can_create_surveys', 'is_active',
         'is_staff', 'is_superuser', 'is_ldap_user', 'date_joined'
     )
     
@@ -35,16 +34,14 @@ class CustomUserAdmin(BaseUserAdmin):
             'fields': ('first_name', 'last_name', 'email', 'phone')
         }),
         (_('Рабочая информация'), {
-            'fields': ('department', 'position', 'role', 'can_create_surveys')
+            'fields': ('role', 'department', 'position', 'can_create_surveys')
         }),
-        (_('LDAP информация'), {
+        (_('LDAP'), {
             'fields': ('is_ldap_user', 'ldap_dn'),
             'classes': ('collapse',)
         }),
         (_('Разрешения'), {
-            'fields': (
-                'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'
-            ),
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Важные даты'), {
             'fields': ('last_login', 'date_joined'),
@@ -55,46 +52,66 @@ class CustomUserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': (
-                'username', 'email', 'password1', 'password2', 'first_name', 
-                'last_name', 'role', 'department', 'can_create_surveys'
-            ),
+            'fields': ('username', 'password1', 'password2', 'email', 'role'),
         }),
     )
     
-    actions = ['enable_survey_creation', 'disable_survey_creation', 'activate_users', 'deactivate_users']
+    actions = ['make_survey_creator', 'remove_survey_creator', 'activate_users', 'deactivate_users']
     
-    def enable_survey_creation(self, request, queryset):
+    def make_survey_creator(self, request, queryset):
+        """Дать право на создание опросов"""
         updated = queryset.update(can_create_surveys=True)
-        self.message_user(request, f'Включено создание опросов для {updated} пользователей.')
-    enable_survey_creation.short_description = 'Включить создание опросов'
+        self.message_user(
+            request,
+            f'{updated} пользователей получили право на создание опросов.'
+        )
+    make_survey_creator.short_description = "Дать право на создание опросов"
     
-    def disable_survey_creation(self, request, queryset):
+    def remove_survey_creator(self, request, queryset):
+        """Убрать право на создание опросов"""
         updated = queryset.update(can_create_surveys=False)
-        self.message_user(request, f'Отключено создание опросов для {updated} пользователей.')
-    disable_survey_creation.short_description = 'Отключить создание опросов'
+        self.message_user(
+            request,
+            f'{updated} пользователей лишены права на создание опросов.'
+        )
+    remove_survey_creator.short_description = "Убрать право на создание опросов"
     
     def activate_users(self, request, queryset):
+        """Активировать пользователей"""
         updated = queryset.update(is_active=True)
-        self.message_user(request, f'Активировано {updated} пользователей.')
-    activate_users.short_description = 'Активировать пользователей'
+        self.message_user(
+            request,
+            f'{updated} пользователей активировано.'
+        )
+    activate_users.short_description = "Активировать пользователей"
     
     def deactivate_users(self, request, queryset):
+        """Деактивировать пользователей"""
         updated = queryset.update(is_active=False)
-        self.message_user(request, f'Деактивировано {updated} пользователей.')
-    deactivate_users.short_description = 'Деактивировать пользователей'
+        self.message_user(
+            request,
+            f'{updated} пользователей деактивировано.'
+        )
+    deactivate_users.short_description = "Деактивировать пользователей"
 
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'theme_preference', 'created_at')
-    list_filter = ('theme_preference',)
+    list_display = ('user', 'theme_preference', 'created_at', 'updated_at')
+    list_filter = ('theme_preference', 'created_at')
     search_fields = ('user__username', 'user__first_name', 'user__last_name')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'updated_at')
     
     fieldsets = (
-        (None, {'fields': ('user',)}),
-        (_('Профиль'), {'fields': ('bio', 'avatar')}),
-        (_('Настройки'), {'fields': ('theme_preference',)}),
-        (_('Система'), {'fields': ('created_at',), 'classes': ('collapse',)}),
+        (None, {
+            'fields': ('user', 'bio', 'avatar', 'theme_preference')
+        }),
+        (_('Даты'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
     )
+
+
+# Регистрируем модели
+admin.site.register(CustomUser, CustomUserAdmin)

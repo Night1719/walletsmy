@@ -29,47 +29,35 @@ def is_admin(user):
     return user.is_authenticated and user.is_admin
 
 
-class CustomLoginView(LoginView):
-    """Кастомное представление для входа"""
-    form_class = CustomAuthenticationForm
-    template_name = 'users/login.html'
-    redirect_authenticated_user = True
+def login_view(request):
+    """Вход в систему"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Добро пожаловать, {user.username}!')
+            return redirect('surveys:list')
+        else:
+            messages.error(request, 'Неверное имя пользователя или пароль.')
     
-    def get_success_url(self):
-        return reverse_lazy('surveys:dashboard')
-    
-    def form_valid(self, form):
-        remember_me = form.cleaned_data.get('remember_me')
-        if not remember_me:
-            self.request.session.set_expiry(0)
-        return super().form_valid(form)
+    return render(request, 'users/login.html')
 
 
-class RegisterView(CreateView):
-    """Представление для регистрации"""
-    form_class = CustomUserCreationForm
-    template_name = 'users/register.html'
-    success_url = reverse_lazy('users:login')
-    
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, _('Регистрация успешна! Теперь вы можете войти в систему.'))
-        return response
+@login_required
+def logout_view(request):
+    """Выход из системы"""
+    logout(request)
+    messages.info(request, 'Вы успешно вышли из системы.')
+    return redirect('users:login')
 
 
 @login_required
 def profile_view(request):
-    """Представление профиля пользователя"""
-    try:
-        profile = request.user.profile
-    except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=request.user)
-    
-    context = {
-        'profile': profile,
-        'user': request.user
-    }
-    return render(request, 'users/profile.html', context)
+    """Профиль пользователя"""
+    return render(request, 'users/profile.html')
 
 
 @login_required
