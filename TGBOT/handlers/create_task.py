@@ -139,7 +139,11 @@ async def choose_remote_duration(message: types.Message, state: FSMContext):
     now = datetime.now()
     start = now.replace(hour=9, minute=0, second=0, microsecond=0)
     end = (start + timedelta(days=days)).replace(hour=18, minute=0, second=0, microsecond=0)
-    await state.update_data(remote_start=start.strftime("%Y-%m-%d"), remote_end=end.strftime("%Y-%m-%d"))
+    # Сохраняем ISO с временем для полей Field1075/1076
+    await state.update_data(
+        remote_start=start.strftime("%Y-%m-%dT%H:%M:%S"),
+        remote_end=end.strftime("%Y-%m-%dT%H:%M:%S"),
+    )
     # Переходим сразу к созданию
     await enter_remote_end(message, state)
 
@@ -155,13 +159,14 @@ async def enter_remote_end(message: types.Message, state: FSMContext):
         "Description": data.get("description") or "Оформление удаленного доступа",
         "CreatorId": session["intraservice_id"],
         "ServiceId": SERVICE_ID_REMOTE_ACCESS,
+        "StatusId": 36,  # Согласование — обязателен для вашей площадки
         # Бизнес-процесс из эталонной заявки
         "TypeId": REMOTE_ACCESS_TYPE_ID,
         "PriorityId": REMOTE_ACCESS_PRIORITY_ID,
         "WorkflowId": REMOTE_ACCESS_WORKFLOW_ID,
         # Поля формы:
-        "Field1075": data.get("remote_start"),  # дата начала
-        "Field1076": end_date,                   # дата окончания
+        "Field1075": data.get("remote_start"),  # дата начала (ISO с временем)
+        "Field1076": end_date,                   # дата окончания (ISO с временем)
         "Field1077": 262,                        # константа
     }
     # Дублируем значения в Attributes (на случай другой схемы API)
