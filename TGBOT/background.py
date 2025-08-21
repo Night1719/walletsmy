@@ -150,16 +150,23 @@ def _comment_author(c: Dict[str, Any]) -> str:
             if isinstance(v, str) and v.strip():
                 return v
     # Flat fields
-    return (
+    author = (
         c.get("CreatorName")
         or c.get("UserName")
         or c.get("AuthorName")
         or c.get("Author")
         or c.get("Creator")
         or c.get("User")
-        or _resolve_user_name(c.get("CreatorId") or c.get("UserId") or c.get("AuthorId") or c.get("AddedById"))
-        or "Кто-то"
     )
+    if isinstance(author, str) and author.strip():
+        return author
+    # В лентах жизни может приходить атрибут с ФИО в нестандартном ключе
+    lf = c.get("lifetime-user") or c.get("LifetimeUser") or c.get("LifeTimeUser")
+    if isinstance(lf, str) and lf.strip():
+        return lf
+    # Пробуем добрать из id
+    name = _resolve_user_name(c.get("CreatorId") or c.get("UserId") or c.get("AuthorId") or c.get("AddedById"))
+    return name or "Кто-то"
 
 
 def _comment_text(c: Dict[str, Any]) -> str:
@@ -190,7 +197,7 @@ async def _check_new_tasks(
         # Initialize last_comment_ids and mark tasks as known to avoid sending old events
         for t in open_tasks:
             tid = str(t.get("Id"))
-            details = get_task_details(int(tid)) or {}
+            details = await asyncio.to_thread(get_task_details, int(tid)) or {}
             comments = _extract_comments(details)
             last_ids = [cid for cid in [ _comment_id(c) for c in comments[-50:] ] if cid is not None]
             entry = task_cache.setdefault("tasks", {}).setdefault(tid, {})
@@ -272,7 +279,7 @@ async def _check_status_and_executor(
         # Check a limited number per cycle to avoid burst calls
         for task_id in closed_now[:10]:
             try:
-                details = get_task_details(int(task_id))
+                details = await asyncio.to_thread(get_task_details, int(task_id))
                 status_name = (details or {}).get("StatusName") or _status_to_name((details or {}).get("StatusId"), "завершена")
                 await send_safe(
                     bot,
@@ -318,14 +325,14 @@ async def _check_comments(
         t = open_tasks[idx]
         task_id = str(t.get("Id"))
         try:
-            details = get_task_details(int(task_id)) or {}
+            details = await asyncio.to_thread(get_task_details, int(task_id)) or {}
             comments = _extract_comments(details)
             if not comments:
                 # пробуем прямой эндпоинт
-                comments = get_task_comments(int(task_id)) or []
+                comments = await asyncio.to_thread(get_task_comments, int(task_id)) or []
             if not comments:
                 # пробуем tasklifetime
-                lifetimes = get_task_lifetime_comments(int(task_id)) or []
+                lifetimes = await asyncio.to_thread(get_task_lifetime_comments, int(task_id)) or []
                 # вытаскиваем только пользовательские комментарии
                 comments = []
                 for e in lifetimes:
@@ -337,6 +344,7 @@ async def _check_comments(
                             "CreatorName": e.get("Author") or e.get("AuthorName") or "",
                             "Text": text,
                             "CreateDate": e.get("CreateDate") or e.get("Date") or e.get("Time") or "",
+                            "lifetime-user": e.get("lifetime-user"),
                         })
             total = len(comments)
             if not isinstance(comments, list):

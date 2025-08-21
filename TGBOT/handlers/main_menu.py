@@ -60,7 +60,10 @@ async def go_root_menu(message: types.Message, state: FSMContext):
     await message.answer("Главное меню:", reply_markup=main_menu_after_auth_keyboard())
 
 
-@router.message(F.text.regexp(r"^[A-Za-zА-Яа-яЁё\-\s]{2,}$"))
+@router.message(
+    F.text.regexp(r"^[A-Za-zА-Яа-яЁё\-\s]{2,}$")
+    & ~F.text.in_({"Удаленный доступ", "Прочее", "⬅️ Назад"})
+)
 async def employee_directory_search(message: types.Message, state: FSMContext):
     query = message.text.strip()
     users = search_users_by_name(query)[:10]
