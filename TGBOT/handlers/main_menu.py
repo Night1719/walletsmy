@@ -51,6 +51,16 @@ async def employee_directory_prompt(message: types.Message, state: FSMContext):
     await message.answer("Введите фамилию или имя сотрудника для поиска:\n(или нажмите 🏠 Главное меню)")
 
 
+@router.message(F.text == "🏠 Главное меню")
+async def back_to_root_from_helpdesk(message: types.Message, state: FSMContext):
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
+    await state.clear()
+    await message.answer("Главное меню:", reply_markup=main_menu_after_auth_keyboard())
+
+
 @router.message(
     StateFilter(None),
     F.text.regexp(r"^[A-Za-zА-Яа-яЁё\-\s]{2,}$")
