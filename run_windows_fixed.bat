@@ -1,133 +1,130 @@
 @echo off
 chcp 65001 >nul
 echo ========================================
-echo    BG Опросник - Запуск на Windows
+echo    BG Survey System - Windows Launch
 echo ========================================
 echo.
 
-REM Проверяем наличие Python
-echo [1/8] Проверка Python...
+REM Check Python
+echo [1/8] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ОШИБКА: Python не найден!
-    echo Установите Python с https://python.org
+    echo ERROR: Python not found!
+    echo Install Python from https://python.org
     pause
     exit /b 1
 )
-echo ✓ Python найден
+echo OK: Python found
 
-REM Проверяем наличие pip
-echo [2/8] Проверка pip...
-python -m pip --version >nul 2>&1
-if errorlevel 1 (
-    echo ОШИБКА: pip не найден!
+REM Check manage.py
+echo [2/8] Checking Django project...
+if not exist "manage.py" (
+    echo ERROR: manage.py not found!
+    echo Make sure you are in the project folder
+    echo.
+    echo Current folder:
+    cd
+    echo.
+    echo Folder contents:
+    dir
     pause
     exit /b 1
 )
-echo ✓ pip найден
+echo OK: manage.py found
 
-REM Создаем виртуальное окружение
-echo [3/8] Создание виртуального окружения...
+REM Create virtual environment
+echo [3/8] Creating virtual environment...
 if not exist "venv" (
     python -m venv venv
     if errorlevel 1 (
-        echo ОШИБКА: Не удалось создать виртуальное окружение!
+        echo ERROR: Failed to create virtual environment
         pause
         exit /b 1
     )
-    echo ✓ Виртуальное окружение создано
+    echo OK: Virtual environment created
 ) else (
-    echo ✓ Виртуальное окружение уже существует
+    echo OK: Virtual environment already exists
 )
 
-REM Активируем виртуальное окружение
-echo [4/8] Активация виртуального окружения...
+REM Activate virtual environment
+echo [4/8] Activating virtual environment...
 call venv\Scripts\activate.bat
 if errorlevel 1 (
-    echo ОШИБКА: Не удалось активировать виртуальное окружение!
+    echo ERROR: Failed to activate virtual environment
     pause
     exit /b 1
 )
-echo ✓ Виртуальное окружение активировано
+echo OK: Virtual environment activated
 
-REM Обновляем pip
-echo [5/8] Обновление pip...
+REM Upgrade pip
+echo [5/8] Upgrading pip...
 python -m pip install --upgrade pip
-echo ✓ pip обновлен
+echo OK: pip upgraded
 
-REM Устанавливаем зависимости
-echo [6/8] Установка зависимостей...
+REM Install dependencies
+echo [6/8] Installing dependencies...
 pip install -r requirements.txt
 if errorlevel 1 (
-    echo ОШИБКА: Не удалось установить зависимости!
+    echo ERROR: Failed to install dependencies
     pause
     exit /b 1
 )
-echo ✓ Зависимости установлены
+echo OK: Dependencies installed
 
-REM Создаем необходимые директории
-echo [7/8] Создание директорий...
+REM Create directories
+echo [7/8] Creating directories...
 if not exist "staticfiles" mkdir staticfiles
 if not exist "media" mkdir media
-echo ✓ Директории созданы
+echo OK: Directories created
 
-REM Проверяем наличие manage.py
-echo [8/8] Проверка Django проекта...
-if not exist "manage.py" (
-    echo ОШИБКА: Файл manage.py не найден!
-    echo Убедитесь, что вы находитесь в корневой папке проекта
-    pause
-    exit /b 1
-)
-echo ✓ manage.py найден
-
-REM Создаем миграции
-echo.
-echo ========================================
-echo    Создание миграций базы данных...
-echo ========================================
+REM Create migrations
+echo [8/8] Creating migrations...
 python manage.py makemigrations users
 python manage.py makemigrations surveys
+echo OK: Migrations created
 
-REM Применяем миграции
+REM Apply migrations
 echo.
 echo ========================================
-echo    Применение миграций...
+echo    Applying migrations...
 echo ========================================
 python manage.py migrate
+echo OK: Migrations applied
 
-REM Создаем суперпользователя
+REM Create superuser
 echo.
 echo ========================================
-echo    Создание администратора...
+echo    Creating administrator...
 echo ========================================
-echo Создаем суперпользователя admin/admin123...
-echo from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@example.com', 'admin123') if not User.objects.filter(username='admin').exists() else None; user = User.objects.get(username='admin'); user.role = 'admin'; user.can_create_surveys = True; user.save() | python manage.py shell
+python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@example.com', 'admin123') if not User.objects.filter(username='admin').exists() else None; user = User.objects.get(username='admin'); user.role = 'admin'; user.can_create_surveys = True; user.save()"
+echo OK: Administrator created
 
-REM Собираем статические файлы
+REM Collect static files
 echo.
 echo ========================================
-echo    Сбор статических файлов...
+echo    Collecting static files...
 echo ========================================
 python manage.py collectstatic --noinput
+echo OK: Static files collected
 
-REM Запускаем сервер
+REM Start server
 echo.
 echo ========================================
-echo    Запуск сервера разработки...
+echo    Starting development server...
 echo ========================================
 echo.
-echo ✓ Сервер запущен!
-echo ✓ Откройте браузер и перейдите по адресу:
-echo ✓ http://127.0.0.1:8000
+echo OK: Server started!
+echo OK: Open browser and go to:
+echo OK: http://127.0.0.1:8000
 echo.
-echo ✓ Админ панель:
-echo ✓ http://127.0.0.1:8000/admin
-echo ✓ Логин: admin
-echo ✓ Пароль: admin123
+echo OK: Admin panel:
+echo OK: http://127.0.0.1:8000/admin
+echo OK: Login: admin
+echo OK: Password: admin123
 echo.
-echo Для остановки сервера нажмите Ctrl+C
+echo Press Ctrl+C to stop server
 echo.
+
 python manage.py runserver 127.0.0.1:8000
 
 pause
