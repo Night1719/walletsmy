@@ -1,0 +1,417 @@
+/* Корпоративные цвета Бантер Групп */
+:root {
+    --bg-primary: #dc3545;      /* Красный */
+    --bg-secondary: #6c757d;    /* Серый */
+    --bg-dark: #212529;         /* Черный */
+    --bg-light: #ffffff;        /* Белый */
+    --text-primary: #212529;    /* Черный текст */
+    --text-secondary: #6c757d;  /* Серый текст */
+    --text-light: #ffffff;      /* Белый текст */
+    --border-color: #dee2e6;    /* Светло-серый */
+    --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Темная тема */
+[data-bs-theme="dark"] {
+    --bg-primary: #dc3545;
+    --bg-secondary: #6c757d;
+    --bg-dark: #212529;
+    --bg-light: #343a40;
+    --text-primary: #f8f9fa;
+    --text-secondary: #adb5bd;
+    --text-light: #f8f9fa;
+    --border-color: #495057;
+    --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+}
+
+/* Автоматическая тема (следует системной) */
+[data-bs-theme="auto"] {
+    /* Использует системные настройки */
+}
+
+/* Общие стили */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background-color: var(--bg-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Навигационная панель */
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--bg-light) !important;
+    opacity: 0.8;
+}
+
+/* Кнопки */
+.btn-primary {
+    background-color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.btn-outline-primary {
+    color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+/* Карточки */
+.card {
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: var(--bg-primary);
+    color: var(--text-light);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Формы */
+.form-control,
+.form-select {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--bg-primary);
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+/* Алерты */
+.alert {
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+}
+
+.alert-success {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+    color: #0f5132;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    color: #842029;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+    color: #664d03;
+}
+
+.alert-info {
+    background-color: #cff4fc;
+    border-color: #b6effb;
+    color: #055160;
+}
+
+/* Таблицы */
+.table {
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+}
+
+.table th {
+    background-color: var(--bg-secondary);
+    color: var(--text-light);
+    border-color: var(--border-color);
+}
+
+.table td {
+    border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Пагинация */
+.pagination .page-link {
+    color: var(--bg-primary);
+    border-color: var(--border-color);
+}
+
+.pagination .page-link:hover {
+    background-color: var(--bg-primary);
+    border-color: var(--bg-primary);
+    color: var(--text-light);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+/* Бейджи */
+.badge.bg-primary {
+    background-color: var(--bg-primary) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--bg-secondary) !important;
+}
+
+/* Прогресс-бары */
+.progress-bar {
+    background-color: var(--bg-primary);
+}
+
+/* Модальные окна */
+.modal-content {
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    color: var(--text-light);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+/* Дропдауны */
+.dropdown-menu {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+.dropdown-item:hover {
+    background-color: var(--bg-primary);
+    color: var(--text-light);
+}
+
+/* Списки */
+.list-group-item {
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.list-group-item:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Переключатели темы */
+#themeToggle {
+    border: 1px solid var(--text-light);
+    color: var(--text-light);
+}
+
+#themeToggle:hover {
+    background-color: var(--text-light);
+    color: var(--bg-primary);
+}
+
+/* Анимации */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Специальные стили для опросов */
+.survey-card {
+    border-left: 4px solid var(--bg-primary);
+}
+
+.survey-status {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.survey-status.active {
+    color: #198754;
+}
+
+.survey-status.draft {
+    color: var(--text-secondary);
+}
+
+.survey-status.paused {
+    color: #fd7e14;
+}
+
+.survey-status.closed {
+    color: #dc3545;
+}
+
+/* Стили для вопросов */
+.question-card {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bg-light);
+}
+
+.question-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.question-help {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+/* Стили для вариантов ответов */
+.choice-option {
+    margin-bottom: 0.75rem;
+}
+
+.choice-option input[type="radio"],
+.choice-option input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.choice-option label {
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+/* Стили для рейтингов */
+.rating-options {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.rating-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Стили для шкал */
+.scale-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.scale-min {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.scale-max {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .question-card {
+        padding: 1rem;
+    }
+}
+
+/* Стили для печати */
+@media print {
+    .navbar,
+    .footer,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}
