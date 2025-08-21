@@ -337,7 +337,15 @@ async def _check_comments(
                 comments = []
                 for e in lifetimes:
                     text = (e.get("Comments") or e.get("Comment") or "").strip()
-                    is_operator = bool(e.get("AuthorIsOperator"))
+                    op_val = e.get("AuthorIsOperator")
+                    if isinstance(op_val, bool):
+                        is_operator = op_val
+                    elif isinstance(op_val, (int, float)):
+                        is_operator = bool(op_val)
+                    elif isinstance(op_val, str):
+                        is_operator = op_val.strip().lower() in ("true", "1", "yes", "y")
+                    else:
+                        is_operator = False
                     if text and not is_operator:
                         comments.append({
                             "Id": e.get("Id") or e.get("CommentId") or 0,
