@@ -10,6 +10,8 @@ class CreateTaskStates(StatesGroup):
     entering_name = State()
     entering_description = State()
     confirming = State()
+    entering_remote_start = State()
+    entering_remote_end = State()
 
 
 class CommentStates(StatesGroup):

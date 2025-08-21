@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards import services_keyboard, main_menu_keyboard, cancel_keyboard
 from storage import get_session
 from states import CreateTaskStates
-from api_client import create_task
+from api_client import create_task, get_user_by_id
 from config import ALLOWED_SERVICES, DEFAULT_TYPE_ID, DEFAULT_PRIORITY_ID, DEFAULT_URGENCY_ID, DEFAULT_IMPACT_ID
 import logging
 
@@ -47,9 +47,14 @@ async def choose_service(message: types.Message, state: FSMContext):
         await message.answer("Выберите сервис из списка или нажмите ⬅️ Назад.", reply_markup=services_keyboard())
         return
 
-    await state.update_data(service_id=service_id)
-    await state.set_state(CreateTaskStates.entering_name)
-    await message.answer("Введите название заявки:", reply_markup=cancel_keyboard())
+    await state.update_data(service_id=service_id, service_title=text)
+    if text == "Прочее":
+        await state.set_state(CreateTaskStates.entering_name)
+        await message.answer("Введите название заявки:", reply_markup=cancel_keyboard())
+    else:
+        # Удаленный доступ: спрашиваем период
+        await state.set_state(CreateTaskStates.entering_remote_start)
+        await message.answer("Укажите дату начала доступа (в формате ГГГГ-ММ-ДД):", reply_markup=cancel_keyboard())
 
 
 @router.message(CreateTaskStates.entering_name, F.text == "❌ Отменить")
@@ -80,16 +85,106 @@ async def enter_description(message: types.Message, state: FSMContext):
     description = message.text.strip()
     data = await state.get_data()
     session = get_session(message.from_user.id)
+    service_title = data.get("service_title")
 
+    if service_title == "Прочее":
+        payload = {
+            "Name": data.get("name"),
+            "Description": description,
+            "CreatorId": session["intraservice_id"],
+            "ServiceId": data.get("service_id"),
+            "StatusId": 27,  # В работе
+        }
+        # Дефолты
+        if DEFAULT_TYPE_ID:
+            payload["TypeId"] = DEFAULT_TYPE_ID
+        if DEFAULT_PRIORITY_ID:
+            payload["PriorityId"] = DEFAULT_PRIORITY_ID
+        if DEFAULT_URGENCY_ID:
+            payload["UrgencyId"] = DEFAULT_URGENCY_ID
+        if DEFAULT_IMPACT_ID:
+            payload["ImpactId"] = DEFAULT_IMPACT_ID
+
+        task_id = create_task(**payload)
+        if task_id:
+            await message.answer(f"✅ Заявка создана: #{task_id}", reply_markup=main_menu_keyboard())
+        else:
+            logger.error(f"Create task failed, payload={payload}")
+            await message.answer("❌ Не удалось создать заявку. Проверьте обязательные поля (тип/приоритет/срочность/влияние) и ServiceId.", reply_markup=main_menu_keyboard())
+        await state.clear()
+    else:
+        # Удаленный доступ — описание можно использовать как обоснование
+        await state.update_data(remote_description=description)
+        await state.set_state(CreateTaskStates.entering_remote_end)
+        await message.answer("Укажите дату окончания доступа (ГГГГ-ММ-ДД):", reply_markup=cancel_keyboard())
+
+
+@router.message(CreateTaskStates.entering_remote_start, F.text)
+async def enter_remote_start(message: types.Message, state: FSMContext):
+    start_date = message.text.strip()
+    # Простейшая валидация формата
+    if len(start_date) != 10 or start_date[4] != '-' or start_date[7] != '-':
+        await message.answer("Неверный формат. Введите дату в формате ГГГГ-ММ-ДД:", reply_markup=cancel_keyboard())
+        return
+    await state.update_data(remote_start=start_date)
+    await state.set_state(CreateTaskStates.entering_remote_end)
+    await message.answer("Укажите дату окончания доступа (ГГГГ-ММ-ДД):", reply_markup=cancel_keyboard())
+
+
+@router.message(CreateTaskStates.entering_remote_end, F.text)
+async def enter_remote_end(message: types.Message, state: FSMContext):
+    end_date = message.text.strip()
+    if len(end_date) != 10 or end_date[4] != '-' or end_date[7] != '-':
+        await message.answer("Неверный формат. Введите дату в формате ГГГГ-ММ-ДД:", reply_markup=cancel_keyboard())
+        return
+    data = await state.get_data()
+    session = get_session(message.from_user.id)
+    # Собираем payload для удаленного доступа
     payload = {
-        "Name": data.get("name"),
-        "Description": description,
+        "Name": f"Удаленный доступ ({session.get('name','')})",
+        "Description": data.get("remote_description") or "Оформление удаленного доступа",
         "CreatorId": session["intraservice_id"],
         "ServiceId": data.get("service_id"),
-        "StatusId": 27,
+        "StatusId": 36,  # Согласование
+        # Поля формы:
+        "Field1075": data.get("remote_start"),  # дата начала
+        "Field1076": end_date,                   # дата окончания
+        "Field1077": 262,                        # константа
     }
+    # Дублируем значения в Attributes (на случай другой схемы API)
+    payload["Attributes"] = [
+        {"Id": 1075, "Value": data.get("remote_start")},
+        {"Id": 1076, "Value": end_date},
+        {"Id": 1077, "Value": 262},
+    ]
 
-    # Проставим дефолты, если требуются системой
+    # Попробуем добавить согласующего — непосредственного руководителя пользователя
+    try:
+        me = get_user_by_id(int(session["intraservice_id"])) or {}
+        potential_keys = (
+            "ManagerId", "LeaderId", "ChiefId", "BossId", "HeadId",
+        )
+        manager_id = None
+        for key in potential_keys:
+            mid = me.get(key)
+            if isinstance(mid, int) and mid > 0:
+                manager_id = mid
+                break
+        # иногда менеджер приходит вложенным объектом
+        if manager_id is None:
+            for key in ("Manager", "Leader", "Chief", "Boss", "Head"):
+                obj = me.get(key)
+                if isinstance(obj, dict):
+                    mid = obj.get("Id")
+                    if isinstance(mid, int) and mid > 0:
+                        manager_id = mid
+                        break
+        if manager_id:
+            payload["CoordinatorIds"] = str(manager_id)
+            payload["CoordinatorId"] = manager_id
+    except Exception:
+        logger.exception("Не удалось определить руководителя для согласования")
+    # Дефолты
     if DEFAULT_TYPE_ID:
         payload["TypeId"] = DEFAULT_TYPE_ID
     if DEFAULT_PRIORITY_ID:
@@ -103,6 +198,6 @@ async def enter_description(message: types.Message, state: FSMContext):
     if task_id:
         await message.answer(f"✅ Заявка создана: #{task_id}", reply_markup=main_menu_keyboard())
     else:
-        logger.error(f"Create task failed, payload={payload}")
-        await message.answer("❌ Не удалось создать заявку. Проверьте обязательные поля (тип/приоритет/срочность/влияние) и ServiceId.", reply_markup=main_menu_keyboard())
+        logger.error(f"Create remote access task failed, payload={payload}")
+        await message.answer("❌ Не удалось создать заявку на удаленный доступ. Проверьте обязательные поля.", reply_markup=main_menu_keyboard())
     await state.clear()
