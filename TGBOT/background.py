@@ -463,9 +463,8 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
     open_tasks = get_user_tasks_by_creator(intraservice_id, "open") or []
     logger.info(f"🛈 User {chat_id}: open_tasks_by_creator={len(open_tasks)}")
 
-    # Уведомления о комментариях — по всем ролям пользователя
-    # Комментарии: ограничим только теми задачами, где пользователь участвует, но исключим чужие, где он вообще не фигурирует
-    open_tasks_for_comments = get_user_tasks(intraservice_id, "open") or open_tasks
+    # Уведомления о комментариях: только по заявкам, СОЗДАННЫМ пользователем
+    open_tasks_for_comments = open_tasks
 
     await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
     await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)
