@@ -581,10 +581,23 @@ def create_task(**payload):
         # Удалим None, чтобы не отправлять null на сервер для non-null полей
         clean_payload = {k: v for k, v in payload.items() if v is not None}
         response = _post(url, headers=headers, json=clean_payload)
-        if response.status_code == 201:
-            task_id = response.json().get("Id")
-            logger.info(f"✅ Заявка создана: #{task_id}")
-            return task_id
+        if response.status_code in (200, 201):
+            task_id = None
+            try:
+                data = response.json()
+                if isinstance(data, dict):
+                    task_id = data.get("Id") or (data.get("Task", {}) if isinstance(data.get("Task"), dict) else {}).get("Id")
+            except Exception:
+                task_id = None
+            if not task_id:
+                loc = response.headers.get("Location") or response.headers.get("location")
+                if loc and "/task/" in loc:
+                    try:
+                        task_id = int(loc.rsplit("/", 1)[-1])
+                    except Exception:
+                        pass
+            logger.info(f"✅ Заявка создана: #{task_id if task_id else '?'}")
+            return task_id or True
         else:
             logger.error(f"❌ Ошибка создания заявки: {response.status_code} {response.text}")
             return None
