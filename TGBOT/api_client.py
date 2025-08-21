@@ -250,7 +250,8 @@ def get_user_tasks_by_creator(user_id: int, status_filter: str = "open"):
         "X-API-Version": API_VERSION,
     }
 
-    open_ids = "27,31,35,44"
+    # Открытые без 44 (Отказано). При необходимости добавьте 36 (Согласование)
+    open_ids = "27,31,35"
     closed_ids = "28,29,30,45"
     params = {
         "creatorids": user_id,

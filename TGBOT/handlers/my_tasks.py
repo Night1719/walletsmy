@@ -16,12 +16,24 @@ from config import HELPDESK_WEB_BASE
 router = Router()
 
 
+_STATUS_MAP = {
+    27: "В работе",
+    31: "Открыта",
+    35: "Требует уточнения",
+    36: "Согласование",
+    44: "Отказано",
+}
+
+
 def _status_name_from(task: dict) -> str:
+    sid = task.get("StatusId")
+    if isinstance(sid, int) and sid in _STATUS_MAP:
+        return _STATUS_MAP[sid]
     return (
         task.get("StatusName")
         or task.get("Status")
         or task.get("StatusDisplay")
-        or (str(task.get("StatusId")) if task.get("StatusId") is not None else "?")
+        or (str(sid) if sid is not None else "?")
     )
 
 
@@ -60,7 +72,9 @@ async def send_my_open_tasks(message: types.Message, state: FSMContext) -> None:
         await message.answer("Заявок не найдено.", reply_markup=main_menu_keyboard())
         return
 
-    for t in tasks[:30]:
+    # Исключаем 44 (Отказано)
+    filtered = [t for t in tasks if t.get("StatusId") != 44]
+    for t in filtered[:30]:
         task_id = t.get("Id")
         name = t.get("Name", "Без названия")
         status_name = _status_name_from(t)

@@ -59,10 +59,14 @@ def settings_menu_keyboard(prefs: Dict[str, bool]):
 
 
 def services_keyboard():
+    # Показываем только необходимые пункты: Удаленный доступ, Прочее, и Назад
     kb = ReplyKeyboardBuilder()
-    for _id, name in ALLOWED_SERVICES.items():
-        kb.row(KeyboardButton(text=name))
-    kb.row(KeyboardButton(text="❌ Отменить"))
+    # Найдем id по названию, чтобы сохранить соответствие ServiceId
+    label_map = {name: _id for _id, name in ALLOWED_SERVICES.items()}
+    for title in ("Удаленный доступ", "Прочее"):
+        if title in label_map:
+            kb.row(KeyboardButton(text=title))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
     return kb.as_markup(resize_keyboard=True)
 
 

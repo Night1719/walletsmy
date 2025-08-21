@@ -21,7 +21,7 @@ async def start_create_task(message: types.Message, state: FSMContext):
     await message.answer("Выберите сервис:", reply_markup=services_keyboard())
 
 
-@router.message(CreateTaskStates.choosing_service, F.text == "❌ Отменить")
+@router.message(CreateTaskStates.choosing_service, F.text == "⬅️ Назад")
 async def cancel_from_service(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer("Отмена. Возврат в меню.", reply_markup=main_menu_keyboard())
@@ -31,6 +31,12 @@ async def cancel_from_service(message: types.Message, state: FSMContext):
 async def choose_service(message: types.Message, state: FSMContext):
     text = message.text.strip()
 
+    # Разрешены только эти пункты
+    allowed_titles = {"Удаленный доступ", "Прочее"}
+    if text not in allowed_titles:
+        await message.answer("Выберите сервис из списка или нажмите ⬅️ Назад.", reply_markup=services_keyboard())
+        return
+
     service_id = None
     for sid, name in ALLOWED_SERVICES.items():
         if name == text:
@@ -38,7 +44,7 @@ async def choose_service(message: types.Message, state: FSMContext):
             break
 
     if not service_id:
-        await message.answer("Выберите сервис из списка или нажмите ❌ Отменить.", reply_markup=services_keyboard())
+        await message.answer("Выберите сервис из списка или нажмите ⬅️ Назад.", reply_markup=services_keyboard())
         return
 
     await state.update_data(service_id=service_id)

@@ -12,15 +12,36 @@ from storage import (
 )
 from api_client import (
     get_user_tasks_by_creator,
+    get_user_tasks,
     get_task_details,
     get_tasks_awaiting_approval,
     get_task_comments,
     get_task_lifetime_comments,
+    get_user_by_id,
 )
-from keyboards import reply_to_task_inline, approval_actions_inline
+from keyboards import reply_to_task_inline, approval_actions_inline, link_to_task_inline
 from metrics import inc_notification, inc_api_error, observe_cycle, set_sessions
 
 logger = logging.getLogger(__name__)
+
+_user_name_cache: dict[int, str] = {}
+
+def _resolve_user_name(user_id: int | str | None) -> str | None:
+    if user_id is None:
+        return None
+    try:
+        uid = int(user_id)
+    except Exception:
+        return None
+    if uid in _user_name_cache:
+        return _user_name_cache[uid]
+    user = get_user_by_id(uid)
+    if isinstance(user, dict):
+        name = user.get("Name") or user.get("FullName") or user.get("FIO") or user.get("DisplayName")
+        if isinstance(name, str) and name.strip():
+            _user_name_cache[uid] = name
+            return name
+    return None
 
 
 async def send_safe(bot: Bot, chat_id: int, text: str, reply_markup=None) -> None:
@@ -106,6 +127,7 @@ def _comment_author(c: Dict[str, Any]) -> str:
         or c.get("Author")
         or c.get("Creator")
         or c.get("User")
+        or _resolve_user_name(c.get("CreatorId") or c.get("UserId") or c.get("AuthorId") or c.get("AddedById"))
         or "Кто-то"
     )
 
@@ -376,13 +398,16 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
     prefs = get_preferences(chat_id)
     cache = get_task_cache(chat_id)
 
-    # Уведомления только по заявкам, созданным пользователем
+    # Уведомления по статусам/новым заявкам — только по созданным пользователем
     open_tasks = get_user_tasks_by_creator(intraservice_id, "open") or []
     logger.info(f"🛈 User {chat_id}: open_tasks_by_creator={len(open_tasks)}")
 
+    # Уведомления о комментариях — по всем ролям пользователя
+    open_tasks_for_comments = get_user_tasks(intraservice_id, "open") or open_tasks
+
     await _check_new_tasks(bot, chat_id, open_tasks, cache, prefs)
     await _check_status_and_executor(bot, chat_id, open_tasks, cache, prefs)
-    await _check_comments(bot, chat_id, open_tasks, cache, prefs)
+    await _check_comments(bot, chat_id, open_tasks_for_comments, cache, prefs)
     await _check_approvals(bot, chat_id, intraservice_id, cache, prefs)
 
     set_task_cache(chat_id, cache)
