@@ -52,10 +52,22 @@ async def send_safe(bot: Bot, chat_id: int, text: str, reply_markup=None) -> Non
 
 
 def _extract_task_core(task: Dict[str, Any]) -> Dict[str, Any]:
+    def _as_int(v):
+        try:
+            if v is None:
+                return None
+            if isinstance(v, int):
+                return v
+            if isinstance(v, str) and v.isdigit():
+                return int(v)
+            return int(v)
+        except Exception:
+            return None
+
     return {
-        "status_id": task.get("StatusId"),
+        "status_id": _as_int(task.get("StatusId")),
         "status_name": task.get("StatusName"),
-        "executor_id": task.get("ExecutorId"),
+        "executor_id": _as_int(task.get("ExecutorId")),
         "executor_name": task.get("ExecutorName"),
         "name": task.get("Name"),
         "create_date": task.get("CreateDate"),
@@ -192,6 +204,8 @@ async def _check_status_and_executor(
 ) -> None:
     cached_tasks: Dict[str, Any] = task_cache.get("tasks", {})
 
+    status_notifies = 0
+    max_status_notifies = 5
     for task in open_tasks:
         task_id = str(task.get("Id"))
         core = _extract_task_core(task)
@@ -199,7 +213,7 @@ async def _check_status_and_executor(
 
         # Status change
         if prefs.get("notify_status") and prev.get("status_id") is not None:
-            if core.get("status_id") != prev.get("status_id"):
+            if core.get("status_id") != prev.get("status_id") and status_notifies < max_status_notifies:
                 old_name = prev.get('status_name') or str(prev.get('status_id'))
                 new_name = core.get('status_name') or str(core.get('status_id'))
                 await send_safe(
@@ -209,6 +223,7 @@ async def _check_status_and_executor(
                     reply_markup=link_to_task_inline(int(task_id), HELPDESK_WEB_BASE),
                 )
                 inc_notification("status")
+                status_notifies += 1
 
         # Executor change
         if prefs.get("notify_executor") and prev.get("executor_id") is not None:

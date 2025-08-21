@@ -33,8 +33,13 @@ async def choose_service(message: types.Message, state: FSMContext):
 
     # Разрешены только эти пункты
     allowed_titles = {"Удаленный доступ", "Прочее"}
+    if text == "⬅️ Назад":
+        await state.clear()
+        await message.answer("Главное меню:", reply_markup=main_menu_keyboard())
+        return
     if text not in allowed_titles:
-        await message.answer("Выберите сервис из списка или нажмите ⬅️ Назад.", reply_markup=services_keyboard())
+        # Игнорируем ввод в этом состоянии, показываем клавиатуру ещё раз
+        await message.answer("Выберите один из пунктов ниже:", reply_markup=services_keyboard())
         return
 
     service_id = None
