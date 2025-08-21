@@ -21,6 +21,10 @@ ALLOWED_SERVICES = {
 }
 ALLOWED_SERVICE_IDS = list(ALLOWED_SERVICES.keys())
 
+# Explicit service IDs for handlers (override-safe)
+SERVICE_ID_REMOTE_ACCESS = int(os.getenv("SERVICE_ID_REMOTE_ACCESS", "67"))
+SERVICE_ID_MISC = int(os.getenv("SERVICE_ID_MISC", "61"))
+
 # === Files & misc ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USER_DATA_FILE = os.path.join(BASE_DIR, "user_data.json")

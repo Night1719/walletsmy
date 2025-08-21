@@ -1,10 +1,10 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from keyboards import services_keyboard, main_menu_keyboard, cancel_keyboard
+from keyboards import services_keyboard, main_menu_keyboard, cancel_keyboard, duration_keyboard
 from storage import get_session
 from states import CreateTaskStates
 from api_client import create_task, get_user_by_id
-from config import ALLOWED_SERVICES, DEFAULT_TYPE_ID, DEFAULT_PRIORITY_ID, DEFAULT_URGENCY_ID, DEFAULT_IMPACT_ID
+from config import ALLOWED_SERVICES, DEFAULT_TYPE_ID, DEFAULT_PRIORITY_ID, DEFAULT_URGENCY_ID, DEFAULT_IMPACT_ID, SERVICE_ID_REMOTE_ACCESS, SERVICE_ID_MISC
 import logging
 
 router = Router()
@@ -43,10 +43,11 @@ async def choose_service(message: types.Message, state: FSMContext):
         return
 
     service_id = None
-    for sid, name in ALLOWED_SERVICES.items():
-        if name == text:
-            service_id = sid
-            break
+    # Жестко проставим ServiceId по названию
+    if text == "Прочее":
+        service_id = SERVICE_ID_MISC
+    elif text == "Удаленный доступ":
+        service_id = SERVICE_ID_REMOTE_ACCESS
 
     if not service_id:
         await message.answer("Выберите сервис из списка или нажмите ⬅️ Назад.", reply_markup=services_keyboard())
@@ -57,7 +58,7 @@ async def choose_service(message: types.Message, state: FSMContext):
         await state.set_state(CreateTaskStates.entering_name)
         await message.answer("Введите название заявки:", reply_markup=cancel_keyboard())
     else:
-        # Удаленный доступ: сначала название и описание, затем даты
+        # Удаленный доступ: сначала название и описание, затем срок
         await state.update_data(is_remote=True)
         await state.set_state(CreateTaskStates.entering_name)
         await message.answer("Введите название заявки (удаленный доступ):", reply_markup=cancel_keyboard())
@@ -99,7 +100,7 @@ async def enter_description(message: types.Message, state: FSMContext):
             "Name": data.get("name"),
             "Description": description,
             "CreatorId": session["intraservice_id"],
-            "ServiceId": data.get("service_id"),
+            "ServiceId": SERVICE_ID_MISC,
             "StatusId": 27,  # В работе
         }
         # Дефолты
@@ -120,30 +121,31 @@ async def enter_description(message: types.Message, state: FSMContext):
             await message.answer("❌ Не удалось создать заявку. Проверьте обязательные поля (тип/приоритет/срочность/влияние) и ServiceId.", reply_markup=main_menu_keyboard())
         await state.clear()
     else:
-        # Удаленный доступ — после описания просим даты
+        # Удаленный доступ — после описания спрашиваем срок
         await state.update_data(description=description)
-        await state.set_state(CreateTaskStates.entering_remote_start)
-        await message.answer("Укажите дату начала доступа (ГГГГ-ММ-ДД):", reply_markup=cancel_keyboard())
+        await state.set_state(CreateTaskStates.choosing_remote_duration)
+        await message.answer("На сколько дней выдать доступ?", reply_markup=duration_keyboard())
 
 
-@router.message(CreateTaskStates.entering_remote_start, F.text)
-async def enter_remote_start(message: types.Message, state: FSMContext):
-    start_date = message.text.strip()
-    # Простейшая валидация формата
-    if len(start_date) != 10 or start_date[4] != '-' or start_date[7] != '-':
-        await message.answer("Неверный формат. Введите дату в формате ГГГГ-ММ-ДД:", reply_markup=cancel_keyboard())
-        return
-    await state.update_data(remote_start=start_date)
-    await state.set_state(CreateTaskStates.entering_remote_end)
-    await message.answer("Укажите дату окончания доступа (ГГГГ-ММ-ДД):", reply_markup=cancel_keyboard())
+@router.message(CreateTaskStates.choosing_remote_duration, F.text.in_({"1 день", "3 дня", "7 дней", "14 дней"}))
+async def choose_remote_duration(message: types.Message, state: FSMContext):
+    text = message.text.strip()
+    days_map = {"1 день": 1, "3 дня": 3, "7 дней": 7, "14 дней": 14}
+    days = days_map.get(text, 1)
+    await state.update_data(remote_days=days)
+    # Рассчитаем даты: начало сегодня 09:00, окончание через N дней 18:00
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    start = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    end = (start + timedelta(days=days)).replace(hour=18, minute=0, second=0, microsecond=0)
+    await state.update_data(remote_start=start.strftime("%Y-%m-%d"), remote_end=end.strftime("%Y-%m-%d"))
+    # Переходим сразу к созданию
+    await enter_remote_end(message, state)
 
 
 @router.message(CreateTaskStates.entering_remote_end, F.text)
 async def enter_remote_end(message: types.Message, state: FSMContext):
-    end_date = message.text.strip()
-    if len(end_date) != 10 or end_date[4] != '-' or end_date[7] != '-':
-        await message.answer("Неверный формат. Введите дату в формате ГГГГ-ММ-ДД:", reply_markup=cancel_keyboard())
-        return
+    end_date = (await state.get_data()).get("remote_end")
     data = await state.get_data()
     session = get_session(message.from_user.id)
     # Собираем payload для удаленного доступа
@@ -151,7 +153,7 @@ async def enter_remote_end(message: types.Message, state: FSMContext):
         "Name": data.get("name") or f"Удаленный доступ ({session.get('name','')})",
         "Description": data.get("description") or "Оформление удаленного доступа",
         "CreatorId": session["intraservice_id"],
-        "ServiceId": data.get("service_id"),
+        "ServiceId": SERVICE_ID_REMOTE_ACCESS,
         "StatusId": 36,  # Согласование
         # Поля формы:
         "Field1075": data.get("remote_start"),  # дата начала

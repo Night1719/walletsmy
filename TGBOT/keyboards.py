@@ -70,6 +70,14 @@ def services_keyboard():
     return kb.as_markup(resize_keyboard=True)
 
 
+def duration_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="1 день"), KeyboardButton(text="3 дня"))
+    kb.row(KeyboardButton(text="7 дней"), KeyboardButton(text="14 дней"))
+    kb.row(KeyboardButton(text="❌ Отменить"))
+    return kb.as_markup(resize_keyboard=True)
+
+
 def task_actions_inline(task_id: int):
     kb = InlineKeyboardBuilder()
     kb.button(text="👁 Детали", callback_data=f"task:details:{task_id}")
