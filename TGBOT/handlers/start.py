@@ -5,7 +5,11 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session, set_session
 from api_client import get_user_by_phone, get_user_by_email, update_user_phone
 from states import AuthStates, RegistrationStates
-from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_USE_TLS, SMTP_USE_SSL, CORP_EMAIL_DOMAIN, OTP_EXPIRE_MINUTES
+from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_USE_TLS, CORP_EMAIL_DOMAIN, OTP_EXPIRE_MINUTES
+try:
+    from config import SMTP_USE_SSL  # optional in older configs
+except Exception:
+    SMTP_USE_SSL = False
 import smtplib
 from email.message import EmailMessage
 import random
