@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from api_client import get_tasks_awaiting_approval, approve_task
+from api_client import get_tasks_awaiting_approval, approve_task, get_task_details
 from keyboards import approval_actions_inline, link_to_task_inline
 from storage import get_session
 from states import DeclineStates
@@ -24,9 +24,24 @@ async def list_approvals(message: types.Message, state: FSMContext):
     for t in tasks[:30]:
         task_id = t.get("Id")
         name = t.get("Name", "Без названия")
-        creator_name = t.get("CreatorName", "?")
-        due = t.get("PlanEndDate", "")
+        creator_name = (
+            t.get("CreatorName")
+            or t.get("Creator")
+            or t.get("CreatorLogin")
+            or "?"
+        )
+        due = (
+            t.get("Deadline")
+            or t.get("PlanEndDate")
+            or t.get("ReactionDate")
+            or t.get("ReactionDateFact")
+            or t.get("ResolutionDateFact")
+            or ""
+        )
         desc = (t.get("Description") or "").strip()
+        if not desc:
+            details = get_task_details(task_id) or {}
+            desc = (details.get("Description") or "").strip()
         if len(desc) > 300:
             desc = desc[:300] + "…"
 
@@ -56,7 +71,7 @@ async def on_approval_action(call: types.CallbackQuery, state: FSMContext):
     user_name = (session.get("name") if session else None)
 
     if action == "ok":
-        ok = approve_task(task_id, approve=True, comment="", user_name=user_name, coordinator_id=coordinator_id, set_status_on_success=45)
+        ok = approve_task(task_id, approve=True, comment="", user_name=user_name, coordinator_id=coordinator_id)
         if ok:
             try:
                 await call.message.edit_reply_markup()
