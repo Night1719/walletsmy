@@ -16,9 +16,8 @@ if not ENCODED_CREDENTIALS and INTRASERVICE_USER and INTRASERVICE_PASS:
 
 # === Services ===
 ALLOWED_SERVICES = {
-    1: "Не работает ПК",
-    2: "Удаленный доступ",
-    3: "Прочее",
+    67: "Удаленный доступ",
+    61: "Прочее",
 }
 ALLOWED_SERVICE_IDS = list(ALLOWED_SERVICES.keys())
 

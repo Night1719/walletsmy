@@ -317,8 +317,8 @@ async def _check_comments(
     rotation = task_cache.setdefault("rotation", {})
     start_index = int(rotation.get("comment_index", 0))
 
-    # Round-robin check a few tasks each cycle (wider window)
-    indices = _rotate_indices(len(open_tasks), start_index, count=10)
+    # Round-robin check a few tasks each cycle (increase breadth)
+    indices = _rotate_indices(len(open_tasks), start_index, count=25)
     rotation["comment_index"] = (start_index + len(indices)) % max(1, len(open_tasks))
 
     for idx in indices:
@@ -476,21 +476,31 @@ async def run_user_checks(bot: Bot, chat_id: int) -> None:
 
 
 async def background_worker(bot: Bot):
+    # Concurrent, bounded worker per user to avoid blocking
+    semaphore = asyncio.Semaphore(8)
+
+    async def _run_one(chat_id: int):
+        async with semaphore:
+            try:
+                await run_user_checks(bot, chat_id)
+            except Exception:
+                logger.exception("background loop error for user %s", chat_id)
+                inc_api_error("user_loop")
+
     while True:
         start = time.perf_counter()
         try:
             sessions: Dict[str, Dict[str, Any]] = get_all_sessions()
             set_sessions(len(sessions))
-            for chat_id_str, session in sessions.items():
+            tasks: List[asyncio.Task] = []
+            for chat_id_str in list(sessions.keys()):
                 try:
                     chat_id = int(chat_id_str)
-                    await run_user_checks(bot, chat_id)
-                    # маленькая пауза между пользователями, чтобы не забивать петлю
-                    await asyncio.sleep(0.05)
+                    tasks.append(asyncio.create_task(_run_one(chat_id)))
                 except Exception:
-                    logger.exception("background loop error for user %s", chat_id_str)
-                    inc_api_error("user_loop")
-
+                    continue
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
             await asyncio.sleep(BACKGROUND_POLL_INTERVAL_SEC)
         except Exception as e:
             logger.exception("Background error: %s", e)
