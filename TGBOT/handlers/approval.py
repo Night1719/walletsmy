@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def format_date(date_str: str) -> str:
     """
-    Форматирует дату в формат дд:мм:гггг чч:мм
+    Форматирует дату в формат дд-мм-гггг чч:мм
     Поддерживает различные форматы входных дат
     """
     if not date_str:
@@ -22,18 +22,19 @@ def format_date(date_str: str) -> str:
     try:
         # Пробуем различные форматы дат
         date_formats = [
-            "%Y-%m-%dT%H:%M:%S",      # 2025-08-25T10:50:55
-            "%Y-%m-%d %H:%M:%S",      # 2025-08-25 10:50:55
-            "%d.%m.%Y %H:%M:%S",      # 25.08.2025 10:50:55
-            "%d.%m.%Y %H:%M",         # 25.08.2025 10:50
-            "%Y-%m-%d",               # 2025-08-25
-            "%d.%m.%Y",               # 25.08.2025
+            "%Y-%m-%dT%H:%M:%S.%f",  # 2025-08-25T10:50:55.834402
+            "%Y-%m-%dT%H:%M:%S",     # 2025-08-25T10:50:55
+            "%Y-%m-%d %H:%M:%S",     # 2025-08-25 10:50:55
+            "%d.%m.%Y %H:%M:%S",     # 25.08.2025 10:50:55
+            "%d.%m.%Y %H:%M",        # 25.08.2025 10:50
+            "%Y-%m-%d",              # 2025-08-25
+            "%d.%m.%Y",              # 25.08.2025
         ]
         
         for fmt in date_formats:
             try:
                 dt = datetime.strptime(date_str, fmt)
-                return dt.strftime("%d:%m:%Y %H:%M")
+                return dt.strftime("%d-%m-%Y %H:%M")
             except ValueError:
                 continue
         
@@ -77,28 +78,12 @@ async def show_task_approval_details(message: types.Message, task_id: int):
         for comment in comments:
             text = (comment.get("Comments") or comment.get("Comment") or comment.get("Text") or "").strip()
             if text:
-                # Пробуем получить автора из различных полей
-                author = (
-                    comment.get("AuthorName") or 
-                    comment.get("Author") or 
-                    comment.get("AuthorLogin") or 
-                    comment.get("CreatorName") or 
-                    comment.get("User") or 
-                    comment.get("AuthorFullName") or
-                    comment.get("AuthorDisplayName") or
-                    comment.get("AuthorFIO") or
-                    comment.get("AuthorId") or
-                    comment.get("UserId") or
-                    comment.get("CreatorId") or
-                    "Неизвестно"
-                )
                 date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or comment.get("Time") or ""
                 normalized_comments.append({
                     "Text": text,
-                    "AuthorName": author,
                     "CreateDate": date
                 })
-                logger.debug(f"ℹ️ Заявка #{task_id}: Комментарий от {author} ({date}): {text[:50]}...")
+                logger.debug(f"ℹ️ Заявка #{task_id}: Комментарий ({date}): {text[:50]}...")
         
         if not normalized_comments:
             # Пробуем получить через lifetime
@@ -116,26 +101,12 @@ async def show_task_approval_details(message: types.Message, task_id: int):
                 text = (comment.get("Comments") or comment.get("Comment") or "").strip()
                 is_operator = comment.get("AuthorIsOperator", False)
                 if text and not is_operator:
-                    author = (
-                        comment.get("AuthorName") or 
-                        comment.get("Author") or 
-                        comment.get("AuthorLogin") or 
-                        comment.get("CreatorName") or 
-                        comment.get("AuthorFullName") or
-                        comment.get("AuthorDisplayName") or
-                        comment.get("AuthorFIO") or
-                        comment.get("AuthorId") or
-                        comment.get("UserId") or
-                        comment.get("CreatorId") or
-                        "Неизвестно"
-                    )
                     date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or ""
                     normalized_comments.append({
                         "Text": text,
-                        "AuthorName": author,
                         "CreateDate": date
                     })
-                    logger.debug(f"ℹ️ Заявка #{task_id}: Lifetime комментарий от {author} ({date}): {text[:50]}...")
+                    logger.debug(f"ℹ️ Заявка #{task_id}: Lifetime комментарий ({date}): {text[:50]}...")
         
         # Берем последние 3 комментария
         recent_comments = normalized_comments[-3:] if normalized_comments else []
@@ -154,17 +125,16 @@ async def show_task_approval_details(message: types.Message, task_id: int):
         
         if recent_comments:
             for i, comment in enumerate(recent_comments, 1):
-                author = comment.get("AuthorName", "Неизвестно")
                 text = comment.get("Text", "").strip()
                 date_str = comment.get("CreateDate", "")
                 
-                # Форматируем дату в формат дд:мм:гггг чч:мм
+                # Форматируем дату в формат дд-мм-гггг чч:мм
                 formatted_date = format_date(date_str)
                 
                 if len(text) > 200:
                     text = text[:200] + "…"
                 
-                message_text += f"\n\n{i}. {author} ({formatted_date}):\n{text}"
+                message_text += f"\n\n{i}. ({formatted_date}):\n{text}"
         else:
             message_text += "\n\nКомментариев пока нет"
         
@@ -208,11 +178,20 @@ async def list_approvals(message: types.Message, state: FSMContext):
             or ""
         )
 
+        # Получаем детальную информацию о заявке
+        task_details = get_task_details(task_id) or {}
+        creator_title = task_details.get("CreatorTitle") or task_details.get("CreatorPosition") or "Не указано"
+        description = task_details.get("Description") or "Описание не указано"
+        if len(description) > 300:
+            description = description[:300] + "…"
+
         txt = (
             f"📝 Заявка #{task_id}\n"
             f"🔖 {name}\n"
             f"👤 Заявитель: {creator_name}\n"
-            f"🗓 Срок: {due}"
+            f"💼 Должность: {creator_title}\n"
+            f"🗓 Срок: {due}\n\n"
+            f"📄 {description}"
         )
         await message.answer(txt, reply_markup=approval_actions_inline(task_id))
 
