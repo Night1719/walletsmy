@@ -4,8 +4,10 @@ from keyboards import main_menu_keyboard, main_menu_after_auth_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from api_client import search_users_by_name
 from storage import get_session
-from storage import get_session
 from aiogram.filters import StateFilter
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -83,13 +85,22 @@ async def employee_directory_search(message: types.Message, state: FSMContext):
         title = u.get("Title") or u.get("Position") or "—"
         email = u.get("Email") or u.get("EMail") or "—"
         phones = []
-        for k in ("WorkPhone", "InternalPhone", "Phone"):
+        logger.debug(f"ℹ️ Пользователь {u.get('Name', 'Unknown')}: проверяем телефоны")
+        
+        for k in ("WorkPhone", "InternalPhone", "Phone", "Extension"):
             v = u.get(k)
             if v:
-                # Проверяем, что это не мобильный номер (не начинается с 7, +7, 8)
                 phone_str = str(v).strip()
+                logger.debug(f"ℹ️ Поле {k}: '{phone_str}'")
+                
+                # Проверяем, что это не мобильный номер (не начинается с 7, +7, 8)
                 if not (phone_str.startswith('7') or phone_str.startswith('+7') or phone_str.startswith('8')):
                     phones.append(phone_str)
+                    logger.debug(f"ℹ️ Добавляем телефон: '{phone_str}'")
+                else:
+                    logger.debug(f"ℹ️ Пропускаем мобильный: '{phone_str}'")
+        
         phone_str = ", ".join(phones) if phones else "—"
+        logger.debug(f"ℹ️ Итоговые телефоны: '{phone_str}'")
         lines.append(f"{name}\nДолжность: {title}\nEmail: {email}\nТелефон(ы): {phone_str}")
     await message.answer("\n\n".join(lines))

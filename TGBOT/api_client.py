@@ -602,21 +602,11 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
                 else:
                     new_is_coordinated.append("false")
         
-        # Проверяем, не остался ли только один согласующий
-        if len(new_coordinator_ids) == 1:
-            # Если остался только один - заменяем на API учетку
-            logger.info(f"ℹ️ Заявка #{task_id}: после удаления остался 1 согласующий, заменяем на API учетку")
-            payload = {
-                "Coordinate": approve,
-                "CoordinatorIds": str(API_USER_ID) if API_USER_ID > 0 else new_coordinator_ids[0],
-                "IsCoordinatedForCoordinators": "true" if approve else "false"
-            }
-        else:
-            # Оставляем несколько согласующих
-            payload = {
-                "CoordinatorIds": ",".join(new_coordinator_ids),
-                "IsCoordinatedForCoordinators": ",".join(new_is_coordinated)
-            }
+        # НЕ согласовываем за всех, просто убираем текущего согласующего
+        payload = {
+            "CoordinatorIds": ",".join(new_coordinator_ids),
+            "IsCoordinatedForCoordinators": ",".join(new_is_coordinated)
+        }
         
         # Добавляем комментарий для согласования или отклонения
         if full_comment:

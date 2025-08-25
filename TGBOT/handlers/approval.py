@@ -66,12 +66,27 @@ async def show_task_approval_details(message: types.Message, task_id: int):
         comments = get_task_comments(task_id) or []
         logger.info(f"ℹ️ Заявка #{task_id}: Получено {len(comments)} комментариев через get_task_comments")
         
+        # Логируем структуру первого комментария для отладки
+        if comments:
+            logger.info(f"ℹ️ Заявка #{task_id}: Структура первого комментария: {comments[0]}")
+        
         # Нормализуем структуру комментариев из get_task_comments
         normalized_comments = []
         for comment in comments:
             text = (comment.get("Comments") or comment.get("Comment") or comment.get("Text") or "").strip()
             if text:
-                author = comment.get("AuthorName") or comment.get("Author") or comment.get("AuthorLogin") or comment.get("CreatorName") or comment.get("User") or "Неизвестно"
+                # Пробуем получить автора из различных полей
+                author = (
+                    comment.get("AuthorName") or 
+                    comment.get("Author") or 
+                    comment.get("AuthorLogin") or 
+                    comment.get("CreatorName") or 
+                    comment.get("User") or 
+                    comment.get("AuthorFullName") or
+                    comment.get("AuthorDisplayName") or
+                    comment.get("AuthorFIO") or
+                    "Неизвестно"
+                )
                 date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or comment.get("Time") or ""
                 normalized_comments.append({
                     "Text": text,
@@ -84,12 +99,26 @@ async def show_task_approval_details(message: types.Message, task_id: int):
             # Пробуем получить через lifetime
             lifetime_comments = get_task_lifetime_comments(task_id) or []
             logger.info(f"ℹ️ Заявка #{task_id}: Получено {len(lifetime_comments)} комментариев через lifetime")
+            
+            # Логируем структуру первого lifetime комментария для отладки
+            if lifetime_comments:
+                logger.info(f"ℹ️ Заявка #{task_id}: Структура первого lifetime комментария: {lifetime_comments[0]}")
+            
             # Фильтруем только пользовательские комментарии
             for comment in lifetime_comments:
                 text = (comment.get("Comments") or comment.get("Comment") or "").strip()
                 is_operator = comment.get("AuthorIsOperator", False)
                 if text and not is_operator:
-                    author = comment.get("AuthorName") or comment.get("Author") or comment.get("AuthorLogin") or comment.get("CreatorName") or "Неизвестно"
+                    author = (
+                        comment.get("AuthorName") or 
+                        comment.get("Author") or 
+                        comment.get("AuthorLogin") or 
+                        comment.get("CreatorName") or 
+                        comment.get("AuthorFullName") or
+                        comment.get("AuthorDisplayName") or
+                        comment.get("AuthorFIO") or
+                        "Неизвестно"
+                    )
                     date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or ""
                     normalized_comments.append({
                         "Text": text,
