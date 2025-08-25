@@ -83,10 +83,13 @@ async def employee_directory_search(message: types.Message, state: FSMContext):
         title = u.get("Title") or u.get("Position") or "—"
         email = u.get("Email") or u.get("EMail") or "—"
         phones = []
-        for k in ("WorkPhone", "InternalPhone"):  # Убираем MobilePhone
+        for k in ("WorkPhone", "InternalPhone", "Phone"):
             v = u.get(k)
             if v:
-                phones.append(str(v))
+                # Проверяем, что это не мобильный номер (не начинается с 7, +7, 8)
+                phone_str = str(v).strip()
+                if not (phone_str.startswith('7') or phone_str.startswith('+7') or phone_str.startswith('8')):
+                    phones.append(phone_str)
         phone_str = ", ".join(phones) if phones else "—"
         lines.append(f"{name}\nДолжность: {title}\nEmail: {email}\nТелефон(ы): {phone_str}")
     await message.answer("\n\n".join(lines))

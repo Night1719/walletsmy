@@ -534,15 +534,33 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         return False
 
     # Анализируем текущих согласующих
-    coordinator_ids_str = task_details.get("CoordinatorIds", "")
-    is_coordinated_str = task_details.get("IsCoordinatedForCoordinators", "")
+    coordinator_ids_str = task_details.get("CoordinatorIds") or ""
+    is_coordinated_str = task_details.get("IsCoordinatedForCoordinators") or ""
     
-    coordinator_ids = [cid.strip() for cid in coordinator_ids_str.split(",") if cid.strip()]
-    is_coordinated = [ic.strip().lower() for ic in is_coordinated_str.split(",") if ic.strip()]
+    logger.info(f"ℹ️ Заявка #{task_id}: CoordinatorIds='{coordinator_ids_str}', IsCoordinated='{is_coordinated_str}'")
+    
+    # Безопасная обработка строк
+    coordinator_ids = []
+    if coordinator_ids_str:
+        coordinator_ids = [cid.strip() for cid in coordinator_ids_str.split(",") if cid.strip()]
+    
+    is_coordinated = []
+    if is_coordinated_str:
+        is_coordinated = [ic.strip().lower() for ic in is_coordinated_str.split(",") if ic.strip()]
+    
+    logger.info(f"ℹ️ Заявка #{task_id}: Обработанные coordinator_ids={coordinator_ids}, is_coordinated={is_coordinated}")
     
     user_id_str = str(coordinator_id) if coordinator_id else ""
     
-    if not user_id_str or user_id_str not in coordinator_ids:
+    if not user_id_str:
+        logger.error(f"❌ Не указан coordinator_id для заявки #{task_id}")
+        return False
+        
+    if not coordinator_ids:
+        logger.error(f"❌ У заявки #{task_id} нет согласующих")
+        return False
+        
+    if user_id_str not in coordinator_ids:
         logger.error(f"❌ Пользователь {user_id_str} не найден в списке согласующих для заявки #{task_id}")
         return False
 
@@ -603,6 +621,8 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         # Добавляем комментарий для согласования или отклонения
         if full_comment:
             payload["Comment"] = full_comment
+
+    logger.info(f"ℹ️ Заявка #{task_id}: Отправляем payload={payload}")
 
     try:
         response = _put(url, headers=headers, json=payload)
