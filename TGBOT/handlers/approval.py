@@ -1,12 +1,81 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from api_client import get_tasks_awaiting_approval, approve_task, get_task_details
-from keyboards import approval_actions_inline, link_to_task_inline
+from api_client import get_tasks_awaiting_approval, approve_task, get_task_details, get_task_comments, get_task_lifetime_comments
+from keyboards import approval_actions_inline, link_to_task_inline, approval_detail_keyboard
 from storage import get_session
 from states import DeclineStates
 from config import HELPDESK_WEB_BASE
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
+
+
+async def show_task_approval_details(message: types.Message, task_id: int):
+    """Показать детальную информацию о заявке на согласование"""
+    try:
+        # Получаем детали заявки
+        task_details = get_task_details(task_id) or {}
+        
+        # Получаем информацию об авторе
+        creator_id = task_details.get("CreatorId")
+        creator_name = task_details.get("CreatorName") or task_details.get("Creator") or "Неизвестно"
+        creator_title = task_details.get("CreatorTitle") or task_details.get("CreatorPosition") or "Не указано"
+        
+        # Получаем описание заявки
+        description = task_details.get("Description") or "Описание не указано"
+        if len(description) > 500:
+            description = description[:500] + "…"
+        
+        # Получаем последние комментарии
+        comments = get_task_comments(task_id) or []
+        if not comments:
+            # Пробуем получить через lifetime
+            lifetime_comments = get_task_lifetime_comments(task_id) or []
+            # Фильтруем только пользовательские комментарии
+            for comment in lifetime_comments:
+                text = (comment.get("Comments") or comment.get("Comment") or "").strip()
+                is_operator = comment.get("AuthorIsOperator", False)
+                if text and not is_operator:
+                    comments.append({
+                        "Text": text,
+                        "AuthorName": comment.get("AuthorName") or comment.get("Author") or "Неизвестно",
+                        "CreateDate": comment.get("CreateDate") or comment.get("Date") or ""
+                    })
+        
+        # Берем последние 3 комментария
+        recent_comments = comments[-3:] if comments else []
+        
+        # Формируем сообщение
+        message_text = f"""📋 Заявка #{task_id} на согласование
+
+👤 Автор: {creator_name}
+💼 Должность: {creator_title}
+
+📄 Описание:
+{description}
+
+💬 Последние комментарии:"""
+        
+        if recent_comments:
+            for i, comment in enumerate(recent_comments, 1):
+                author = comment.get("AuthorName", "Неизвестно")
+                text = comment.get("Text", "").strip()
+                date = comment.get("CreateDate", "")
+                if len(text) > 200:
+                    text = text[:200] + "…"
+                
+                message_text += f"\n\n{i}. {author} ({date}):\n{text}"
+        else:
+            message_text += "\n\nКомментариев пока нет"
+        
+        # Отправляем сообщение с кнопками для согласования
+        await message.answer(message_text, reply_markup=approval_detail_keyboard(task_id))
+        
+    except Exception as e:
+        logger.error(f"Ошибка при получении деталей заявки {task_id}: {e}")
+        await message.answer(f"❌ Не удалось загрузить детали заявки #{task_id}")
 
 
 @router.message(F.text == "✅ Согласование")
@@ -21,6 +90,8 @@ async def list_approvals(message: types.Message, state: FSMContext):
         await message.answer("Нет заявок, ожидающих вашего согласования.")
         return
 
+    await message.answer(f"📋 Найдено {len(tasks)} заявок, ожидающих согласования:")
+    
     for t in tasks[:30]:
         task_id = t.get("Id")
         name = t.get("Name", "Без названия")
@@ -38,19 +109,12 @@ async def list_approvals(message: types.Message, state: FSMContext):
             or t.get("ResolutionDateFact")
             or ""
         )
-        desc = (t.get("Description") or "").strip()
-        if not desc:
-            details = get_task_details(task_id) or {}
-            desc = (details.get("Description") or "").strip()
-        if len(desc) > 300:
-            desc = desc[:300] + "…"
 
         txt = (
             f"📝 Заявка #{task_id}\n"
             f"🔖 {name}\n"
             f"👤 Заявитель: {creator_name}\n"
-            f"🗓 Срок: {due}\n\n"
-            f"📄 {desc}"
+            f"🗓 Срок: {due}"
         )
         await message.answer(txt, reply_markup=approval_actions_inline(task_id))
 
@@ -64,6 +128,12 @@ async def on_approval_action(call: types.CallbackQuery, state: FSMContext):
 
     _, action, task_id_str = parts
     task_id = int(task_id_str)
+
+    if action == "goto":
+        # Переходим в меню согласования с детальной информацией
+        await show_task_approval_details(call.message, task_id)
+        await call.answer()
+        return
 
     # Определяем текущего согласующего как Telegram-пользователя, соответствующего IntraService Id из сессии
     session = get_session(call.from_user.id)

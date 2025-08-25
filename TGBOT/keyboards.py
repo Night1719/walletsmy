@@ -88,6 +88,13 @@ def task_actions_inline(task_id: int):
 
 def approval_actions_inline(task_id: int):
     kb = InlineKeyboardBuilder()
+    kb.button(text="🔗 Перейти", callback_data=f"approval:goto:{task_id}")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def approval_detail_keyboard(task_id: int):
+    kb = InlineKeyboardBuilder()
     kb.button(text="✅ Согласовать", callback_data=f"approval:ok:{task_id}")
     kb.button(text="❌ Отклонить", callback_data=f"approval:decline:{task_id}")
     kb.adjust(2)

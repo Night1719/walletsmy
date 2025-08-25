@@ -83,7 +83,7 @@ async def employee_directory_search(message: types.Message, state: FSMContext):
         title = u.get("Title") or u.get("Position") or "—"
         email = u.get("Email") or u.get("EMail") or "—"
         phones = []
-        for k in ("MobilePhone", "WorkPhone", "InternalPhone", "Phone"):
+        for k in ("WorkPhone", "InternalPhone"):  # Убираем MobilePhone
             v = u.get(k)
             if v:
                 phones.append(str(v))
