@@ -6,8 +6,42 @@ from storage import get_session
 from states import DeclineStates
 from config import HELPDESK_WEB_BASE
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+def format_date(date_str: str) -> str:
+    """
+    Форматирует дату в формат дд:мм:гггг чч:мм
+    Поддерживает различные форматы входных дат
+    """
+    if not date_str:
+        return "дата не указана"
+    
+    try:
+        # Пробуем различные форматы дат
+        date_formats = [
+            "%Y-%m-%dT%H:%M:%S",      # 2025-08-25T10:50:55
+            "%Y-%m-%d %H:%M:%S",      # 2025-08-25 10:50:55
+            "%d.%m.%Y %H:%M:%S",      # 25.08.2025 10:50:55
+            "%d.%m.%Y %H:%M",         # 25.08.2025 10:50
+            "%Y-%m-%d",               # 2025-08-25
+            "%d.%m.%Y",               # 25.08.2025
+        ]
+        
+        for fmt in date_formats:
+            try:
+                dt = datetime.strptime(date_str, fmt)
+                return dt.strftime("%d:%m:%Y %H:%M")
+            except ValueError:
+                continue
+        
+        # Если не удалось распарсить, возвращаем как есть
+        return date_str
+        
+    except Exception:
+        return date_str
 
 router = Router()
 
@@ -30,22 +64,43 @@ async def show_task_approval_details(message: types.Message, task_id: int):
         
         # Получаем последние комментарии
         comments = get_task_comments(task_id) or []
-        if not comments:
+        logger.info(f"ℹ️ Заявка #{task_id}: Получено {len(comments)} комментариев через get_task_comments")
+        
+        # Нормализуем структуру комментариев из get_task_comments
+        normalized_comments = []
+        for comment in comments:
+            text = (comment.get("Comments") or comment.get("Comment") or comment.get("Text") or "").strip()
+            if text:
+                author = comment.get("AuthorName") or comment.get("Author") or comment.get("AuthorLogin") or comment.get("CreatorName") or comment.get("User") or "Неизвестно"
+                date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or comment.get("Time") or ""
+                normalized_comments.append({
+                    "Text": text,
+                    "AuthorName": author,
+                    "CreateDate": date
+                })
+                logger.debug(f"ℹ️ Заявка #{task_id}: Комментарий от {author} ({date}): {text[:50]}...")
+        
+        if not normalized_comments:
             # Пробуем получить через lifetime
             lifetime_comments = get_task_lifetime_comments(task_id) or []
+            logger.info(f"ℹ️ Заявка #{task_id}: Получено {len(lifetime_comments)} комментариев через lifetime")
             # Фильтруем только пользовательские комментарии
             for comment in lifetime_comments:
                 text = (comment.get("Comments") or comment.get("Comment") or "").strip()
                 is_operator = comment.get("AuthorIsOperator", False)
                 if text and not is_operator:
-                    comments.append({
+                    author = comment.get("AuthorName") or comment.get("Author") or comment.get("AuthorLogin") or comment.get("CreatorName") or "Неизвестно"
+                    date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or ""
+                    normalized_comments.append({
                         "Text": text,
-                        "AuthorName": comment.get("AuthorName") or comment.get("Author") or "Неизвестно",
-                        "CreateDate": comment.get("CreateDate") or comment.get("Date") or ""
+                        "AuthorName": author,
+                        "CreateDate": date
                     })
+                    logger.debug(f"ℹ️ Заявка #{task_id}: Lifetime комментарий от {author} ({date}): {text[:50]}...")
         
         # Берем последние 3 комментария
-        recent_comments = comments[-3:] if comments else []
+        recent_comments = normalized_comments[-3:] if normalized_comments else []
+        logger.info(f"ℹ️ Заявка #{task_id}: Итого {len(normalized_comments)} комментариев, показываем последние {len(recent_comments)}")
         
         # Формируем сообщение
         message_text = f"""📋 Заявка #{task_id} на согласование
@@ -62,11 +117,15 @@ async def show_task_approval_details(message: types.Message, task_id: int):
             for i, comment in enumerate(recent_comments, 1):
                 author = comment.get("AuthorName", "Неизвестно")
                 text = comment.get("Text", "").strip()
-                date = comment.get("CreateDate", "")
+                date_str = comment.get("CreateDate", "")
+                
+                # Форматируем дату в формат дд:мм:гггг чч:мм
+                formatted_date = format_date(date_str)
+                
                 if len(text) > 200:
                     text = text[:200] + "…"
                 
-                message_text += f"\n\n{i}. {author} ({date}):\n{text}"
+                message_text += f"\n\n{i}. {author} ({formatted_date}):\n{text}"
         else:
             message_text += "\n\nКомментариев пока нет"
         
