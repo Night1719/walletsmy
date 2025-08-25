@@ -87,18 +87,33 @@ async def employee_directory_search(message: types.Message, state: FSMContext):
         phones = []
         logger.debug(f"ℹ️ Пользователь {u.get('Name', 'Unknown')}: проверяем телефоны")
         
+        # Сначала проверяем мобильный телефон
+        mobile_phone = u.get("MobilePhone") or ""
+        mobile_phone_str = str(mobile_phone).strip() if mobile_phone else ""
+        logger.debug(f"ℹ️ MobilePhone: '{mobile_phone_str}'")
+        
+        # Проверяем все поля телефонов
         for k in ("WorkPhone", "InternalPhone", "Phone", "Extension", "PhoneNumber", "InternalNumber", "WorkNumber", "ExtNumber"):
             v = u.get(k)
             if v:
                 phone_str = str(v).strip()
                 logger.debug(f"ℹ️ Поле {k}: '{phone_str}'")
                 
-                # Проверяем, что это не мобильный номер (не начинается с 7, +7, 8)
-                if not (phone_str.startswith('7') or phone_str.startswith('+7') or phone_str.startswith('8')):
-                    phones.append(phone_str)
-                    logger.debug(f"ℹ️ Добавляем телефон: '{phone_str}'")
+                # Если это поле Phone и есть мобильный, сравниваем их
+                if k == "Phone" and mobile_phone_str:
+                    # Показываем Phone только если он отличается от мобильного
+                    if phone_str != mobile_phone_str and not phone_str.startswith(mobile_phone_str):
+                        phones.append(phone_str)
+                        logger.debug(f"ℹ️ Добавляем Phone (отличается от мобильного): '{phone_str}'")
+                    else:
+                        logger.debug(f"ℹ️ Пропускаем Phone (совпадает с мобильным): '{phone_str}'")
                 else:
-                    logger.debug(f"ℹ️ Пропускаем мобильный: '{phone_str}'")
+                    # Для остальных полей проверяем, что это не мобильный номер
+                    if not (phone_str.startswith('7') or phone_str.startswith('+7') or phone_str.startswith('8')):
+                        phones.append(phone_str)
+                        logger.debug(f"ℹ️ Добавляем телефон: '{phone_str}'")
+                    else:
+                        logger.debug(f"ℹ️ Пропускаем мобильный: '{phone_str}'")
         
         phone_str = ", ".join(phones) if phones else "—"
         logger.debug(f"ℹ️ Итоговые телефоны: '{phone_str}'")

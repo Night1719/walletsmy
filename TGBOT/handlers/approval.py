@@ -108,9 +108,43 @@ async def show_task_approval_details(message: types.Message, task_id: int):
                     })
                     logger.debug(f"ℹ️ Заявка #{task_id}: Lifetime комментарий ({date}): {text[:50]}...")
         
-        # Берем последние 3 комментария
+        # Берем последние 3 комментария (правильный порядок)
         recent_comments = normalized_comments[-3:] if normalized_comments else []
         logger.info(f"ℹ️ Заявка #{task_id}: Итого {len(normalized_comments)} комментариев, показываем последние {len(recent_comments)}")
+        
+        # Сортируем комментарии по дате (новые в конце)
+        if recent_comments:
+            try:
+                # Парсим даты и сортируем
+                def parse_date_for_sort(date_str):
+                    if not date_str:
+                        return datetime.min
+                    try:
+                        # Пробуем различные форматы дат для сортировки
+                        date_formats = [
+                            "%Y-%m-%dT%H:%M:%S.%f",  # 2025-08-25T10:50:55.834402
+                            "%Y-%m-%dT%H:%M:%S",     # 2025-08-25T10:50:55
+                            "%Y-%m-%d %H:%M:%S",     # 2025-08-25 10:50:55
+                            "%d.%m.%Y %H:%M:%S",     # 25.08.2025 10:50:55
+                            "%d.%m.%Y %H:%M",        # 25.08.2025 10:50
+                            "%Y-%m-%d",              # 2025-08-25
+                            "%d.%m.%Y",              # 25.08.2025
+                        ]
+                        
+                        for fmt in date_formats:
+                            try:
+                                return datetime.strptime(date_str, fmt)
+                            except ValueError:
+                                continue
+                        return datetime.min
+                    except Exception:
+                        return datetime.min
+                
+                # Сортируем по дате (старые в начале, новые в конце)
+                recent_comments.sort(key=lambda x: parse_date_for_sort(x.get("CreateDate", "")))
+                logger.info(f"ℹ️ Заявка #{task_id}: Комментарии отсортированы по дате")
+            except Exception as e:
+                logger.error(f"ℹ️ Заявка #{task_id}: Ошибка сортировки комментариев: {e}")
         
         # Формируем сообщение
         message_text = f"""📋 Заявка #{task_id} на согласование
