@@ -603,6 +603,7 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
                     new_is_coordinated.append("false")
         
         # НЕ согласовываем за всех, просто убираем текущего согласующего
+        # НЕ отправляем Coordinate - это важно!
         payload = {
             "CoordinatorIds": ",".join(new_coordinator_ids),
             "IsCoordinatedForCoordinators": ",".join(new_is_coordinated)

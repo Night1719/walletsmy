@@ -87,7 +87,7 @@ async def employee_directory_search(message: types.Message, state: FSMContext):
         phones = []
         logger.debug(f"ℹ️ Пользователь {u.get('Name', 'Unknown')}: проверяем телефоны")
         
-        for k in ("WorkPhone", "InternalPhone", "Phone", "Extension"):
+        for k in ("WorkPhone", "InternalPhone", "Phone", "Extension", "PhoneNumber", "InternalNumber", "WorkNumber", "ExtNumber"):
             v = u.get(k)
             if v:
                 phone_str = str(v).strip()

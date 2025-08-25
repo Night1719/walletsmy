@@ -69,6 +69,8 @@ async def show_task_approval_details(message: types.Message, task_id: int):
         # Логируем структуру первого комментария для отладки
         if comments:
             logger.info(f"ℹ️ Заявка #{task_id}: Структура первого комментария: {comments[0]}")
+            # Логируем все доступные поля
+            logger.info(f"ℹ️ Заявка #{task_id}: Все поля комментария: {list(comments[0].keys())}")
         
         # Нормализуем структуру комментариев из get_task_comments
         normalized_comments = []
@@ -85,6 +87,9 @@ async def show_task_approval_details(message: types.Message, task_id: int):
                     comment.get("AuthorFullName") or
                     comment.get("AuthorDisplayName") or
                     comment.get("AuthorFIO") or
+                    comment.get("AuthorId") or
+                    comment.get("UserId") or
+                    comment.get("CreatorId") or
                     "Неизвестно"
                 )
                 date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or comment.get("Time") or ""
@@ -103,6 +108,8 @@ async def show_task_approval_details(message: types.Message, task_id: int):
             # Логируем структуру первого lifetime комментария для отладки
             if lifetime_comments:
                 logger.info(f"ℹ️ Заявка #{task_id}: Структура первого lifetime комментария: {lifetime_comments[0]}")
+                # Логируем все доступные поля
+                logger.info(f"ℹ️ Заявка #{task_id}: Все поля lifetime комментария: {list(lifetime_comments[0].keys())}")
             
             # Фильтруем только пользовательские комментарии
             for comment in lifetime_comments:
@@ -117,6 +124,9 @@ async def show_task_approval_details(message: types.Message, task_id: int):
                         comment.get("AuthorFullName") or
                         comment.get("AuthorDisplayName") or
                         comment.get("AuthorFIO") or
+                        comment.get("AuthorId") or
+                        comment.get("UserId") or
+                        comment.get("CreatorId") or
                         "Неизвестно"
                     )
                     date = comment.get("CreateDate") or comment.get("Date") or comment.get("CreateTime") or ""
