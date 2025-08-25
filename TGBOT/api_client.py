@@ -2,7 +2,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import logging
-from config import INTRASERVICE_BASE_URL, ENCODED_CREDENTIALS, API_VERSION
+from config import INTRASERVICE_BASE_URL, ENCODED_CREDENTIALS, API_VERSION, API_USER_ID
 
 # Отключаем предупреждения о самоподписанном сертификате (для теста)
 requests.packages.urllib3.disable_warnings()
@@ -507,6 +507,11 @@ def update_user_phone(user_id: int, phone: str) -> bool:
 def approve_task(task_id: int, approve: bool = True, comment: str = "", user_name: str = None, coordinator_id: int = None, set_status_on_success: int | None = None):
     """
     Согласовать или отклонить заявку.
+    
+    Логика работы:
+    1. Если 1 согласующий: заменяется на API учетку и согласовывается
+    2. Если 2+ согласующих: убирается только текущий согласующий, остальные остаются
+    
     coordinator_id — Id согласующего в IntraService (для выбора конкретного согласующего)
     set_status_on_success — при успехе дополнительно установить указанный StatusId (например 45)
     """
@@ -518,27 +523,93 @@ def approve_task(task_id: int, approve: bool = True, comment: str = "", user_nam
         "X-API-Version": API_VERSION,
     }
 
+    # Получаем текущие детали заявки для анализа согласующих
+    try:
+        task_details = get_task_details(task_id)
+        if not task_details:
+            logger.error(f"❌ Не удалось получить детали заявки #{task_id}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения деталей заявки #{task_id}: {e}")
+        return False
+
+    # Анализируем текущих согласующих
+    coordinator_ids_str = task_details.get("CoordinatorIds", "")
+    is_coordinated_str = task_details.get("IsCoordinatedForCoordinators", "")
+    
+    coordinator_ids = [cid.strip() for cid in coordinator_ids_str.split(",") if cid.strip()]
+    is_coordinated = [ic.strip().lower() for ic in is_coordinated_str.split(",") if ic.strip()]
+    
+    user_id_str = str(coordinator_id) if coordinator_id else ""
+    
+    if not user_id_str or user_id_str not in coordinator_ids:
+        logger.error(f"❌ Пользователь {user_id_str} не найден в списке согласующих для заявки #{task_id}")
+        return False
+
+    # Формируем комментарий
     full_comment = comment or ""
     if user_name:
         action = "Согласовано" if approve else "Отклонено"
         full_comment = f"{action} через Telegram пользователем: {user_name}. {full_comment}".strip()
 
-    payload = {"Coordinate": approve}
-
-    # Пробуем указать конкретного согласующего (если API поддерживает)
-    if coordinator_id is not None:
-        payload["CoordinatorId"] = coordinator_id
-        payload["CoordinateForCoordinatorId"] = coordinator_id
-
-    if full_comment:
-        payload["Comment"] = full_comment
+    # Определяем логику согласования
+    if len(coordinator_ids) == 1:
+        # Если только 1 согласующий - заменяем на API учетку и согласовываем
+        logger.info(f"ℹ️ Заявка #{task_id}: 1 согласующий, заменяем на API учетку")
+        
+        # Заменяем на API учетку и согласовываем
+        payload = {
+            "Coordinate": approve,
+            "CoordinatorIds": str(API_USER_ID) if API_USER_ID > 0 else user_id_str,
+            "IsCoordinatedForCoordinators": "true" if approve else "false"
+        }
+        
+        if full_comment:
+            payload["Comment"] = full_comment
+            
+    else:
+        # Если 2+ согласующих - убираем только текущего из списка
+        logger.info(f"ℹ️ Заявка #{task_id}: {len(coordinator_ids)} согласующих, убираем {user_id_str}")
+        
+        # Убираем текущего пользователя из списка согласующих
+        new_coordinator_ids = [cid for cid in coordinator_ids if cid != user_id_str]
+        new_is_coordinated = []
+        
+        # Обновляем статус согласования для оставшихся
+        for i, cid in enumerate(coordinator_ids):
+            if cid != user_id_str:
+                # Берем текущий статус согласования
+                if i < len(is_coordinated):
+                    new_is_coordinated.append(is_coordinated[i])
+                else:
+                    new_is_coordinated.append("false")
+        
+        # Проверяем, не остался ли только один согласующий
+        if len(new_coordinator_ids) == 1:
+            # Если остался только один - заменяем на API учетку
+            logger.info(f"ℹ️ Заявка #{task_id}: после удаления остался 1 согласующий, заменяем на API учетку")
+            payload = {
+                "Coordinate": approve,
+                "CoordinatorIds": str(API_USER_ID) if API_USER_ID > 0 else new_coordinator_ids[0],
+                "IsCoordinatedForCoordinators": "true" if approve else "false"
+            }
+        else:
+            # Оставляем несколько согласующих
+            payload = {
+                "CoordinatorIds": ",".join(new_coordinator_ids),
+                "IsCoordinatedForCoordinators": ",".join(new_is_coordinated)
+            }
+        
+        # Добавляем комментарий для согласования или отклонения
+        if full_comment:
+            payload["Comment"] = full_comment
 
     try:
         response = _put(url, headers=headers, json=payload)
         if response.status_code == 200:
-            logger.info(f"✅ Заявка #{task_id} {'согласована' if approve else 'отклонена'}")
-
-            # Опционально выставим статус явно, если нужно (подстроиться под процесс)
+            logger.info(f"✅ Заявка #{task_id} {'согласована' if approve else 'отклонена'} пользователем {user_name}")
+            
+            # Опционально выставим статус явно, если нужно
             if set_status_on_success is not None and approve:
                 try:
                     force_payload = {"StatusId": set_status_on_success}
