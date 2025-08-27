@@ -12,8 +12,43 @@ from keyboards import task_actions_inline, link_to_task_inline
 from storage import get_session
 from states import CommentStates
 from config import HELPDESK_WEB_BASE
+from datetime import datetime
 
 router = Router()
+
+
+def format_date(date_str: str) -> str:
+    """
+    Форматирует дату в формат дд-мм-гггг чч:мм
+    Поддерживает различные форматы входных дат
+    """
+    if not date_str:
+        return "дата не указана"
+    
+    try:
+        # Пробуем различные форматы дат
+        date_formats = [
+            "%Y-%m-%dT%H:%M:%S.%f",  # 2025-08-25T10:50:55.834402
+            "%Y-%m-%dT%H:%M:%S",     # 2025-08-25T10:50:55
+            "%Y-%m-%d %H:%M:%S",     # 2025-08-25 10:50:55
+            "%d.%m.%Y %H:%M:%S",     # 25.08.2025 10:50:55
+            "%d.%m.%Y %H:%M",        # 25.08.2025 10:50
+            "%Y-%m-%d",              # 2025-08-25
+            "%d.%m.%Y",              # 25.08.2025
+        ]
+        
+        for fmt in date_formats:
+            try:
+                dt = datetime.strptime(date_str, fmt)
+                return dt.strftime("%d-%m-%Y %H:%M")
+            except ValueError:
+                continue
+        
+        # Если не удалось распарсить, возвращаем как есть
+        return date_str
+        
+    except Exception:
+        return date_str
 
 
 _STATUS_MAP = {
@@ -83,11 +118,14 @@ async def send_my_open_tasks(message: types.Message, state: FSMContext) -> None:
         if len(description) > 300:
             description = description[:300] + "…"
 
+        # Форматируем дату создания
+        formatted_date = format_date(creator_date)
+        
         text_msg = (
             f"📋 Заявка #{task_id}\n"
             f"🔖 Название: {name}\n"
             f"📊 Статус: {status_name}\n"
-            f"📅 Создана: {creator_date}\n"
+            f"📅 Создана: {formatted_date}\n"
             f"📄 Описание: {description}"
         )
         await message.answer(text_msg)
