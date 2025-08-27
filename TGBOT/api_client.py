@@ -1,0 +1,712 @@
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import logging
+from config import INTRASERVICE_BASE_URL, ENCODED_CREDENTIALS, API_VERSION, API_USER_ID
+
+# Отключаем предупреждения о самоподписанном сертификате (для теста)
+requests.packages.urllib3.disable_warnings()
+
+logger = logging.getLogger(__name__)
+
+# Connection pooling, retries and timeouts
+_TIMEOUT = (5, 20)  # (connect, read) seconds
+_session = requests.Session()
+_retry = Retry(
+    total=3,
+    backoff_factor=0.3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST", "PUT"],
+    raise_on_status=False,
+)
+_adapter = HTTPAdapter(max_retries=_retry, pool_connections=200, pool_maxsize=200)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
+
+
+def _get(url, *, headers=None, params=None):
+    return _session.get(url, headers=headers, params=params, verify=False, timeout=_TIMEOUT)
+
+
+def _post(url, *, headers=None, json=None):
+    return _session.post(url, headers=headers, json=json, verify=False, timeout=_TIMEOUT)
+
+
+def _put(url, *, headers=None, json=None):
+    return _session.put(url, headers=headers, json=json, verify=False, timeout=_TIMEOUT)
+
+
+def get_user_by_email(email: str):
+    url = f"{INTRASERVICE_BASE_URL}/user"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"search": email}
+    try:
+        r = _get(url, headers=headers, params=params)
+        if r.status_code == 200:
+            users = r.json().get("Users", [])
+            # фильтруем по точному совпадению email, если поле доступно
+            for u in users:
+                ue = u.get("Email") or u.get("EMail")
+                if isinstance(ue, str) and ue.strip().lower() == email.strip().lower():
+                    return u
+            # если одно совпадение — вернём его
+            if len(users) == 1:
+                return users[0]
+            return None
+        else:
+            logger.error(f"❌ Ошибка поиска по email: {r.status_code} {r.text}")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Ошибка поиска по email: {e}")
+        return None
+
+
+# --- 1. ПОИСК ПОЛЬЗОВАТЕЛЯ ПО ТЕЛЕФОНУ ---
+def get_user_by_phone(phone: str):
+    """
+    Найти пользователя по номеру телефона.
+    Поддерживаем форматы: +7..., 8..., 7...
+    """
+    # Нормализуем номер
+    digits = ''.join(filter(str.isdigit, phone))
+    if not digits:
+        return None
+
+    # Берём последние 10 цифр для поиска
+    search_query = digits[-10:] if len(digits) >= 10 else None
+
+    if not search_query:
+        return None
+
+    url = f"{INTRASERVICE_BASE_URL}/user"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"search": search_query}
+
+    try:
+        response = _get(url, headers=headers, params=params)
+        logger.info(f"🔍 Поиск пользователя: {params} → статус {response.status_code}")
+
+        if response.status_code == 200:
+            data = response.json()
+            users = data.get("Users", [])
+            for user in users:
+                # Проверяем все возможные телефонные поля
+                phones = []
+                for k in ("MobilePhone", "Mobile", "Phone", "Phones", "WorkPhone", "InternalPhone"):
+                    v = user.get(k)
+                    if isinstance(v, str) and v:
+                        phones.append(v)
+                match = False
+                for p in phones:
+                    d = ''.join(filter(str.isdigit, p))
+                    if not d:
+                        continue
+                    last10 = d[-10:] if len(d) >= 10 else d
+                    if last10 == search_query or ('7'+last10) == d or ('8'+last10) == d:
+                        match = True
+                        break
+                if match:
+                    logger.info(f"✅ Найден пользователь: {user.get('Name')} (ID={user.get('Id')})")
+                    return user
+            # Если единственный результат и не удалось сопоставить номер — вернём первого как фолбек
+            if len(users) == 1:
+                u = users[0]
+                logger.info(f"ℹ️ Фолбек: возвращаю первого пользователя {u.get('Name')} (ID={u.get('Id')})")
+                return u
+        else:
+            logger.error(f"❌ Ошибка API: {response.status_code} {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка поиска пользователя: {e}")
+    return None
+
+
+def update_user(user_id: int, **fields) -> bool:
+    """
+    Изменить поля пользователя: PUT /api/user/{user_id}
+    Пример: update_user(35, CompanyId=64, Name="Имя35")
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user/{user_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    payload = {k: v for k, v in fields.items() if v is not None}
+    try:
+        r = _put(url, headers=headers, json=payload)
+        if r.status_code in (200, 204):
+            return True
+        logger.error(f"❌ Ошибка обновления пользователя {user_id}: {r.status_code} {r.text}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка обновления пользователя: {e}")
+        return False
+
+# --- 2. ПОЛУЧЕНИЕ ЗАЯВОК ПОЛЬЗОВАТЕЛЯ ---
+def get_user_tasks(user_id: int, status_filter: str = "open"):
+    """
+    Получить заявки пользователя.
+    status_filter: "open" или "closed"
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+
+    # ID статусов
+    open_ids = "27,31,35,44"   # Новая, Открыта, В работе, Ожидает
+    closed_ids = "28,29,30,45"     # Завершена, Выполнена, Отклонена, Согласовано
+
+    base_params = {
+        "statusids": open_ids if status_filter == "open" else closed_ids,
+        "count": "false",
+    }
+
+    try:
+        roles = [
+            ("creatorids", user_id),
+            ("memberids", user_id),
+            ("executorids", user_id),
+            ("requesterids", user_id),
+            ("authorids", user_id),
+            ("performerids", user_id),
+        ]
+
+        combined_ids: dict[int, None] = {}
+        for key, val in roles:
+            params = dict(base_params)
+            params[key] = val
+            response = _get(url, headers=headers, params=params)
+            logger.info(f"📡 GET /task ({key}) | URL: {response.url}")
+            if response.status_code == 200:
+                batch = response.json().get("Tasks", [])
+                logger.info(f"✅ Найдено {len(batch)} заявок по {key}")
+                for t in batch:
+                    tid = t.get("Id")
+                    if tid is not None:
+                        combined_ids[tid] = None
+            else:
+                logger.error(f"❌ Ошибка получения заявок ({key}): {response.status_code} {response.text}")
+
+        # Теперь вытаскиваем полные карточки по каждому Id
+        full_tasks: list[dict] = []
+        for tid in combined_ids.keys():
+            details = get_task_details(tid)
+            if details:
+                full_tasks.append(details)
+        logger.info(f"📦 Собрано полных карточек: {len(full_tasks)}")
+        return full_tasks
+    except Exception as e:
+        logger.error(f"❌ Ошибка: {e}")
+        return []
+
+
+def get_user_by_id(user_id: int):
+    """
+    Получить пользователя по Id: GET /user/{id}
+    Возвращает dict пользователя или None
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user/{user_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    try:
+        r = _get(url, headers=headers)
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, dict) and "User" in data and isinstance(data.get("User"), dict):
+                return data["User"]
+            return data if isinstance(data, dict) else None
+        else:
+            logger.error(f"❌ Ошибка получения пользователя {user_id}: {r.status_code} {r.text}")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения пользователя {user_id}: {e}")
+        return None
+
+
+def get_user_tasks_by_creator(user_id: int, status_filter: str = "open"):
+    """
+    Получить список заявок ТОЛЬКО созданных пользователем (CreatorId = user_id)
+    c фильтром по статусам (открытые/завершённые). Возвращает краткие карточки из /task.
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+
+    # Открытые без 44 (Отказано). Добавляем 36 (Согласование)
+    open_ids = "27,31,35,36"
+    closed_ids = "28,29,30,45"
+    params = {
+        "creatorids": user_id,
+        "statusids": open_ids if status_filter == "open" else closed_ids,
+        "count": "false",
+    }
+
+    try:
+        response = _get(url, headers=headers, params=params)
+        logger.info(f"📡 GET /task (creatorids) | URL: {response.url}")
+        if response.status_code == 200:
+            return response.json().get("Tasks", [])
+        else:
+            logger.error(f"❌ Ошибка получения заявок по creator: {response.status_code} {response.text}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения заявок по creator: {e}")
+        return []
+
+
+# --- 3. ПОЛУЧЕНИЕ ЗАЯВОК НА СОГЛАСОВАНИЕ ---
+def get_tasks_awaiting_approval(user_intraservice_id: int):
+    """
+    Получить заявки, где пользователь — согласующий и ещё не согласовал.
+    Учитывает CoordinatorIds и IsCoordinatedForCoordinators.
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params_direct = {
+        "coordinatorids": user_intraservice_id,
+        "statusids": "36",  # Статус "Согласование"
+        "count": "false"
+    }
+
+    try:
+        # 1) Пытаемся сузить сразу по coordinatorids
+        response = _get(url, headers=headers, params=params_direct)
+        tasks = []
+        if response.status_code == 200:
+            tasks = response.json().get("Tasks", [])
+        else:
+            logger.error(f"❌ Ошибка получения заявок на согласование (direct): {response.status_code}")
+
+        # 2) Если ничего не нашли — делаем fallback: все в статусе согласования и фильтруем вручную
+        if not tasks:
+            params_fallback = {"statusids": "36", "count": "false"}
+            r2 = _get(url, headers=headers, params=params_fallback)
+            if r2.status_code == 200:
+                tasks = r2.json().get("Tasks", [])
+                logger.info(f"ℹ️ Fallback approvals: получили {len(tasks)} заявок со статусом 36, фильтруем по координатору")
+            else:
+                logger.error(f"❌ Ошибка получения заявок на согласование (fallback): {r2.status_code}")
+                return []
+        result = []
+
+        for task in tasks:
+            coordinator_ids_str = task.get("CoordinatorIds", "")
+            is_coordinated_str = task.get("IsCoordinatedForCoordinators", "")
+
+            coordinator_ids = [cid.strip() for cid in coordinator_ids_str.split(",") if cid.strip()]
+            is_coordinated = [ic.strip().lower() for ic in is_coordinated_str.split(",") if ic.strip()]
+
+            user_id_str = str(user_intraservice_id)
+
+            if user_id_str not in coordinator_ids:
+                continue  # Не вы
+
+            idx = coordinator_ids.index(user_id_str)
+            if idx < len(is_coordinated) and is_coordinated[idx] == "true":
+                continue  # Уже согласовали
+
+            result.append(task)
+
+        logger.info(f"✅ Найдено {len(result)} заявок на согласование")
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при получении заявок на согласование: {e}")
+        return []
+
+
+# --- 4. ПОЛУЧЕНИЕ ДЕТАЛЕЙ ЗАЯВКИ ---
+def get_task_details(task_id: int):
+    """
+    Получить детали заявки + комментарии. Пытаемся разными include-значениями.
+    """
+    base_url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    include_variants = [
+        "COMMENTS",
+        "TASKCOMMENTS",
+        "COMMENTSALL",
+    ]
+
+    for inc in include_variants:
+        try:
+            params = {"include": inc}
+            response = _get(base_url, headers=headers, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                # Unwrap if server returns {"Task": {...}}
+                if isinstance(data, dict) and "Task" in data and isinstance(data.get("Task"), dict):
+                    data = data["Task"]
+                # Если видим поле Comments в любом виде — возвращаем
+                if any(k in data for k in ("Comments", "TaskComments", "CommentsList")):
+                    return data
+                # Даже если нет явного списка, вернём как есть (для статуса/описания)
+                if inc == include_variants[-1]:
+                    return data
+            else:
+                logger.error(f"❌ Ошибка получения заявки #{task_id} (include={inc}): {response.status_code}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка: {e}")
+
+    return None
+
+
+def get_task_comments(task_id: int):
+    """
+    Получить список комментариев напрямую, если include не отдаёт.
+    Пробуем несколько вариантов путей и структур.
+    Возвращает list[dict] или пустой список.
+    """
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    paths = [
+        f"{INTRASERVICE_BASE_URL}/task/{task_id}/comment",
+        f"{INTRASERVICE_BASE_URL}/task/{task_id}/comments",
+    ]
+    for url in paths:
+        try:
+            r = _get(url, headers=headers)
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict):
+                    for key in ("Comments", "Items", "TaskComments", "List"):
+                        val = data.get(key)
+                        if isinstance(val, list):
+                            return val
+        except Exception:
+            logger.exception("❌ Ошибка при получении комментариев для #%s", task_id)
+    return []
+
+
+def get_task_lifetime_comments(task_id: int):
+    """
+    Получить комментарии из ленты жизни заявки (/tasklifetime).
+    Возвращает list[dict] с полями Id, Comments, Author/AuthorName/AuthorIsOperator и пр.
+    """
+    base = f"{INTRASERVICE_BASE_URL}/tasklifetime"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"taskid": task_id, "lastcommentsontop": "true"}
+    try_versions = [headers.copy()]
+
+    # Если текущая версия не отдаёт, попробуем без заголовка X-API-Version или с 1.0
+    alt_headers = headers.copy(); alt_headers.pop("X-API-Version", None)
+    try_versions.append(alt_headers)
+    v1_headers = headers.copy(); v1_headers["X-API-Version"] = "1.0"
+    try_versions.append(v1_headers)
+
+    for h in try_versions:
+        try:
+            r = _get(base, headers=h, params=params)
+            if r.status_code == 200:
+                data = r.json()
+                items = data.get("TaskLifetimes", [])
+                if isinstance(items, list):
+                    return items
+            else:
+                logger.warning(f"⚠️ tasklifetime {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            logger.exception("❌ Ошибка tasklifetime для #%s: %s", task_id, e)
+    return []
+
+
+# --- 5. ДОБАВЛЕНИЕ КОММЕНТАРИЯ ---
+def add_comment_to_task(task_id: int, comment: str, public: bool = True):
+    """
+    Добавить комментарий к заявке.
+    public=True — попытка создать общедоступный комментарий (включаем несколько флагов на случай разных настроек API)
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    payload = {"Comment": comment}
+
+    if public:
+        # Возможные поля для публичности комментария (оставлены сразу несколько, лишние будут проигнорированы)
+        payload.update({
+            "IsPublic": True,
+            "IsClientVisible": True,
+            "ForClient": True,
+            "Internal": False,
+            "IsHidden": False,
+        })
+
+    try:
+        response = _put(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            logger.info(f"✅ Комментарий добавлен к заявке #{task_id}")
+            return True
+        else:
+            logger.error(f"❌ Ошибка добавления комментария: {response.status_code} {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка: {e}")
+        return False
+
+
+# Convenience helper: update phone in multiple common fields
+def update_user_phone(user_id: int, phone: str) -> bool:
+    try:
+        # Normalize to digits, keep original as-is for display
+        digits = ''.join(filter(str.isdigit, phone or ''))
+        value = phone
+        # Prefer +7XXXXXXXXXX for RU if 11 with 7/8
+        if len(digits) == 11 and digits[0] in ('7', '8'):
+            value = '+7' + digits[1:]
+        elif len(digits) == 10:
+            value = '+7' + digits
+        # Try set multiple fields in one call
+        ok = update_user(user_id, MobilePhone=value, Mobile=value)
+        if not ok:
+            # Fallback attempts with alternative names
+            ok = update_user(user_id, Phone=value)
+        return ok
+    except Exception as e:
+        logger.error(f"❌ Ошибка установки телефона пользователю {user_id}: {e}")
+        return False
+
+# --- 6. СОГЛАСОВАНИЕ / ОТКЛОНЕНИЕ ЗАЯВКИ ---
+def approve_task(task_id: int, approve: bool = True, comment: str = "", user_name: str = None, coordinator_id: int = None, set_status_on_success: int | None = None):
+    """
+    Согласовать или отклонить заявку.
+    
+    Логика работы:
+    1. Если 1 согласующий: заменяется на API учетку и согласовывается
+    2. Если 2+ согласующих: убирается только текущий согласующий, остальные остаются
+    
+    coordinator_id — Id согласующего в IntraService (для выбора конкретного согласующего)
+    set_status_on_success — при успехе дополнительно установить указанный StatusId (например 45)
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task/{task_id}"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+
+    # Получаем текущие детали заявки для анализа согласующих
+    try:
+        task_details = get_task_details(task_id)
+        if not task_details:
+            logger.error(f"❌ Не удалось получить детали заявки #{task_id}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения деталей заявки #{task_id}: {e}")
+        return False
+
+    # Анализируем текущих согласующих
+    coordinator_ids_str = task_details.get("CoordinatorIds") or ""
+    is_coordinated_str = task_details.get("IsCoordinatedForCoordinators") or ""
+    
+    logger.info(f"ℹ️ Заявка #{task_id}: CoordinatorIds='{coordinator_ids_str}', IsCoordinated='{is_coordinated_str}'")
+    
+    # Безопасная обработка строк
+    coordinator_ids = []
+    if coordinator_ids_str:
+        coordinator_ids = [cid.strip() for cid in coordinator_ids_str.split(",") if cid.strip()]
+    
+    is_coordinated = []
+    if is_coordinated_str:
+        is_coordinated = [ic.strip().lower() for ic in is_coordinated_str.split(",") if ic.strip()]
+    
+    logger.info(f"ℹ️ Заявка #{task_id}: Обработанные coordinator_ids={coordinator_ids}, is_coordinated={is_coordinated}")
+    
+    user_id_str = str(coordinator_id) if coordinator_id else ""
+    
+    if not user_id_str:
+        logger.error(f"❌ Не указан coordinator_id для заявки #{task_id}")
+        return False
+        
+    if not coordinator_ids:
+        logger.error(f"❌ У заявки #{task_id} нет согласующих")
+        return False
+        
+    if user_id_str not in coordinator_ids:
+        logger.error(f"❌ Пользователь {user_id_str} не найден в списке согласующих для заявки #{task_id}")
+        return False
+
+    # Формируем комментарий
+    full_comment = comment or ""
+    if user_name:
+        action = "Согласовано" if approve else "Отклонено"
+        full_comment = f"{action} через Telegram пользователем: {user_name}. {full_comment}".strip()
+
+    # Определяем логику согласования
+    if len(coordinator_ids) == 1:
+        # Если только 1 согласующий - заменяем на API учетку и согласовываем
+        logger.info(f"ℹ️ Заявка #{task_id}: 1 согласующий, заменяем на API учетку")
+        
+        # Заменяем на API учетку и согласовываем
+        payload = {
+            "Coordinate": approve,
+            "CoordinatorIds": str(API_USER_ID) if API_USER_ID > 0 else user_id_str,
+            "IsCoordinatedForCoordinators": "true" if approve else "false"
+        }
+        
+        if full_comment:
+            payload["Comment"] = full_comment
+            
+    else:
+        # Если 2+ согласующих - убираем только текущего из списка
+        logger.info(f"ℹ️ Заявка #{task_id}: {len(coordinator_ids)} согласующих, убираем {user_id_str}")
+        
+        # Убираем текущего пользователя из списка согласующих
+        new_coordinator_ids = [cid for cid in coordinator_ids if cid != user_id_str]
+        new_is_coordinated = []
+        
+        # Обновляем статус согласования для оставшихся
+        for i, cid in enumerate(coordinator_ids):
+            if cid != user_id_str:
+                # Берем текущий статус согласования
+                if i < len(is_coordinated):
+                    new_is_coordinated.append(is_coordinated[i])
+                else:
+                    new_is_coordinated.append("false")
+        
+        # НЕ согласовываем за всех, просто убираем текущего согласующего
+        # НЕ отправляем Coordinate - это важно!
+        payload = {
+            "CoordinatorIds": ",".join(new_coordinator_ids),
+            "IsCoordinatedForCoordinators": ",".join(new_is_coordinated)
+        }
+        
+        # Добавляем комментарий для согласования или отклонения
+        if full_comment:
+            payload["Comment"] = full_comment
+
+    logger.info(f"ℹ️ Заявка #{task_id}: Отправляем payload={payload}")
+
+    try:
+        response = _put(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            logger.info(f"✅ Заявка #{task_id} {'согласована' if approve else 'отклонена'} пользователем {user_name}")
+            
+            # Опционально выставим статус явно, если нужно
+            if set_status_on_success is not None and approve:
+                try:
+                    force_payload = {"StatusId": set_status_on_success}
+                    r2 = _put(url, headers=headers, json=force_payload)
+                    if r2.status_code != 200:
+                        logger.warning(f"⚠️ Не удалось принудительно установить статус {set_status_on_success} для #{task_id}: {r2.status_code} {r2.text}")
+                except Exception as ie:
+                    logger.error(f"❌ Ошибка установки статуса: {ie}")
+            return True
+        else:
+            logger.error(f"❌ Ошибка согласования: {response.status_code} {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка: {e}")
+        return False
+
+
+# --- 7. СОЗДАНИЕ НОВОЙ ЗАЯВКИ ---
+def create_task(**payload):
+    """
+    Создать новую заявку.
+    Пример payload:
+    {
+        "Name": "Новая заявка",
+        "Description": "Описание",
+        "CreatorId": 53,
+        "ServiceId": 1,
+        "StatusId": 27
+    }
+    """
+    url = f"{INTRASERVICE_BASE_URL}/task"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+
+    try:
+        # Удалим None, чтобы не отправлять null на сервер для non-null полей
+        clean_payload = {k: v for k, v in payload.items() if v is not None}
+        response = _post(url, headers=headers, json=clean_payload)
+        if response.status_code in (200, 201):
+            task_id = None
+            try:
+                data = response.json()
+                if isinstance(data, dict):
+                    task_id = data.get("Id") or (data.get("Task", {}) if isinstance(data.get("Task"), dict) else {}).get("Id")
+            except Exception:
+                task_id = None
+            if not task_id:
+                loc = response.headers.get("Location") or response.headers.get("location")
+                if loc and "/task/" in loc:
+                    try:
+                        task_id = int(loc.rsplit("/", 1)[-1])
+                    except Exception:
+                        pass
+            logger.info(f"✅ Заявка создана: #{task_id if task_id else '?'}")
+            return task_id or True
+        else:
+            logger.error(f"❌ Ошибка создания заявки: {response.status_code} {response.text}")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Ошибка: {e}")
+        return None
+
+
+def search_users_by_name(query: str):
+    """
+    Поиск пользователей по части имени/фамилии.
+    Возвращает список пользователей с основными полями.
+    """
+    url = f"{INTRASERVICE_BASE_URL}/user"
+    headers = {
+        "Authorization": f"Basic {ENCODED_CREDENTIALS}",
+        "Accept": "application/json",
+        "X-API-Version": API_VERSION,
+    }
+    params = {"search": query}
+    try:
+        r = _get(url, headers=headers, params=params)
+        if r.status_code == 200:
+            return r.json().get("Users", [])
+        else:
+            logger.error(f"❌ Ошибка поиска сотрудников: {r.status_code} {r.text}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ Ошибка поиска сотрудников: {e}")
+        return []
