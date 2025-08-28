@@ -1,80 +1,95 @@
 @echo off
 chcp 65001 >nul
-title BG Survey Platform - BunterGroup
-
-echo.
 echo ========================================
-echo    BG Survey Platform v1.0.0
-echo    BunterGroup
+echo BG Survey Platform - Windows Launcher
 echo ========================================
 echo.
 
-echo [INFO] Проверка Python...
+echo Checking Python installation...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python не установлен или не найден в PATH
-    echo [INFO] Пожалуйста, установите Python 3.8+ с https://python.org
+    echo ERROR: Python is not installed or not in PATH
+    echo Please install Python 3.8+ from https://python.org
+    echo Make sure to check "Add to PATH" during installation
     pause
     exit /b 1
 )
 
-echo [INFO] Python найден
+echo Python found. Checking version...
 python --version
 
 echo.
-echo [INFO] Проверка виртуального окружения...
-if not exist "venv" (
-    echo [INFO] Создание виртуального окружения...
+echo Creating virtual environment...
+if exist venv (
+    echo Virtual environment already exists
+) else (
     python -m venv venv
     if errorlevel 1 (
-        echo [ERROR] Не удалось создать виртуальное окружение
+        echo ERROR: Failed to create virtual environment
         pause
         exit /b 1
     )
-    echo [SUCCESS] Виртуальное окружение создано
-) else (
-    echo [INFO] Виртуальное окружение уже существует
 )
 
 echo.
-echo [INFO] Активация виртуального окружения...
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 if errorlevel 1 (
-    echo [ERROR] Не удалось активировать виртуальное окружение
+    echo ERROR: Failed to activate virtual environment
     pause
     exit /b 1
 )
 
 echo.
-echo [INFO] Проверка зависимостей...
-pip show flask >nul 2>&1
+echo Installing dependencies...
+pip install -r requirements.txt
 if errorlevel 1 (
-    echo [INFO] Установка зависимостей...
-    pip install -r requirements.txt
-    if errorlevel 1 (
-        echo [ERROR] Не удалось установить зависимости
-        pause
-        exit /b 1
-    )
-    echo [SUCCESS] Зависимости установлены
-) else (
-    echo [INFO] Зависимости уже установлены
+    echo ERROR: Failed to install dependencies
+    pause
+    exit /b 1
 )
 
 echo.
-echo [INFO] Проверка базы данных...
-if not exist "surveys.db" (
-    echo [INFO] База данных не найдена, будет создана автоматически
+echo Creating necessary directories...
+if not exist logs mkdir logs
+if not exist static\images mkdir static\images
+
+echo.
+echo Initializing database...
+python init_db.py
+if errorlevel 1 (
+    echo ERROR: Failed to initialize database
+    pause
+    exit /b 1
 )
 
 echo.
-echo [INFO] Запуск BG Survey Platform...
-echo [INFO] Приложение будет доступно по адресу: http://localhost:5000
-echo [INFO] Для остановки нажмите Ctrl+C
+echo Creating admin user...
+python create_admin.py
+if errorlevel 1 (
+    echo ERROR: Failed to create admin user
+    pause
+    exit /b 1
+)
+
+echo.
+echo ========================================
+echo Setup completed successfully!
+echo ========================================
+echo.
+echo Starting BG Survey Platform...
+echo.
+echo The application will be available at:
+echo http://localhost:5000
+echo.
+echo Default users:
+echo - Admin: admin / admin123
+echo - Test: test_user / test123
+echo - User: user / user123
+echo.
+echo Press Ctrl+C to stop the application
 echo.
 
 python app.py
 
-echo.
-echo [INFO] Приложение остановлено
 pause
