@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Админ панель - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-cog text-danger me-2"></i>
+            Панель администратора
+        </h2>
+        <p class="text-muted">Управление системой и мониторинг активности</p>
+    </div>
+</div>
+
+<!-- Статистика системы -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-primary fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ users|length }}</h4>
+                <p class="text-muted mb-0">Пользователей</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clipboard-list text-success fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ surveys|length }}</h4>
+                <p class="text-muted mb-0">Опросов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-user-shield text-warning fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('is_admin')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Администраторов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-edit text-info fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('can_create_surveys')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Создателей опросов</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt text-danger me-2"></i>
+                    Быстрые действия
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Управление пользователями
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Панель управления
+                    </a>
+                    <button class="btn btn-outline-info" onclick="showSystemInfo()">
+                        <i class="fas fa-info-circle me-2"></i>Информация о системе
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="showBackupInfo()">
+                        <i class="fas fa-database me-2"></i>Резервное копирование
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние действия -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-users text-primary me-2"></i>
+                    Последние пользователи
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                    <div class="list-group list-group-flush">
+                        {% for user in users[-5:]|reverse %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ user.username }}</h6>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-danger">Админ</span>
+                                        {% endif %}
+                                        {% if user.can_create_surveys %}
+                                            <span class="badge bg-success">Создает опросы</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary btn-sm">
+                            Все пользователи
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Пользователи не найдены</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-clipboard-list text-success me-2"></i>
+                    Последние опросы
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if surveys %}
+                    <div class="list-group list-group-flush">
+                        {% for survey in surveys[-5:]|reverse %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ survey.title }}</h6>
+                                        <small class="text-muted">
+                                            {{ survey.questions|length }} вопросов, 
+                                            {{ survey.responses|length }} ответов
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if survey.is_anonymous %}
+                                            <span class="badge bg-success">Анонимный</span>
+                                        {% endif %}
+                                        {% if survey.require_auth %}
+                                            <span class="badge bg-warning">Требует вход</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ survey.created_at.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success btn-sm">
+                            Все опросы
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Опросы не найдены</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Системная информация -->
+<div class="row">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-server text-info me-2"></i>
+                    Системная информация
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Версия системы</h6>
+                        <p class="text-muted">BG Survey Platform v1.0.0</p>
+                        
+                        <h6>База данных</h6>
+                        <p class="text-muted">SQLite (встроенная)</p>
+                        
+                        <h6>Веб-сервер</h6>
+                        <p class="text-muted">Flask Development Server</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Python версия</h6>
+                        <p class="text-muted">3.8+</p>
+                        
+                        <h6>Статус системы</h6>
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>Работает
+                        </span>
+                        
+                        <h6>Последнее обновление</h6>
+                        <p class="text-muted">{{ moment().format('DD.MM.YYYY HH:mm') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна -->
+<div class="modal fade" id="systemInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Информация о системе</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Технические характеристики</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Фреймворк:</strong> Flask</li>
+                            <li><strong>База данных:</strong> SQLAlchemy + SQLite</li>
+                            <li><strong>Аутентификация:</strong> Flask-Login</li>
+                            <li><strong>Фронтенд:</strong> Bootstrap 5 + Chart.js</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Возможности</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Пользователи:</strong> {{ users|length }}</li>
+                            <li><strong>Опросы:</strong> {{ surveys|length }}</li>
+                            <li><strong>Администраторы:</strong> {{ users|selectattr('is_admin')|list|length }}</li>
+                            <li><strong>Создатели опросов:</strong> {{ users|selectattr('can_create_surveys')|list|length }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="backupInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Резервное копирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Функция резервного копирования будет доступна в следующих версиях
+                </div>
+                <p>Планируемые возможности:</p>
+                <ul>
+                    <li>Автоматическое резервное копирование базы данных</li>
+                    <li>Экспорт данных в различные форматы</li>
+                    <li>Восстановление из резервной копии</li>
+                    <li>Настройка расписания резервного копирования</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showSystemInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('systemInfoModal'));
+    modal.show();
+}
+
+function showBackupInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('backupInfoModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

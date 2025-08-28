@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты: {{ survey.title }} - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('index') }}" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Главная
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('dashboard') }}" class="text-decoration-none">Панель управления</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Результаты опроса</li>
+            </ol>
+        </nav>
+        
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-chart-bar text-danger me-2"></i>
+            Результаты опроса
+        </h2>
+        <p class="text-muted">{{ survey.title }}</p>
+    </div>
+</div>
+
+<!-- Общая статистика -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-question-circle text-primary fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ survey.questions|length }}</h4>
+                <p class="text-muted mb-0">Вопросов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-success fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ survey.responses|length }}</h4>
+                <p class="text-muted mb-0">Ответов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ survey.created_at.strftime('%d.%m') }}</h4>
+                <p class="text-muted mb-0">Создан</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clock text-info fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {% if survey.responses %}
+                        {{ survey.responses|sort(attribute='created_at')|last|attr('created_at')|strftime('%d.%m') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h4>
+                <p class="text-muted mb-0">Последний ответ</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Результаты по вопросам -->
+<div class="row">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line text-danger me-2"></i>
+                    Анализ результатов
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if results %}
+                    {% for question_id, result in results.items() %}
+                        <div class="question-result mb-5 p-4 border rounded">
+                            <h5 class="mb-3">
+                                <span class="badge bg-primary me-2">{{ loop.index }}</span>
+                                {{ result.text }}
+                            </h5>
+                            
+                            {% if result.type == 'multiple_choice' %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="chart-legend">
+                                            <h6 class="mb-3">Статистика:</h6>
+                                            {% for option, count in result.data.items() %}
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="small">{{ option }}</span>
+                                                    <span class="badge bg-primary">{{ count }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            {% elif result.type == 'rating' %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="rating-summary mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <h4 class="text-warning mb-0 me-3">
+                                                    {{ "%.1f"|format(result.average) }}
+                                                </h4>
+                                                <div>
+                                                    <div class="stars">
+                                                        {% for i in range(1, 11) %}
+                                                            <i class="fas fa-star {{ 'text-warning' if i <= result.average else 'text-muted' }}"></i>
+                                                        {% endfor %}
+                                                    </div>
+                                                    <small class="text-muted">Средний рейтинг</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="rating-stats">
+                                            <h6 class="mb-3">Детали:</h6>
+                                            <p><strong>Средний рейтинг:</strong> {{ "%.1f"|format(result.average) }}/10</p>
+                                            <p><strong>Всего ответов:</strong> {{ result.count }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            {% else %}
+                                <!-- Текстовые ответы -->
+                                <div class="text-answers">
+                                    <h6 class="mb-3">Текстовые ответы ({{ result.answers|length }}):</h6>
+                                    <div class="row">
+                                        {% for answer in result.answers %}
+                                            <div class="col-md-6 mb-2">
+                                                <div class="card bg-light">
+                                                    <div class="card-body p-2">
+                                                        <small class="text-muted">Ответ {{ loop.index }}:</small>
+                                                        <p class="mb-0">{{ answer }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="empty-state mb-3">
+                            <i class="fas fa-chart-bar text-muted fa-3x"></i>
+                        </div>
+                        <h5 class="text-muted">Результаты пока недоступны</h5>
+                        <p class="text-muted">Пока нет ответов на этот опрос</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Детальная информация об ответах -->
+{% if survey.responses %}
+<div class="row mt-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list text-danger me-2"></i>
+                    Детали ответов
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Дата</th>
+                                <th>Пользователь</th>
+                                <th>IP-адрес</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for response in survey.responses %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ response.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if response.user_id %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ response.user.username if response.user else 'Неизвестно' }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            Анонимно
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <code class="small">{{ response.ip_address }}</code>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="showResponseDetails({{ response.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Модальное окно с деталями ответа -->
+<div class="modal fade" id="responseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали ответа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="responseModalBody">
+                <!-- Содержимое будет загружено динамически -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Действия -->
+<div class="row mt-4">
+    <div class="col">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>К панели управления
+            </a>
+            
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="exportResults()">
+                    <i class="fas fa-download me-2"></i>Экспорт
+                </button>
+                <button class="btn btn-outline-success" onclick="printResults()">
+                    <i class="fas fa-print me-2"></i>Печать
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Инициализация графиков
+document.addEventListener('DOMContentLoaded', function() {
+    {% if results %}
+        {% for question_id, result in results.items() %}
+            {% if result.type == 'multiple_choice' %}
+                createPieChart('chart_{{ question_id }}', {{ result.data|tojson }}, '{{ result.text }}');
+            {% elif result.type == 'rating' %}
+                createRatingChart('chart_{{ question_id }}', {{ result.data|tojson }}, '{{ result.text }}');
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+});
+
+function createPieChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: [
+                    '#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd',
+                    '#6f42c1', '#e83e8c', '#20c997', '#6c757d', '#343a40'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: title
+                }
+            }
+        }
+    });
+}
+
+function createRatingChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const labels = Array.from({length: 10}, (_, i) => i + 1);
+    const values = labels.map(label => data[label] || 0);
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Количество ответов',
+                data: values,
+                backgroundColor: '#ffc107',
+                borderColor: '#fd7e14',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: title
+                }
+            }
+        }
+    });
+}
+
+function showResponseDetails(responseId) {
+    // Здесь можно добавить AJAX запрос для получения деталей ответа
+    const modal = new bootstrap.Modal(document.getElementById('responseModal'));
+    document.getElementById('responseModalBody').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка деталей ответа...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // Имитация загрузки данных
+    setTimeout(() => {
+        document.getElementById('responseModalBody').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Детальная информация об ответе будет доступна в следующих версиях
+            </div>
+        `;
+    }, 1000);
+}
+
+function exportResults() {
+    // Экспорт результатов в CSV
+    alert('Функция экспорта будет доступна в следующих версиях');
+}
+
+function printResults() {
+    window.print();
+}
+</script>
+{% endblock %}

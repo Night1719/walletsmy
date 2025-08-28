@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('admin_panel') }}" class="text-decoration-none">
+                        <i class="fas fa-cog me-1"></i>Админ панель
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Управление пользователями</li>
+            </ol>
+        </nav>
+        
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-users text-danger me-2"></i>
+            Управление пользователями
+        </h2>
+        <p class="text-muted">Создание, редактирование и управление правами пользователей</p>
+    </div>
+</div>
+
+<!-- Создание нового пользователя -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-plus text-primary me-2"></i>
+                    Создать нового пользователя
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="createUserForm">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="username" class="form-label">Имя пользователя *</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="password" class="form-label">Пароль *</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
+                                <label class="form-check-label" for="is_admin">
+                                    Права администратора
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    Полный доступ к системе и админ панели
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="can_create_surveys" name="can_create_surveys">
+                                <label class="form-check-label" for="can_create_surveys">
+                                    Создание опросов
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    Возможность создавать и управлять опросами
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Создать пользователя
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список пользователей -->
+<div class="row">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list text-danger me-2"></i>
+                    Список пользователей ({{ users|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Пользователь</th>
+                                    <th>Email</th>
+                                    <th>Права</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ user.id }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar me-2">
+                                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.username }}</strong>
+                                                {% if user.id == current_user.id %}
+                                                    <br><small class="text-muted">(Вы)</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="mailto:{{ user.email }}" class="text-decoration-none">
+                                            {{ user.email }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% if user.is_admin %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-shield-alt me-1"></i>Админ
+                                                </span>
+                                            {% endif %}
+                                            {% if user.can_create_surveys %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-edit me-1"></i>Создает опросы
+                                                </span>
+                                            {% endif %}
+                                            {% if not user.is_admin and not user.can_create_surveys %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-user me-1"></i>Базовые права
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ user.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if user.id != current_user.id %}
+                                                <a href="{{ url_for('toggle_admin', user_id=user.id) }}" 
+                                                   class="btn btn-outline-{{ 'danger' if user.is_admin else 'success' }}"
+                                                   title="{{ 'Убрать права админа' if user.is_admin else 'Сделать админом' }}"
+                                                   onclick="return confirm('{{ 'Убрать права администратора у' if user.is_admin else 'Назначить администратором' }} {{ user.username }}?')">
+                                                    <i class="fas fa-{{ 'user-slash' if user.is_admin else 'user-shield' }}"></i>
+                                                </a>
+                                                
+                                                <a href="{{ url_for('toggle_survey_creation', user_id=user.id) }}" 
+                                                   class="btn btn-outline-{{ 'warning' if user.can_create_surveys else 'info' }}"
+                                                   title="{{ 'Убрать права на создание опросов' if user.can_create_surveys else 'Дать права на создание опросов' }}"
+                                                   onclick="return confirm('{{ 'Убрать права на создание опросов у' if user.can_create_surveys else 'Дать права на создание опросов' }} {{ user.username }}?')">
+                                                    <i class="fas fa-{{ 'ban' if user.can_create_surveys else 'check' }}"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="btn btn-outline-secondary disabled" title="Нельзя изменить свои права">
+                                                    <i class="fas fa-lock"></i>
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="empty-state mb-3">
+                            <i class="fas fa-users text-muted fa-3x"></i>
+                        </div>
+                        <h5 class="text-muted">Пользователи не найдены</h5>
+                        <p class="text-muted">Создайте первого пользователя для начала работы</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика пользователей -->
+<div class="row mt-4">
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-primary fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ users|length }}</h4>
+                <p class="text-muted mb-0">Всего пользователей</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-user-shield text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('is_admin')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Администраторов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-edit text-success fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('can_create_surveys')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Создателей опросов</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Действия -->
+<div class="row mt-4">
+    <div class="col">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>К админ панели
+            </a>
+            
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="exportUsers()">
+                    <i class="fas fa-download me-2"></i>Экспорт пользователей
+                </button>
+                <button class="btn btn-outline-info" onclick="showImportInfo()">
+                    <i class="fas fa-upload me-2"></i>Импорт из LDAP
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно с информацией об импорте -->
+<div class="modal fade" id="importInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Импорт пользователей из LDAP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Функция импорта из LDAP будет доступна в следующих версиях
+                </div>
+                <p>Планируемые возможности:</p>
+                <ul>
+                    <li>Автоматическая синхронизация с Active Directory</li>
+                    <li>Импорт групп пользователей</li>
+                    <li>Настройка маппинга атрибутов</li>
+                    <li>Планируемая синхронизация</li>
+                    <li>Логирование операций импорта</li>
+                </ul>
+                
+                <h6 class="mt-3">Требования для LDAP интеграции:</h6>
+                <ul>
+                    <li>Доступ к LDAP серверу</li>
+                    <li>Права на чтение пользователей</li>
+                    <li>Настройка SSL/TLS соединения</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Валидация формы создания пользователя
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createUserForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (username.length < 3) {
+                e.preventDefault();
+                alert('Имя пользователя должно содержать минимум 3 символа');
+                return;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Пароль должен содержать минимум 6 символов');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                e.preventDefault();
+                alert('Введите корректный email адрес');
+                return;
+            }
+        });
+    }
+});
+
+function exportUsers() {
+    // Экспорт пользователей в CSV
+    alert('Функция экспорта будет доступна в следующих версиях');
+}
+
+function showImportInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('importInfoModal'));
+    modal.show();
+}
+
+// Подтверждение действий
+function confirmAction(message) {
+    return confirm(message);
+}
+</script>
+{% endblock %}
