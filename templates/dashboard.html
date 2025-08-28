@@ -171,6 +171,10 @@
                                                class="btn btn-outline-success" title="Результаты">
                                                 <i class="fas fa-chart-bar"></i>
                                             </a>
+                                            <button class="btn btn-outline-info" title="Поделиться"
+                                                    onclick="copySurveyUrl('{{ url_for('view_survey', survey_id=survey.id) }}', '{{ survey.title }}')">
+                                                <i class="fas fa-share-alt"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -196,4 +200,52 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+function copySurveyUrl(url, title) {
+    // Создаем временный input для копирования
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    
+    // Копируем ссылку
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        
+        // Показываем уведомление
+        showNotification(`Ссылка на опрос "${title}" скопирована!`, 'success');
+        
+        // Удаляем временный input
+        document.body.removeChild(tempInput);
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+        showNotification('Ошибка при копировании ссылки', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Добавляем уведомление на страницу
+    document.body.appendChild(notification);
+    
+    // Автоматически скрываем через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+</script>
 {% endblock %}

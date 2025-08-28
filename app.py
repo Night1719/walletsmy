@@ -74,6 +74,14 @@ def load_user(user_id):
 # Вспомогательные функции для шаблонов
 @app.context_processor
 def utility_processor():
+    def from_json(json_string):
+        """Преобразует JSON строку в Python объект"""
+        try:
+            if json_string:
+                return json.loads(json_string)
+            return []
+        except (json.JSONDecodeError, TypeError):
+            return []
     def count_responses(surveys):
         """Подсчитывает общее количество ответов для списка опросов"""
         total = 0
@@ -102,7 +110,8 @@ def utility_processor():
     return {
         'count_responses': count_responses,
         'count_active_surveys': count_active_surveys,
-        'format_date': format_date
+        'format_date': format_date,
+        'from_json': from_json
     }
 
 def admin_required(f):

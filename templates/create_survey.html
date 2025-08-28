@@ -359,5 +359,42 @@ document.addEventListener('input', function(e) {
         updatePreview();
     }
 });
+
+// Функция для копирования ссылки на опрос (после создания)
+function copySurveyUrl(url, title) {
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        showNotification(`Ссылка на опрос "${title}" скопирована!`, 'success');
+        document.body.removeChild(tempInput);
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+        showNotification('Ошибка при копировании ссылки', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
 </script>
 {% endblock %}
