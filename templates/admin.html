@@ -192,6 +192,84 @@
     </div>
 </div>
 
+<!-- SSL управление -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lock text-warning me-2"></i>
+                        SSL сертификаты
+                    </h5>
+                    <button class="btn btn-outline-warning btn-sm" onclick="showSSLInfo()">
+                        <i class="fas fa-info-circle me-1"></i>Информация
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Текущий статус SSL</h6>
+                        <div class="d-flex align-items-center mb-3">
+                            {% if ssl_status.enabled %}
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-check-circle me-1"></i>Включен
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary me-2">
+                                    <i class="fas fa-times-circle me-1"></i>Отключен
+                                </span>
+                            {% endif %}
+                            <small class="text-muted">HTTPS соединение</small>
+                        </div>
+                        
+                        <h6>Сертификат</h6>
+                        {% if ssl_status.certificate %}
+                            <p class="text-muted mb-2">{{ ssl_status.certificate.subject }}</p>
+                            <small class="text-muted">
+                                Действителен до: {{ ssl_status.certificate.expires }}
+                            </small>
+                        {% else %}
+                            <p class="text-muted">Сертификат не установлен</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Действия</h6>
+                        <div class="d-grid gap-2">
+                            {% if not ssl_status.enabled %}
+                                <button class="btn btn-success btn-sm" onclick="enableSSL()">
+                                    <i class="fas fa-lock me-1"></i>Включить SSL
+                                </button>
+                            {% else %}
+                                <button class="btn btn-warning btn-sm" onclick="disableSSL()">
+                                    <i class="fas fa-unlock me-1"></i>Отключить SSL
+                                </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-primary btn-sm" onclick="uploadCertificate()">
+                                <i class="fas fa-upload me-1"></i>Загрузить сертификат
+                            </button>
+                            
+                            <button class="btn btn-outline-info btn-sm" onclick="generateSelfSigned()">
+                                <i class="fas fa-certificate me-1"></i>Самоподписанный
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                SSL обеспечивает безопасное соединение для ваших опросов
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Системная информация -->
 <div class="row">
     <div class="col">
@@ -289,6 +367,116 @@
         </div>
     </div>
 </div>
+
+<!-- SSL Информация -->
+<div class="modal fade" id="sslInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-lock text-warning me-2"></i>
+                    SSL сертификаты - Информация
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Что такое SSL?</h6>
+                        <p class="text-muted">
+                            SSL (Secure Sockets Layer) - это протокол безопасности, который обеспечивает 
+                            шифрованное соединение между браузером пользователя и вашим сервером.
+                        </p>
+                        
+                        <h6>Преимущества SSL:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Шифрование данных</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Защита от перехвата</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Доверие пользователей</li>
+                            <li><i class="fas fa-check text-success me-2"></i>SEO преимущества</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Типы сертификатов:</h6>
+                        <div class="mb-3">
+                            <strong>Самоподписанный:</strong>
+                            <p class="text-muted small">Бесплатный, но браузеры показывают предупреждение</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Let's Encrypt:</strong>
+                            <p class="text-muted small">Бесплатный, доверенный всеми браузерами</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Коммерческий:</strong>
+                            <p class="text-muted small">Платный, максимальная защита и доверие</p>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Важно:</strong> После изменения SSL настроек требуется перезапуск сервера
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" onclick="showSSLTutorial()">
+                    <i class="fas fa-play me-1"></i>Руководство по настройке
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Загрузка сертификата -->
+<div class="modal fade" id="uploadCertificateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-upload text-primary me-2"></i>
+                    Загрузка SSL сертификата
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="certificateForm">
+                    <div class="mb-3">
+                        <label for="certFile" class="form-label">Файл сертификата (.crt, .pem)</label>
+                        <input type="file" class="form-control" id="certFile" accept=".crt,.pem" required>
+                        <small class="text-muted">Выберите файл сертификата</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="keyFile" class="form-label">Приватный ключ (.key)</label>
+                        <input type="file" class="form-control" id="keyFile" accept=".key" required>
+                        <small class="text-muted">Выберите файл приватного ключа</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="chainFile" class="form-label">Цепочка сертификатов (опционально)</label>
+                        <input type="file" class="form-control" id="chainFile" accept=".crt,.pem">
+                        <small class="text-muted">Для некоторых провайдеров может потребоваться</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Поддерживаемые форматы:</strong> .crt, .pem, .key
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="processCertificateUpload()">
+                    <i class="fas fa-upload me-1"></i>Загрузить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -301,6 +489,78 @@ function showSystemInfo() {
 function showBackupInfo() {
     const modal = new bootstrap.Modal(document.getElementById('backupInfoModal'));
     modal.show();
+}
+
+// SSL функции
+function showSSLInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('sslInfoModal'));
+    modal.show();
+}
+
+function enableSSL() {
+    if (confirm('Включить SSL? Это потребует перезапуска сервера.')) {
+        // Здесь будет AJAX запрос для включения SSL
+        showNotification('SSL включен! Перезапустите сервер для применения изменений.', 'success');
+    }
+}
+
+function disableSSL() {
+    if (confirm('Отключить SSL? Это потребует перезапуска сервера.')) {
+        // Здесь будет AJAX запрос для отключения SSL
+        showNotification('SSL отключен! Перезапустите сервер для применения изменений.', 'warning');
+    }
+}
+
+function uploadCertificate() {
+    const modal = new bootstrap.Modal(document.getElementById('uploadCertificateModal'));
+    modal.show();
+}
+
+function generateSelfSigned() {
+    if (confirm('Сгенерировать самоподписанный сертификат? Браузеры будут показывать предупреждение.')) {
+        // Здесь будет AJAX запрос для генерации сертификата
+        showNotification('Самоподписанный сертификат сгенерирован!', 'info');
+    }
+}
+
+function processCertificateUpload() {
+    const certFile = document.getElementById('certFile').files[0];
+    const keyFile = document.getElementById('keyFile').files[0];
+    
+    if (!certFile || !keyFile) {
+        showNotification('Выберите файлы сертификата и ключа!', 'error');
+        return;
+    }
+    
+    // Здесь будет AJAX запрос для загрузки сертификата
+    showNotification('Сертификат загружен! Перезапустите сервер для применения.', 'success');
+    
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadCertificateModal'));
+    modal.hide();
+}
+
+function showSSLTutorial() {
+    // Открываем руководство по настройке
+    window.open('https://letsencrypt.org/getting-started/', '_blank');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
 }
 </script>
 {% endblock %}

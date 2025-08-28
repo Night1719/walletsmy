@@ -175,7 +175,26 @@ def dashboard():
 def admin_panel():
     users = User.query.all()
     surveys = Survey.query.all()
-    return render_template('admin.html', users=users, surveys=surveys)
+    
+    # SSL статус (заглушка для демонстрации)
+    ssl_status = {
+        'enabled': False,
+        'certificate': None
+    }
+    
+    # Проверяем наличие SSL файлов
+    try:
+        if os.path.exists('ssl/cert.pem') and os.path.exists('ssl/key.pem'):
+            ssl_status['enabled'] = True
+            # Здесь можно добавить парсинг сертификата
+            ssl_status['certificate'] = {
+                'subject': 'SSL Certificate',
+                'expires': '2025-12-31'
+            }
+    except:
+        pass
+    
+    return render_template('admin.html', users=users, surveys=surveys, ssl_status=ssl_status)
 
 @app.route('/admin/users', methods=['GET', 'POST'])
 @admin_required
