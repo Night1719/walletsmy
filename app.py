@@ -71,6 +71,40 @@ class Answer(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Вспомогательные функции для шаблонов
+@app.context_processor
+def utility_processor():
+    def count_responses(surveys):
+        """Подсчитывает общее количество ответов для списка опросов"""
+        total = 0
+        for survey in surveys:
+            if hasattr(survey, 'responses'):
+                total += len(survey.responses)
+        return total
+    
+    def count_active_surveys(surveys):
+        """Подсчитывает количество активных опросов (с ответами)"""
+        count = 0
+        for survey in surveys:
+            if hasattr(survey, 'responses') and len(survey.responses) > 0:
+                count += 1
+        return count
+    
+    def format_date(date_obj):
+        """Форматирует дату в удобочитаемый вид"""
+        if date_obj:
+            try:
+                return date_obj.strftime('%d.%m')
+            except:
+                return str(date_obj)
+        return '-'
+    
+    return {
+        'count_responses': count_responses,
+        'count_active_surveys': count_active_surveys,
+        'format_date': format_date
+    }
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
