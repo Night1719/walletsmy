@@ -248,8 +248,8 @@
                                 </button>
                             {% endif %}
                             
-                            <button class="btn btn-outline-primary btn-sm" onclick="uploadCertificate()">
-                                <i class="fas fa-upload me-1"></i>Загрузить сертификат
+                            <button class="btn btn-outline-primary btn-sm" onclick="showTextInputModal()">
+                                <i class="fas fa-keyboard me-1"></i>Вставить сертификат
                             </button>
                             
                             <button class="btn btn-outline-info btn-sm" onclick="generateSelfSigned()">
@@ -534,6 +534,71 @@
         </div>
     </div>
 </div>
+
+<!-- Текстовый ввод SSL сертификата -->
+<div class="modal fade" id="textInputModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-keyboard text-primary me-2"></i>
+                    Вставка SSL сертификата
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Вставьте содержимое вашего SSL сертификата и приватного ключа
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="sslCertificate" class="form-label">
+                                <i class="fas fa-certificate text-success me-1"></i>
+                                Сертификат (.pem или .crt)
+                            </label>
+                            <textarea class="form-control" id="sslCertificate" rows="15" 
+                                      placeholder="-----BEGIN CERTIFICATE-----
+MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
+TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
+...
+-----END CERTIFICATE-----" required></textarea>
+                            <div class="form-text">Вставьте весь текст сертификата включая BEGIN и END строки</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="sslPrivateKey" class="form-label">
+                                <i class="fas fa-key text-warning me-1"></i>
+                                Приватный ключ (.pem или .key)
+                            </label>
+                            <textarea class="form-control" id="sslPrivateKey" rows="15" 
+                                      placeholder="-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
+...
+-----END PRIVATE KEY-----" required></textarea>
+                            <div class="form-text">Вставьте весь текст приватного ключа включая BEGIN и END строки</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание:</strong> После сохранения сертификата необходимо перезапустить сервер
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="saveSSLCertificate()">
+                    <i class="fas fa-save me-2"></i>Сохранить сертификат
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -568,9 +633,55 @@ function disableSSL() {
     }
 }
 
-function uploadCertificate() {
-    const modal = new bootstrap.Modal(document.getElementById('uploadCertificateModal'));
+function showTextInputModal() {
+    const modal = new bootstrap.Modal(document.getElementById('textInputModal'));
     modal.show();
+}
+
+function saveSSLCertificate() {
+    const certificate = document.getElementById('sslCertificate').value.trim();
+    const privateKey = document.getElementById('sslPrivateKey').value.trim();
+    
+    if (!certificate || !privateKey) {
+        showNotification('Заполните оба поля!', 'error');
+        return;
+    }
+    
+    // Проверяем формат
+    if (!certificate.includes('-----BEGIN CERTIFICATE-----') || !certificate.includes('-----END CERTIFICATE-----')) {
+        showNotification('Неверный формат сертификата!', 'error');
+        return;
+    }
+    
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') && !privateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+        showNotification('Неверный формат приватного ключа!', 'error');
+        return;
+    }
+    
+    // Отправляем на сервер
+    fetch('/admin/ssl/text-upload', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            certificate: certificate,
+            private_key: privateKey
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Сертификат сохранен! Перезапустите сервер для применения.', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('textInputModal'));
+            modal.hide();
+        } else {
+            showNotification('Ошибка: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
 }
 
 function generateSelfSigned() {

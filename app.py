@@ -381,6 +381,61 @@ def setup_lets_encrypt():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка настройки: {str(e)}'})
 
+@app.route('/admin/ssl/text-upload', methods=['POST'])
+@admin_required
+def upload_ssl_text():
+    """Загрузка SSL сертификата текстом"""
+    try:
+        data = request.get_json()
+        certificate = data.get('certificate', '').strip()
+        private_key = data.get('private_key', '').strip()
+        
+        if not certificate or not private_key:
+            return jsonify({'success': False, 'message': 'Необходимо заполнить оба поля'})
+        
+        # Проверяем формат сертификата
+        if not certificate.startswith('-----BEGIN CERTIFICATE-----') or not certificate.endswith('-----END CERTIFICATE-----'):
+            return jsonify({'success': False, 'message': 'Неверный формат сертификата'})
+        
+        # Проверяем формат ключа
+        if not (private_key.startswith('-----BEGIN PRIVATE KEY-----') or 
+                private_key.startswith('-----BEGIN RSA PRIVATE KEY-----')) or not private_key.endswith('-----END PRIVATE KEY-----'):
+            return jsonify({'success': False, 'message': 'Неверный формат приватного ключа'})
+        
+        # Создаем папку ssl если её нет
+        ssl_dir = 'ssl'
+        if not os.path.exists(ssl_dir):
+            os.makedirs(ssl_dir)
+            print(f"✅ Создана папка {ssl_dir}")
+        
+        # Сохраняем файлы
+        cert_path = os.path.join(ssl_dir, 'cert.pem')
+        key_path = os.path.join(ssl_dir, 'key.pem')
+        
+        print(f"💾 Сохранение сертификата в: {cert_path}")
+        print(f"💾 Сохранение ключа в: {key_path}")
+        
+        # Записываем содержимое в файлы
+        with open(cert_path, 'w') as f:
+            f.write(certificate)
+        
+        with open(key_path, 'w') as f:
+            f.write(private_key)
+        
+        # Устанавливаем правильные права доступа
+        os.chmod(key_path, 0o600)
+        os.chmod(cert_path, 0o644)
+        
+        print(f"✅ Файлы сохранены с правами:")
+        print(f"   Сертификат: {oct(os.stat(cert_path).st_mode)[-3:]}")
+        print(f"   Ключ: {oct(os.stat(key_path).st_mode)[-3:]}")
+        
+        return jsonify({'success': True, 'message': 'SSL сертификат успешно сохранен! Перезапустите сервер для применения изменений.'})
+        
+    except Exception as e:
+        print(f"❌ Ошибка сохранения SSL: {e}")
+        return jsonify({'success': False, 'message': f'Ошибка сохранения: {str(e)}'})
+
 @app.route('/surveys/create', methods=['GET', 'POST'])
 @login_required
 @survey_creation_required
