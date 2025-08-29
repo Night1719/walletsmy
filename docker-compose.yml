@@ -1,142 +1,160 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: trading_bot_postgres
-    environment:
-      POSTGRES_DB: trading_bot
-      POSTGRES_USER: trading_bot
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-    networks:
-      - trading_bot_network
+  # Основное приложение
+  bg-survey-platform:
+    build: .
+    container_name: bg-survey-platform
     restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_CONFIG=production
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///surveys.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - ./static:/app/static
+    networks:
+      - bg-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Redis for Celery
+  # Redis для кеширования и сессий
   redis:
     image: redis:7-alpine
-    container_name: trading_bot_redis
+    container_name: bg-survey-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - trading_bot_network
-    restart: unless-stopped
+      - bg-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # FastAPI Web Application
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: trading_bot_web
-    environment:
-      - DATABASE_URL=postgresql://trading_bot:password@postgres:5432/trading_bot
-      - REDIS_URL=redis://redis:6379/0
-      - SOLANA_NETWORK=devnet
-      - ENABLE_REAL_TRADES=false
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - trading_bot_network
-    restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-  # Celery Worker
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: trading_bot_worker
-    environment:
-      - DATABASE_URL=postgresql://trading_bot:password@postgres:5432/trading_bot
-      - REDIS_URL=redis://redis:6379/0
-      - SOLANA_NETWORK=devnet
-      - ENABLE_REAL_TRADES=false
-    volumes:
-      - .:/app
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - trading_bot_network
-    restart: unless-stopped
-    command: celery -A worker.celery_app worker --loglevel=info
-
-  # Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: trading_bot_prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - trading_bot_network
-    restart: unless-stopped
-
-  # Grafana
-  grafana:
-    image: grafana/grafana:latest
-    container_name: trading_bot_grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
-    depends_on:
-      - prometheus
-    networks:
-      - trading_bot_network
-    restart: unless-stopped
-
-  # Nginx Reverse Proxy (Optional)
+  # Nginx для проксирования и SSL
   nginx:
     image: nginx:alpine
-    container_name: trading_bot_nginx
+    container_name: bg-survey-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - web
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./static:/var/www/static:ro
     networks:
-      - trading_bot_network
+      - bg-network
+    depends_on:
+      - bg-survey-platform
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL (опционально, для продакшена)
+  postgres:
+    image: postgres:15-alpine
+    container_name: bg-survey-postgres
     restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-bg_survey}
+      - POSTGRES_USER=${POSTGRES_USER:-bg_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bg_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bg_user} -d ${POSTGRES_DB:-bg_survey}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - production
+
+  # pgAdmin для управления PostgreSQL (опционально)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bg-survey-pgadmin
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@buntergroup.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin123}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - bg-network
+    depends_on:
+      - postgres
+    profiles:
+      - production
+
+  # Backup сервис (опционально)
+  backup:
+    image: alpine:latest
+    container_name: bg-survey-backup
+    restart: "no"
+    volumes:
+      - ./backup:/backup
+      - postgres_data:/var/lib/postgresql/data:ro
+      - ./data:/app/data:ro
+    networks:
+      - bg-network
+    command: |
+      sh -c '
+        echo "Создание резервной копии..."
+        timestamp=$$(date +%Y%m%d_%H%M%S)
+        
+        # Резервная копия PostgreSQL
+        if [ -d "/var/lib/postgresql/data" ]; then
+          pg_dump -h postgres -U $${POSTGRES_USER:-bg_user} $${POSTGRES_DB:-bg_survey} > /backup/db_backup_$${timestamp}.sql
+        fi
+        
+        # Резервная копия данных приложения
+        tar -czf /backup/app_backup_$${timestamp}.tar.gz -C /app/data .
+        
+        echo "Резервная копия создана: backup_$${timestamp}"
+      '
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-bg_survey}
+      - POSTGRES_USER=${POSTGRES_USER:-bg_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bg_password}
+    depends_on:
+      - postgres
     profiles:
       - production
 
 volumes:
-  postgres_data:
   redis_data:
-  prometheus_data:
-  grafana_data:
+    driver: local
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
 
 networks:
-  trading_bot_network:
+  bg-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

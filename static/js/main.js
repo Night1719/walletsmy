@@ -1,56 +1,51 @@
-// Основной JavaScript файл для BG Опросника
+// BG Survey Platform - Основной JavaScript файл
 
 document.addEventListener('DOMContentLoaded', function() {
     // Инициализация всех компонентов
     initThemeToggle();
     initTooltips();
-    initModals();
-    initForms();
-    initCharts();
+    initConfirmations();
+    initFormValidation();
+    initAnimations();
 });
 
 // Переключение темы
 function initThemeToggle() {
-    const themeToggle = document.getElementById('themeToggle');
+    const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', function() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            let newTheme;
+            const body = document.body;
+            const icon = this.querySelector('i');
             
-            if (currentTheme === 'light') {
-                newTheme = 'dark';
-            } else if (currentTheme === 'dark') {
-                newTheme = 'auto';
+            if (body.classList.contains('dark-theme')) {
+                // Переключение на светлую тему
+                body.classList.remove('dark-theme');
+                icon.className = 'fas fa-moon';
+                document.cookie = 'theme=light; path=/; max-age=31536000';
+                localStorage.setItem('theme', 'light');
             } else {
-                newTheme = 'light';
+                // Переключение на темную тему
+                body.classList.add('dark-theme');
+                icon.className = 'fas fa-sun';
+                document.cookie = 'theme=dark; path=/; max-age=31536000';
+                localStorage.setItem('theme', 'dark');
             }
-            
-            setTheme(newTheme);
-            localStorage.setItem('theme', newTheme);
         });
+        
+        // Установка текущей темы при загрузке
+        const savedTheme = localStorage.getItem('theme') || getCookie('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeToggle.querySelector('i').className = 'fas fa-sun';
+        }
     }
 }
 
-function setTheme(theme) {
-    const html = document.documentElement;
-    const themeIcon = document.getElementById('themeIcon');
-    
-    if (theme === 'auto') {
-        html.removeAttribute('data-bs-theme');
-        if (themeIcon) {
-            themeIcon.className = 'bi bi-circle-half';
-        }
-    } else {
-        html.setAttribute('data-bs-theme', theme);
-        if (themeIcon) {
-            if (theme === 'light') {
-                themeIcon.className = 'bi bi-moon-fill';
-            } else {
-                themeIcon.className = 'bi bi-sun-fill';
-            }
-        }
-    }
+// Получение значения cookie
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
 // Инициализация тултипов
@@ -61,330 +56,429 @@ function initTooltips() {
     });
 }
 
-// Инициализация модальных окон
-function initModals() {
-    const modalTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="modal"]'));
-    modalTriggerList.map(function (modalTriggerEl) {
-        return new bootstrap.Modal(modalTriggerEl);
+// Инициализация подтверждений
+function initConfirmations() {
+    // Подтверждение удаления
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('[data-confirm]')) {
+            const message = e.target.getAttribute('data-confirm');
+            if (!confirm(message)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
     });
 }
 
-// Инициализация форм
-function initForms() {
-    // Валидация форм
-    const forms = document.querySelectorAll('.needs-validation');
+// Валидация форм
+function initFormValidation() {
+    const forms = document.querySelectorAll('form[data-validate]');
     forms.forEach(form => {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
+        form.addEventListener('submit', function(e) {
+            if (!validateForm(this)) {
+                e.preventDefault();
             }
-            form.classList.add('was-validated');
-        });
-    });
-    
-    // Автосохранение форм
-    const autoSaveForms = document.querySelectorAll('.auto-save');
-    autoSaveForms.forEach(form => {
-        const inputs = form.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            input.addEventListener('change', function() {
-                autoSaveForm(form);
-            });
         });
     });
 }
 
-// Автосохранение формы
-function autoSaveForm(form) {
-    const formData = new FormData(form);
-    const url = form.getAttribute('data-auto-save-url');
+// Функция валидации формы
+function validateForm(form) {
+    let isValid = true;
+    const requiredFields = form.querySelectorAll('[required]');
     
-    if (!url) return;
-    
-    fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Форма сохранена', 'success');
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            showFieldError(field, 'Это поле обязательно для заполнения');
+            isValid = false;
         } else {
-            showToast('Ошибка сохранения', 'error');
+            clearFieldError(field);
         }
-    })
-    .catch(error => {
-        console.error('Ошибка автосохранения:', error);
-        showToast('Ошибка сохранения', 'error');
-    });
-}
-
-// Инициализация графиков
-function initCharts() {
-    const chartElements = document.querySelectorAll('[data-chart]');
-    chartElements.forEach(element => {
-        const chartType = element.getAttribute('data-chart');
-        const chartData = JSON.parse(element.getAttribute('data-chart-data') || '{}');
         
-        if (chartType === 'pie') {
-            createPieChart(element, chartData);
-        } else if (chartType === 'bar') {
-            createBarChart(element, chartData);
-        } else if (chartType === 'line') {
-            createLineChart(element, chartData);
+        // Специальная валидация для email
+        if (field.type === 'email' && field.value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(field.value)) {
+                showFieldError(field, 'Введите корректный email адрес');
+                isValid = false;
+            }
         }
-    });
-}
-
-// Создание круговой диаграммы
-function createPieChart(element, data) {
-    const ctx = element.getContext('2d');
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: data.labels || [],
-            datasets: [{
-                data: data.values || [],
-                backgroundColor: [
-                    '#dc3545', '#6c757d', '#198754', '#fd7e14', '#0dcaf0',
-                    '#6f42c1', '#e83e8c', '#20c997', '#ffc107', '#6610f2'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
+        
+        // Валидация длины пароля
+        if (field.type === 'password' && field.value) {
+            if (field.value.length < 6) {
+                showFieldError(field, 'Пароль должен содержать минимум 6 символов');
+                isValid = false;
             }
         }
     });
-}
-
-// Создание столбчатой диаграммы
-function createBarChart(element, data) {
-    const ctx = element.getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels || [],
-            datasets: [{
-                label: data.label || 'Данные',
-                data: data.values || [],
-                backgroundColor: '#dc3545',
-                borderColor: '#c82333',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-// Создание линейной диаграммы
-function createLineChart(element, data) {
-    const ctx = element.getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels || [],
-            datasets: [{
-                label: data.label || 'Данные',
-                data: data.values || [],
-                borderColor: '#dc3545',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-// Показ уведомлений
-function showToast(message, type = 'info', duration = 5000) {
-    const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        createToastContainer();
-    }
     
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} alert-dismissible fade show`;
-    toast.innerHTML = `
+    return isValid;
+}
+
+// Показать ошибку поля
+function showFieldError(field, message) {
+    clearFieldError(field);
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block';
+    errorDiv.textContent = message;
+    
+    field.classList.add('is-invalid');
+    field.parentNode.appendChild(errorDiv);
+}
+
+// Очистить ошибку поля
+function clearFieldError(field) {
+    field.classList.remove('is-invalid');
+    const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+// Инициализация анимаций
+function initAnimations() {
+    // Анимация появления элементов при скролле
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+            }
+        });
+    }, observerOptions);
+    
+    // Наблюдение за элементами для анимации
+    const animatedElements = document.querySelectorAll('.card, .feature-icon, .stat-icon');
+    animatedElements.forEach(el => {
+        observer.observe(el);
+    });
+}
+
+// Функции для работы с опросами
+window.surveyUtils = {
+    // Копирование ссылки на опрос
+    copySurveyUrl: function(url) {
+        navigator.clipboard.writeText(url).then(function() {
+            showNotification('Ссылка скопирована в буфер обмена', 'success');
+        }).catch(function() {
+            // Fallback для старых браузеров
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showNotification('Ссылка скопирована в буфер обмена', 'success');
+        });
+    },
+    
+    // Подтверждение отправки опроса
+    confirmSurveySubmission: function() {
+        return confirm('Вы уверены, что хотите отправить ответы? После отправки их нельзя будет изменить.');
+    },
+    
+    // Валидация ответов на опрос
+    validateSurveyAnswers: function(form) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        return isValid;
+    }
+};
+
+// Функции для работы с графиками
+window.chartUtils = {
+    // Создание круговой диаграммы
+    createPieChart: function(canvasId, data, title) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        return new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd',
+                        '#6f42c1', '#e83e8c', '#20c997', '#6c757d', '#343a40'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                }
+            }
+        });
+    },
+    
+    // Создание столбчатой диаграммы
+    createBarChart: function(canvasId, data, title) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        return new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Количество',
+                    data: values,
+                    backgroundColor: '#dc3545',
+                    borderColor: '#c82333',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                }
+            }
+        });
+    }
+};
+
+// Функции для работы с уведомлениями
+window.notificationUtils = {
+    // Показать уведомление
+    show: function(message, type = 'info', duration = 5000) {
+        showNotification(message, type, duration);
+    },
+    
+    // Показать успешное уведомление
+    success: function(message, duration) {
+        this.show(message, 'success', duration);
+    },
+    
+    // Показать уведомление об ошибке
+    error: function(message, duration) {
+        this.show(message, 'error', duration);
+    },
+    
+    // Показать предупреждение
+    warning: function(message, duration) {
+        this.show(message, 'warning', duration);
+    }
+};
+
+// Функция показа уведомления
+function showNotification(message, type = 'info', duration = 5000) {
+    // Создание элемента уведомления
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    `;
+    
+    notification.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    toastContainer.appendChild(toast);
+    // Добавление в DOM
+    document.body.appendChild(notification);
     
-    setTimeout(() => {
-        toast.remove();
-    }, duration);
-}
-
-// Создание контейнера для уведомлений
-function createToastContainer() {
-    const container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'position-fixed top-0 end-0 p-3';
-    container.style.zIndex = '1055';
-    document.body.appendChild(container);
-}
-
-// Получение CSRF токена
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+    // Автоматическое скрытие
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
             }
-        }
+        }, duration);
     }
-    return cookieValue;
+    
+    // Обработка закрытия
+    notification.addEventListener('closed.bs.alert', function() {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    });
 }
 
-// Функции для работы с опросами
-const SurveyManager = {
-    // Копирование ссылки на опрос
-    copySurveyLink: function(surveyId) {
-        const link = `${window.location.origin}/surveys/public/${surveyId}/`;
-        navigator.clipboard.writeText(link).then(function() {
-            showToast('Ссылка скопирована в буфер обмена', 'success');
-        }, function() {
-            showToast('Ошибка копирования ссылки', 'error');
-        });
-    },
-    
-    // Предварительный просмотр опроса
-    previewSurvey: function(surveyId) {
-        const url = `/surveys/${surveyId}/preview/`;
-        window.open(url, '_blank');
-    },
-    
-    // Экспорт результатов
-    exportResults: function(surveyId, format = 'csv') {
-        const url = `/surveys/${surveyId}/results/export/?format=${format}`;
-        window.location.href = url;
-    },
-    
-    // Удаление опроса с подтверждением
-    deleteSurvey: function(surveyId, surveyTitle) {
-        if (confirm(`Вы уверены, что хотите удалить опрос "${surveyTitle}"? Это действие нельзя отменить.`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/surveys/${surveyId}/delete/`;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = 'csrfmiddlewaretoken';
-            csrfToken.value = getCookie('csrftoken');
-            
-            form.appendChild(csrfToken);
-            document.body.appendChild(form);
-            form.submit();
+// Функции для работы с данными
+window.dataUtils = {
+    // Экспорт данных в CSV
+    exportToCSV: function(data, filename) {
+        if (!data || !data.length) {
+            notificationUtils.error('Нет данных для экспорта');
+            return;
         }
-    }
-};
-
-// Функции для работы с вопросами
-const QuestionManager = {
-    // Добавление нового вопроса
-    addQuestion: function(surveyId) {
-        const url = `/surveys/${surveyId}/questions/create/`;
-        window.location.href = url;
-    },
-    
-    // Редактирование вопроса
-    editQuestion: function(surveyId, questionId) {
-        const url = `/surveys/${surveyId}/questions/${questionId}/edit/`;
-        window.location.href = url;
-    },
-    
-    // Удаление вопроса
-    deleteQuestion: function(surveyId, questionId, questionText) {
-        if (confirm(`Удалить вопрос "${questionText}"?`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/surveys/${surveyId}/questions/${questionId}/delete/`;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = 'csrfmiddlewaretoken';
-            csrfToken.value = getCookie('csrftoken');
-            
-            form.appendChild(csrfToken);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    },
-    
-    // Изменение порядка вопросов
-    reorderQuestions: function(surveyId) {
-        const url = `/surveys/${surveyId}/questions/reorder/`;
-        window.location.href = url;
-    }
-};
-
-// Функции для работы с пользователями
-const UserManager = {
-    // Активация/деактивация пользователя
-    toggleUserStatus: function(userId, currentStatus) {
-        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-        const url = `/users/admin/users/${userId}/toggle-status/`;
         
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ status: newStatus })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                showToast('Ошибка изменения статуса', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            showToast('Ошибка изменения статуса', 'error');
-        });
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename || 'export.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     },
     
-    // Импорт пользователей из LDAP
-    importFromLDAP: function() {
-        const url = '/users/admin/ldap-import/';
-        window.location.href = url;
+    // Форматирование даты
+    formatDate: function(date, format = 'DD.MM.YYYY') {
+        if (!date) return '';
+        
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        
+        return format
+            .replace('DD', day)
+            .replace('MM', month)
+            .replace('YYYY', year);
     }
 };
 
-// Глобальные функции
-window.SurveyManager = SurveyManager;
-window.QuestionManager = QuestionManager;
-window.UserManager = UserManager;
-window.showToast = showToast;
+// Функции для работы с модальными окнами
+window.modalUtils = {
+    // Показать модальное окно
+    show: function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        }
+    },
+    
+    // Скрыть модальное окно
+    hide: function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
+        }
+    }
+};
+
+// Утилиты для работы с DOM
+window.domUtils = {
+    // Создание элемента с атрибутами
+    createElement: function(tag, attributes = {}, textContent = '') {
+        const element = document.createElement(tag);
+        
+        Object.keys(attributes).forEach(key => {
+            if (key === 'className') {
+                element.className = attributes[key];
+            } else if (key === 'innerHTML') {
+                element.innerHTML = attributes[key];
+            } else {
+                element.setAttribute(key, attributes[key]);
+            }
+        });
+        
+        if (textContent) {
+            element.textContent = textContent;
+        }
+        
+        return element;
+    },
+    
+    // Добавление/удаление классов
+    toggleClass: function(element, className) {
+        if (element.classList.contains(className)) {
+            element.classList.remove(className);
+        } else {
+            element.classList.add(className);
+        }
+    },
+    
+    // Проверка видимости элемента
+    isVisible: function(element) {
+        return element.offsetWidth > 0 && element.offsetHeight > 0;
+    }
+};
+
+// Глобальные обработчики событий
+document.addEventListener('click', function(e) {
+    // Обработка копирования ссылок
+    if (e.target.matches('[data-copy]')) {
+        const text = e.target.getAttribute('data-copy');
+        surveyUtils.copySurveyUrl(text);
+    }
+    
+    // Обработка подтверждений
+    if (e.target.matches('[data-confirm]')) {
+        const message = e.target.getAttribute('data-confirm');
+        if (!confirm(message)) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }
+});
+
+// Обработка ошибок
+window.addEventListener('error', function(e) {
+    console.error('JavaScript error:', e.error);
+    notificationUtils.error('Произошла ошибка. Проверьте консоль для деталей.');
+});
+
+// Обработка необработанных промисов
+window.addEventListener('unhandledrejection', function(e) {
+    console.error('Unhandled promise rejection:', e.reason);
+    notificationUtils.error('Произошла ошибка при выполнении операции.');
+});

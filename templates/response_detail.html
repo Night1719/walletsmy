@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Ответ пользователя - {{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Заголовок -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-user-check text-primary me-2"></i>
+                        Ответ пользователя
+                    </h2>
+                    <p class="text-muted mb-0">{{ survey.title }}</p>
+                </div>
+                
+                <div class="btn-group">
+                    <a href="{{ url_for('survey_results', survey_id=survey.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>К результатам
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Панель управления
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Информация об ответе -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        Информация об ответе
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>ID ответа:</strong> #{{ response.id }}</p>
+                            <p><strong>Дата:</strong> {{ response.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if response.user_id %}
+                                <p><strong>Пользователь:</strong> 
+                                    {% set user = response.user %}
+                                    {% if user %}
+                                        {{ user.username }} ({{ user.email }})
+                                    {% else %}
+                                        Удален
+                                    {% endif %}
+                                </p>
+                            {% else %}
+                                <p><strong>Пользователь:</strong> Анонимный</p>
+                            {% endif %}
+                            <p><strong>IP адрес:</strong> {{ response.ip_address }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar text-success me-2"></i>
+                        Статистика
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Всего вопросов:</strong> {{ survey.questions|length }}</p>
+                    <p><strong>Отвечено на:</strong> {{ answers|length }}</p>
+                    <p><strong>Заполненность:</strong> 
+                        <span class="badge bg-{{ 'success' if answers|length == survey.questions|length else 'warning' }}">
+                            {{ "%.1f"|format((answers|length / survey.questions|length) * 100) }}%
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ответы на вопросы -->
+    <div class="row">
+        <div class="col">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-question-circle text-warning me-2"></i>
+                        Ответы на вопросы
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if answers %}
+                        {% for question in survey.questions %}
+                            <div class="question-answer mb-4 p-3 border rounded">
+                                <div class="d-flex align-items-start mb-3">
+                                    <span class="badge bg-primary me-3">{{ loop.index }}</span>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-2">{{ question.text }}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-tag me-1"></i>
+                                            {% if question.type == 'text' %}
+                                                Текстовый ответ
+                                            {% elif question.type == 'multiple_choice' %}
+                                                Множественный выбор
+                                            {% elif question.type == 'rating' %}
+                                                Рейтинг
+                                            {% else %}
+                                                {{ question.type }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                {% set answer = answers.get(question.id) %}
+                                {% if answer %}
+                                    <div class="answer-content">
+                                        {% if question.type == 'text' %}
+                                            <div class="text-answer p-3 bg-light rounded">
+                                                <strong>Ответ:</strong>
+                                                <p class="mb-0 mt-2">{{ answer.answer_value }}</p>
+                                            </div>
+                                        {% elif question.type == 'multiple_choice' %}
+                                            <div class="choice-answer p-3 bg-light rounded">
+                                                <strong>Выбранный вариант:</strong>
+                                                <p class="mb-0 mt-2">
+                                                    <span class="badge bg-success">{{ answer.answer_value }}</span>
+                                                </p>
+                                                {% if answer.question_options %}
+                                                    <small class="text-muted mt-2 d-block">
+                                                        <strong>Доступные варианты:</strong>
+                                                        {% set options = answer.question_options|from_json %}
+                                                        {% for option in options %}
+                                                            <span class="badge bg-secondary me-1">{{ option }}</span>
+                                                        {% endfor %}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        {% elif question.type == 'rating' %}
+                                            <div class="rating-answer p-3 bg-light rounded">
+                                                <strong>Оценка:</strong>
+                                                <div class="d-flex align-items-center mt-2">
+                                                    <h4 class="text-warning mb-0 me-3">{{ answer.answer_value }}/10</h4>
+                                                    <div class="stars">
+                                                        {% for i in range(1, 11) %}
+                                                            <i class="fas fa-star {{ 'text-warning' if i <= answer.answer_value|int else 'text-muted' }}"></i>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="unknown-answer p-3 bg-light rounded">
+                                                <strong>Ответ:</strong>
+                                                <p class="mb-0 mt-2">{{ answer.answer_value }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="no-answer p-3 bg-light rounded">
+                                        <em class="text-muted">На этот вопрос не был дан ответ</em>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state mb-3">
+                                <i class="fas fa-exclamation-triangle text-muted fa-3x"></i>
+                            </div>
+                            <h5 class="text-muted">Ответы не найдены</h5>
+                            <p class="text-muted">Возможно, ответ был удален или поврежден</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

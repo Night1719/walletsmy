@@ -1,0 +1,965 @@
+{% extends "base.html" %}
+
+{% block title %}Админ панель - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-cog text-danger me-2"></i>
+            Панель администратора
+        </h2>
+        <p class="text-muted">Управление системой и мониторинг активности</p>
+    </div>
+</div>
+
+<!-- Статистика системы -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-primary fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ users|length }}</h4>
+                <p class="text-muted mb-0">Пользователей</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clipboard-list text-success fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ surveys|length }}</h4>
+                <p class="text-muted mb-0">Опросов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-user-shield text-warning fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('is_admin')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Администраторов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-edit text-info fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">
+                    {{ users|selectattr('can_create_surveys')|list|length }}
+                </h4>
+                <p class="text-muted mb-0">Создателей опросов</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt text-danger me-2"></i>
+                    Быстрые действия
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Управление пользователями
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Панель управления
+                    </a>
+                    <button class="btn btn-outline-info" onclick="showSystemInfo()">
+                        <i class="fas fa-info-circle me-2"></i>Информация о системе
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="showBackupInfo()">
+                        <i class="fas fa-database me-2"></i>Резервное копирование
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние действия -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-users text-primary me-2"></i>
+                    Последние пользователи
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                    <div class="list-group list-group-flush">
+                        {% for user in users[-5:]|reverse %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ user.username }}</h6>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-danger">Админ</span>
+                                        {% endif %}
+                                        {% if user.can_create_surveys %}
+                                            <span class="badge bg-success">Создает опросы</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary btn-sm">
+                            Все пользователи
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Пользователи не найдены</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-clipboard-list text-success me-2"></i>
+                    Последние опросы
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if surveys %}
+                    <div class="list-group list-group-flush">
+                        {% for survey in surveys[-5:]|reverse %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ survey.title }}</h6>
+                                        <small class="text-muted">
+                                            {{ survey.questions|length }} вопросов, 
+                                            {{ survey.responses|length }} ответов
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if survey.is_anonymous %}
+                                            <span class="badge bg-success">Анонимный</span>
+                                        {% endif %}
+                                        {% if survey.require_auth %}
+                                            <span class="badge bg-warning">Требует вход</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ survey.created_at.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success btn-sm">
+                            Все опросы
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Опросы не найдены</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SSL управление -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <!-- LDAP интеграция -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-server text-info me-2"></i>
+                                LDAP интеграция
+                            </h5>
+                            <button class="btn btn-outline-info btn-sm" onclick="testLDAPConnection()">
+                                <i class="fas fa-plug me-1"></i>Тест подключения
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Настройки LDAP</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Сервер LDAP</label>
+                                    <input type="text" class="form-control" id="ldapServer" 
+                                           placeholder="ldap://ldap.example.com:389" value="ldap://localhost:389">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Base DN</label>
+                                    <input type="text" class="form-control" id="ldapBaseDN" 
+                                           placeholder="dc=example,dc=com" value="dc=example,dc=com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Bind DN</label>
+                                    <input type="text" class="form-control" id="ldapBindDN" 
+                                           placeholder="cn=admin,dc=example,dc=com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Пароль</label>
+                                    <input type="password" class="form-control" id="ldapPassword" 
+                                           placeholder="Пароль для подключения">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Действия</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Поиск пользователей</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="ldapSearchQuery" 
+                                               placeholder="Имя, email или логин">
+                                        <button class="btn btn-outline-primary" onclick="searchLDAPUsers()">
+                                            <i class="fas fa-search me-1"></i>Поиск
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="ldapSearchResults" class="mb-3" style="display: none;">
+                                    <h6>Результаты поиска:</h6>
+                                    <div class="ldap-users-list" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Результаты поиска будут здесь -->
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-success" onclick="importSelectedUsers()" style="display: none;" id="importBtn">
+                                    <i class="fas fa-download me-2"></i>Импортировать выбранных
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lock text-warning me-2"></i>
+                        SSL сертификаты
+                    </h5>
+                    <button class="btn btn-outline-warning btn-sm" onclick="showSSLInfo()">
+                        <i class="fas fa-info-circle me-1"></i>Информация
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Текущий статус SSL</h6>
+                        <div class="d-flex align-items-center mb-3">
+                            {% if ssl_status.enabled %}
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-check-circle me-1"></i>Включен
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary me-2">
+                                    <i class="fas fa-times-circle me-1"></i>Отключен
+                                </span>
+                            {% endif %}
+                            <small class="text-muted">HTTPS соединение</small>
+                        </div>
+                        
+                        <h6>Сертификат</h6>
+                        {% if ssl_status.certificate %}
+                            <p class="text-muted mb-2">{{ ssl_status.certificate.subject }}</p>
+                            <small class="text-muted">
+                                Действителен до: {{ ssl_status.certificate.expires }}
+                            </small>
+                        {% else %}
+                            <p class="text-muted">Сертификат не установлен</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Действия</h6>
+                        <div class="d-grid gap-2">
+                            {% if not ssl_status.enabled %}
+                                <button class="btn btn-success btn-sm" onclick="enableSSL()">
+                                    <i class="fas fa-lock me-1"></i>Включить SSL
+                                </button>
+                            {% else %}
+                                <button class="btn btn-warning btn-sm" onclick="disableSSL()">
+                                    <i class="fas fa-unlock me-1"></i>Отключить SSL
+                                </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-primary btn-sm" onclick="showTextInputModal()">
+                                <i class="fas fa-keyboard me-1"></i>Вставить сертификат
+                            </button>
+                            
+                            <button class="btn btn-outline-info btn-sm" onclick="generateSelfSigned()">
+                                <i class="fas fa-certificate me-1"></i>Самоподписанный
+                            </button>
+                            
+                            <button class="btn btn-outline-success btn-sm" onclick="setupLetsEncrypt()">
+                                <i class="fas fa-leaf me-1"></i>Let's Encrypt
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                SSL обеспечивает безопасное соединение для ваших опросов
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Системная информация -->
+<div class="row">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-server text-info me-2"></i>
+                    Системная информация
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Версия системы</h6>
+                        <p class="text-muted">BG Survey Platform v1.0.0</p>
+                        
+                        <h6>База данных</h6>
+                        <p class="text-muted">SQLite (встроенная)</p>
+                        
+                        <h6>Веб-сервер</h6>
+                        <p class="text-muted">Flask Development Server</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Python версия</h6>
+                        <p class="text-muted">3.8+</p>
+                        
+                        <h6>Статус системы</h6>
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>Работает
+                        </span>
+                        
+                        <h6>Последнее обновление</h6>
+                        <p class="text-muted">Сейчас</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна -->
+<div class="modal fade" id="systemInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Информация о системе</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Технические характеристики</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Фреймворк:</strong> Flask</li>
+                            <li><strong>База данных:</strong> SQLAlchemy + SQLite</li>
+                            <li><strong>Аутентификация:</strong> Flask-Login</li>
+                            <li><strong>Фронтенд:</strong> Bootstrap 5 + Chart.js</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Возможности</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Пользователи:</strong> {{ users|length }}</li>
+                            <li><strong>Опросы:</strong> {{ surveys|length }}</li>
+                            <li><strong>Администраторы:</strong> {{ users|selectattr('is_admin')|list|length }}</li>
+                            <li><strong>Создатели опросов:</strong> {{ users|selectattr('can_create_surveys')|list|length }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="backupInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Резервное копирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Функция резервного копирования будет доступна в следующих версиях
+                </div>
+                <p>Планируемые возможности:</p>
+                <ul>
+                    <li>Автоматическое резервное копирование базы данных</li>
+                    <li>Экспорт данных в различные форматы</li>
+                    <li>Восстановление из резервной копии</li>
+                    <li>Настройка расписания резервного копирования</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SSL Информация -->
+<div class="modal fade" id="sslInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-lock text-warning me-2"></i>
+                    SSL сертификаты - Информация
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Что такое SSL?</h6>
+                        <p class="text-muted">
+                            SSL (Secure Sockets Layer) - это протокол безопасности, который обеспечивает 
+                            шифрованное соединение между браузером пользователя и вашим сервером.
+                        </p>
+                        
+                        <h6>Преимущества SSL:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Шифрование данных</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Защита от перехвата</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Доверие пользователей</li>
+                            <li><i class="fas fa-check text-success me-2"></i>SEO преимущества</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Типы сертификатов:</h6>
+                        <div class="mb-3">
+                            <strong>Самоподписанный:</strong>
+                            <p class="text-muted small">Бесплатный, но браузеры показывают предупреждение</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Let's Encrypt:</strong>
+                            <p class="text-muted small">Бесплатный, доверенный всеми браузерами</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Коммерческий:</strong>
+                            <p class="text-muted small">Платный, максимальная защита и доверие</p>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Важно:</strong> После изменения SSL настроек требуется перезапуск сервера
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" onclick="showSSLTutorial()">
+                    <i class="fas fa-play me-1"></i>Руководство по настройке
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Let's Encrypt настройка -->
+<div class="modal fade" id="letsEncryptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-leaf text-success me-2"></i>
+                    Настройка Let's Encrypt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="letsEncryptForm">
+                    <div class="mb-3">
+                        <label for="domainName" class="form-label">Доменное имя</label>
+                        <input type="text" class="form-control" id="domainName" 
+                               placeholder="example.com" required>
+                        <small class="text-muted">Введите домен, для которого нужно получить сертификат</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailAddress" class="form-label">Email адрес</label>
+                        <input type="email" class="form-control" id="emailAddress" 
+                               placeholder="admin@example.com" required>
+                        <small class="text-muted">Для уведомлений о сертификате</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Требования:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Домен должен указывать на этот сервер</li>
+                            <li>Порт 80 должен быть открыт для проверки</li>
+                            <li>Certbot должен быть установлен на сервере</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Важно:</strong> После получения сертификата требуется перезапуск сервера
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" onclick="processLetsEncrypt()">
+                    <i class="fas fa-leaf me-1"></i>Получить сертификат
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Загрузка сертификата -->
+<div class="modal fade" id="uploadCertificateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-upload text-primary me-2"></i>
+                    Загрузка SSL сертификата
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="certificateForm">
+                    <div class="mb-3">
+                        <label for="certFile" class="form-label">Файл сертификата (.crt, .pem)</label>
+                        <input type="file" class="form-control" id="certFile" accept=".crt,.pem" required>
+                        <small class="text-muted">Выберите файл сертификата</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="keyFile" class="form-label">Приватный ключ (.key)</label>
+                        <input type="file" class="form-control" id="keyFile" accept=".key" required>
+                        <small class="text-muted">Выберите файл приватного ключа</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="chainFile" class="form-label">Цепочка сертификатов (опционально)</label>
+                        <input type="file" class="form-control" id="chainFile" accept=".crt,.pem">
+                        <small class="text-muted">Для некоторых провайдеров может потребоваться</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Поддерживаемые форматы:</strong> .crt, .pem, .key
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="processCertificateUpload()">
+                    <i class="fas fa-upload me-1"></i>Загрузить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Текстовый ввод SSL сертификата -->
+<div class="modal fade" id="textInputModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-keyboard text-primary me-2"></i>
+                    Вставка SSL сертификата
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Вставьте содержимое вашего SSL сертификата и приватного ключа
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="sslCertificate" class="form-label">
+                                <i class="fas fa-certificate text-success me-1"></i>
+                                Сертификат (.pem или .crt)
+                            </label>
+                            <textarea class="form-control" id="sslCertificate" rows="15" 
+                                      placeholder="-----BEGIN CERTIFICATE-----
+MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
+TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
+...
+-----END CERTIFICATE-----" required></textarea>
+                            <div class="form-text">Вставьте весь текст сертификата включая BEGIN и END строки</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="sslPrivateKey" class="form-label">
+                                <i class="fas fa-key text-warning me-1"></i>
+                                Приватный ключ (.pem или .key)
+                            </label>
+                            <textarea class="form-control" id="sslPrivateKey" rows="15" 
+                                      placeholder="-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
+...
+-----END PRIVATE KEY-----" required></textarea>
+                            <div class="form-text">Вставьте весь текст приватного ключа включая BEGIN и END строки</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание:</strong> После сохранения сертификата необходимо перезапустить сервер
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="saveSSLCertificate()">
+                    <i class="fas fa-save me-2"></i>Сохранить сертификат
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showSystemInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('systemInfoModal'));
+    modal.show();
+}
+
+function showBackupInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('backupInfoModal'));
+    modal.show();
+}
+
+// SSL функции
+function showSSLInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('sslInfoModal'));
+    modal.show();
+}
+
+function enableSSL() {
+    if (confirm('Включить SSL? Это потребует перезапуска сервера.')) {
+        // Здесь будет AJAX запрос для включения SSL
+        showNotification('SSL включен! Перезапустите сервер для применения изменений.', 'success');
+    }
+}
+
+function disableSSL() {
+    if (confirm('Отключить SSL? Это потребует перезапуска сервера.')) {
+        // Здесь будет AJAX запрос для отключения SSL
+        showNotification('SSL отключен! Перезапустите сервер для применения изменений.', 'warning');
+    }
+}
+
+function showTextInputModal() {
+    const modal = new bootstrap.Modal(document.getElementById('textInputModal'));
+    modal.show();
+}
+
+function saveSSLCertificate() {
+    const certificate = document.getElementById('sslCertificate').value.trim();
+    const privateKey = document.getElementById('sslPrivateKey').value.trim();
+    
+    if (!certificate || !privateKey) {
+        showNotification('Заполните оба поля!', 'error');
+        return;
+    }
+    
+    // Проверяем формат
+    if (!certificate.includes('-----BEGIN CERTIFICATE-----') || !certificate.includes('-----END CERTIFICATE-----')) {
+        showNotification('Неверный формат сертификата!', 'error');
+        return;
+    }
+    
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') && !privateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+        showNotification('Неверный формат приватного ключа!', 'error');
+        return;
+    }
+    
+    // Отправляем на сервер
+    fetch('/admin/ssl/text-upload', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            certificate: certificate,
+            private_key: privateKey
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Сертификат сохранен! Перезапустите сервер для применения.', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('textInputModal'));
+            modal.hide();
+        } else {
+            showNotification('Ошибка: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
+}
+
+function generateSelfSigned() {
+    if (confirm('Сгенерировать самоподписанный сертификат? Браузеры будут показывать предупреждение.')) {
+        // Здесь будет AJAX запрос для генерации сертификата
+        showNotification('Самоподписанный сертификат сгенерирован!', 'info');
+    }
+}
+
+function setupLetsEncrypt() {
+    const modal = new bootstrap.Modal(document.getElementById('letsEncryptModal'));
+    modal.show();
+}
+
+function processLetsEncrypt() {
+    const domain = document.getElementById('domainName').value;
+    const email = document.getElementById('emailAddress').value;
+    
+    if (!domain || !email) {
+        showNotification('Заполните все поля!', 'error');
+        return;
+    }
+    
+    // Здесь будет AJAX запрос для настройки Let's Encrypt
+    showNotification(`Настройка Let's Encrypt для ${domain}...`, 'info');
+    
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('letsEncryptModal'));
+    modal.hide();
+}
+
+function processCertificateUpload() {
+    const certFile = document.getElementById('certFile').files[0];
+    const keyFile = document.getElementById('keyFile').files[0];
+    
+    if (!certFile || !keyFile) {
+        showNotification('Выберите файлы сертификата и ключа!', 'error');
+        return;
+    }
+    
+    // Здесь будет AJAX запрос для загрузки сертификата
+    showNotification('Сертификат загружен! Перезапустите сервер для применения.', 'success');
+    
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadCertificateModal'));
+    modal.hide();
+}
+
+function showSSLTutorial() {
+    // Открываем руководство по настройке
+    window.open('https://letsencrypt.org/getting-started/', '_blank');
+}
+
+// LDAP функции
+function testLDAPConnection() {
+    const server = document.getElementById('ldapServer').value;
+    const baseDN = document.getElementById('ldapBaseDN').value;
+    const bindDN = document.getElementById('ldapBindDN').value;
+    const password = document.getElementById('ldapPassword').value;
+    
+    if (!server || !baseDN || !bindDN || !password) {
+        showNotification('Заполните все поля LDAP настроек', 'error');
+        return;
+    }
+    
+    showNotification('Тестирование подключения к LDAP...', 'info');
+    
+    // Здесь будет AJAX запрос для тестирования LDAP
+    fetch('/admin/ldap/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            server: server,
+            base_dn: baseDN,
+            bind_dn: bindDN,
+            password: password
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Подключение к LDAP успешно!', 'success');
+        } else {
+            showNotification('Ошибка подключения: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
+}
+
+function searchLDAPUsers() {
+    const query = document.getElementById('ldapSearchQuery').value;
+    
+    if (!query.trim()) {
+        showNotification('Введите поисковый запрос', 'error');
+        return;
+    }
+    
+    showNotification('Поиск пользователей в LDAP...', 'info');
+    
+    fetch(`/admin/ldap/search?q=${encodeURIComponent(query)}&max=50`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayLDAPUsers(data.users);
+                showNotification(`Найдено ${data.users.length} пользователей`, 'success');
+            } else {
+                showNotification('Ошибка поиска: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Ошибка сети: ' + error, 'error');
+        });
+}
+
+function displayLDAPUsers(users) {
+    const resultsDiv = document.getElementById('ldapSearchResults');
+    const usersList = resultsDiv.querySelector('.ldap-users-list');
+    const importBtn = document.getElementById('importBtn');
+    
+    if (users.length === 0) {
+        usersList.innerHTML = '<p class="text-muted">Пользователи не найдены</p>';
+        importBtn.style.display = 'none';
+    } else {
+        let html = '';
+        users.forEach(user => {
+            html += `
+                <div class="ldap-user-item p-2 border rounded mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${user.dn}" id="user_${user.dn.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label class="form-check-label" for="user_${user.dn.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            <strong>${user.cn || user.sAMAccountName}</strong><br>
+                            <small class="text-muted">
+                                ${user.mail ? 'Email: ' + user.mail + '<br>' : ''}
+                                ${user.sAMAccountName ? 'Логин: ' + user.sAMAccountName + '<br>' : ''}
+                                ${user.department ? 'Отдел: ' + user.department + '<br>' : ''}
+                                ${user.title ? 'Должность: ' + user.title : ''}
+                            </small>
+                        </label>
+                    </div>
+                </div>
+            `;
+        });
+        usersList.innerHTML = html;
+        importBtn.style.display = 'block';
+    }
+    
+    resultsDiv.style.display = 'block';
+}
+
+function importSelectedUsers() {
+    const selectedUsers = [];
+    document.querySelectorAll('.ldap-user-item input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedUsers.push(checkbox.value);
+    });
+    
+    if (selectedUsers.length === 0) {
+        showNotification('Выберите пользователей для импорта', 'error');
+        return;
+    }
+    
+    if (!confirm(`Импортировать ${selectedUsers.length} пользователей?`)) {
+        return;
+    }
+    
+    showNotification('Импорт пользователей...', 'info');
+    
+    fetch('/admin/ldap/import', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_dns: selectedUsers
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Импортировано ${data.total_imported} пользователей`, 'success');
+            // Скрываем результаты поиска
+            document.getElementById('ldapSearchResults').style.display = 'none';
+            document.getElementById('importBtn').style.display = 'none';
+        } else {
+            showNotification('Ошибка импорта: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

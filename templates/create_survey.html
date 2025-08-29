@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Создать опрос - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-plus text-danger me-2"></i>
+            Создать новый опрос
+        </h2>
+        <p class="text-muted">Создайте профессиональный опрос с различными типами вопросов</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="POST" id="surveyForm">
+                    <!-- Основная информация -->
+                    <div class="mb-4">
+                        <h5 class="text-dark mb-3">
+                            <i class="fas fa-info-circle text-danger me-2"></i>
+                            Основная информация
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название опроса *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Краткое описание цели опроса..."></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_anonymous" name="is_anonymous">
+                                    <label class="form-check-label" for="is_anonymous">
+                                        Анонимный опрос
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        IP-адреса будут отслеживаться для статистики
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="require_auth" name="require_auth">
+                                    <label class="form-check-label" for="require_auth">
+                                        Требует авторизации
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        Только авторизованные пользователи смогут пройти опрос
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Вопросы -->
+                    <div class="mb-4">
+                        <h5 class="text-dark mb-3">
+                            <i class="fas fa-question-circle text-danger me-2"></i>
+                            Вопросы
+                        </h5>
+                        
+                        <div id="questionsContainer">
+                            <!-- Вопросы будут добавляться сюда -->
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="button" class="btn btn-outline-danger" id="addQuestionBtn">
+                                <i class="fas fa-plus me-2"></i>Добавить вопрос
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Скрытое поле для вопросов -->
+                    <input type="hidden" name="questions" id="questionsData">
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-save me-2"></i>Создать опрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb text-warning me-2"></i>
+                    Советы по созданию
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Используйте четкие и понятные вопросы
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Добавляйте варианты ответов для множественного выбора
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Используйте рейтинги для оценки удовлетворенности
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Оставляйте текстовые поля для дополнительных комментариев
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="fas fa-eye text-info me-2"></i>
+                    Предварительный просмотр
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="previewContainer">
+                    <p class="text-muted text-center">Добавьте вопросы для предварительного просмотра</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Шаблон вопроса -->
+<template id="questionTemplate">
+    <div class="question-item border rounded p-3 mb-3 bg-light">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="mb-0">Вопрос <span class="question-number"></span></h6>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-question">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Текст вопроса *</label>
+            <input type="text" class="form-control question-text" required>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Тип вопроса *</label>
+            <select class="form-select question-type">
+                <option value="text">Текстовый ответ</option>
+                <option value="multiple_choice">Множественный выбор</option>
+                <option value="rating">Рейтинг (1-10)</option>
+            </select>
+        </div>
+        
+        <div class="question-options" style="display: none;">
+            <label class="form-label">Варианты ответов</label>
+            <div class="options-container">
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control option-input" placeholder="Вариант 1">
+                    <button type="button" class="btn btn-outline-secondary remove-option">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary add-option">
+                <i class="fas fa-plus me-1"></i>Добавить вариант
+            </button>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let questionCounter = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const questionTemplate = document.getElementById('questionTemplate');
+    const questionsData = document.getElementById('questionsData');
+    const surveyForm = document.getElementById('surveyForm');
+    
+    // Добавить вопрос
+    addQuestionBtn.addEventListener('click', function() {
+        addQuestion();
+    });
+    
+    // Обработка отправки формы
+    surveyForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        collectQuestionsData();
+        this.submit();
+    });
+    
+    // Добавить первый вопрос по умолчанию
+    addQuestion();
+});
+
+function addQuestion() {
+    questionCounter++;
+    const template = document.getElementById('questionTemplate');
+    const clone = template.content.cloneNode(true);
+    
+    // Установить номер вопроса
+    clone.querySelector('.question-number').textContent = questionCounter;
+    
+    // Добавить обработчики событий
+    const questionItem = clone.querySelector('.question-item');
+    const questionType = questionItem.querySelector('.question-type');
+    const questionOptions = questionItem.querySelector('.question-options');
+    const removeBtn = questionItem.querySelector('.remove-question');
+    const addOptionBtn = questionItem.querySelector('.add-option');
+    
+    // Показать/скрыть варианты ответов
+    questionType.addEventListener('change', function() {
+        if (this.value === 'multiple_choice') {
+            questionOptions.style.display = 'block';
+        } else {
+            questionOptions.style.display = 'none';
+        }
+        updatePreview();
+    });
+    
+    // Удалить вопрос
+    removeBtn.addEventListener('click', function() {
+        if (document.querySelectorAll('.question-item').length > 1) {
+            questionItem.remove();
+            updatePreview();
+        }
+    });
+    
+    // Добавить вариант ответа
+    addOptionBtn.addEventListener('click', function() {
+        addOption(questionItem);
+    });
+    
+    // Удалить вариант ответа
+    questionItem.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-option')) {
+            if (e.target.closest('.options-container').children.length > 1) {
+                e.target.closest('.input-group').remove();
+            }
+        }
+    });
+    
+    document.getElementById('questionsContainer').appendChild(clone);
+    updatePreview();
+}
+
+function addOption(questionItem) {
+    const optionsContainer = questionItem.querySelector('.options-container');
+    const optionCount = optionsContainer.children.length + 1;
+    
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'input-group mb-2';
+    optionDiv.innerHTML = `
+        <input type="text" class="form-control option-input" placeholder="Вариант ${optionCount}">
+        <button type="button" class="btn btn-outline-secondary remove-option">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    
+    optionsContainer.appendChild(optionDiv);
+}
+
+function updatePreview() {
+    const previewContainer = document.getElementById('previewContainer');
+    const questions = document.querySelectorAll('.question-item');
+    
+    if (questions.length === 0) {
+        previewContainer.innerHTML = '<p class="text-muted text-center">Добавьте вопросы для предварительного просмотра</p>';
+        return;
+    }
+    
+    let previewHTML = '';
+    questions.forEach((question, index) => {
+        const questionText = question.querySelector('.question-text').value || `Вопрос ${index + 1}`;
+        const questionType = question.querySelector('.question-type').value;
+        
+        previewHTML += `
+            <div class="mb-3 p-2 border-start border-3 border-primary">
+                <strong>${questionText}</strong>
+                <br><small class="text-muted">${getQuestionTypeName(questionType)}</small>
+        `;
+        
+        if (questionType === 'multiple_choice') {
+            const options = question.querySelectorAll('.option-input');
+            if (options.length > 0) {
+                previewHTML += '<div class="mt-2">';
+                options.forEach(option => {
+                    if (option.value) {
+                        previewHTML += `<div class="form-check"><input class="form-check-input" type="radio" disabled><label class="form-check-label small">${option.value}</label></div>`;
+                    }
+                });
+                previewHTML += '</div>';
+            }
+        } else if (questionType === 'rating') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Рейтинг от 1 до 10</small></div>';
+        } else {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Текстовое поле</small></div>';
+        }
+        
+        previewHTML += '</div>';
+    });
+    
+    previewContainer.innerHTML = previewHTML;
+}
+
+function getQuestionTypeName(type) {
+    const types = {
+        'text': 'Текстовый ответ',
+        'multiple_choice': 'Множественный выбор',
+        'rating': 'Рейтинг (1-10)'
+    };
+    return types[type] || type;
+}
+
+function collectQuestionsData() {
+    const questions = [];
+    document.querySelectorAll('.question-item').forEach(question => {
+        const questionData = {
+            text: question.querySelector('.question-text').value,
+            type: question.querySelector('.question-type').value,
+            options: []
+        };
+        
+        if (questionData.type === 'multiple_choice') {
+            question.querySelectorAll('.option-input').forEach(option => {
+                if (option.value.trim()) {
+                    questionData.options.push(option.value.trim());
+                }
+            });
+        }
+        
+        questions.push(questionData);
+    });
+    
+    document.getElementById('questionsData').value = JSON.stringify(questions);
+}
+
+// Обновлять предварительный просмотр при изменении полей
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('question-text') || e.target.classList.contains('option-input')) {
+        updatePreview();
+    }
+});
+
+// Функция для копирования ссылки на опрос (после создания)
+function copySurveyUrl(url, title) {
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        showNotification(`Ссылка на опрос "${title}" скопирована!`, 'success');
+        document.body.removeChild(tempInput);
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+        showNotification('Ошибка при копировании ссылки', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

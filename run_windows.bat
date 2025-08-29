@@ -1,130 +1,95 @@
 @echo off
 chcp 65001 >nul
 echo ========================================
-echo    BG Опросник - Запуск на Windows
+echo BG Survey Platform - Windows Launcher
 echo ========================================
 echo.
 
-REM Проверяем Python
-echo [1/8] Проверка Python...
+echo Checking Python installation...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Python не найден!
-    echo Установите Python с https://python.org
+    echo ERROR: Python is not installed or not in PATH
+    echo Please install Python 3.8+ from https://python.org
+    echo Make sure to check "Add to PATH" during installation
     pause
     exit /b 1
 )
-echo ✅ Python найден
 
-REM Проверяем наличие manage.py
-echo [2/8] Проверка Django проекта...
-if not exist "manage.py" (
-    echo ❌ Файл manage.py не найден!
-    echo Убедитесь, что вы в папке с проектом
-    echo.
-    echo Текущая папка:
-    cd
-    echo.
-    echo Содержимое папки:
-    dir
-    pause
-    exit /b 1
-)
-echo ✅ manage.py найден
+echo Python found. Checking version...
+python --version
 
-REM Создаем виртуальное окружение
-echo [3/8] Создание виртуального окружения...
-if not exist "venv" (
+echo.
+echo Creating virtual environment...
+if exist venv (
+    echo Virtual environment already exists
+) else (
     python -m venv venv
     if errorlevel 1 (
-        echo ❌ Ошибка создания виртуального окружения
+        echo ERROR: Failed to create virtual environment
         pause
         exit /b 1
     )
-    echo ✅ Виртуальное окружение создано
-) else (
-    echo ✅ Виртуальное окружение уже существует
 )
 
-REM Активируем виртуальное окружение
-echo [4/8] Активация виртуального окружения...
+echo.
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 if errorlevel 1 (
-    echo ❌ Ошибка активации виртуального окружения
+    echo ERROR: Failed to activate virtual environment
     pause
     exit /b 1
 )
-echo ✅ Виртуальное окружение активировано
 
-REM Обновляем pip
-echo [5/8] Обновление pip...
-python -m pip install --upgrade pip
-echo ✅ pip обновлен
-
-REM Устанавливаем зависимости
-echo [6/8] Установка зависимостей...
+echo.
+echo Installing dependencies...
 pip install -r requirements.txt
 if errorlevel 1 (
-    echo ❌ Ошибка установки зависимостей
+    echo ERROR: Failed to install dependencies
     pause
     exit /b 1
 )
-echo ✅ Зависимости установлены
 
-REM Создаем необходимые директории
-echo [7/8] Создание директорий...
-if not exist "staticfiles" mkdir staticfiles
-if not exist "media" mkdir media
-echo ✅ Директории созданы
+echo.
+echo Creating necessary directories...
+if not exist logs mkdir logs
+if not exist static\images mkdir static\images
 
-REM Создаем миграции
-echo [8/8] Создание миграций...
-python manage.py makemigrations users
-python manage.py makemigrations surveys
-echo ✅ Миграции созданы
+echo.
+echo Initializing database...
+python init_db.py
+if errorlevel 1 (
+    echo ERROR: Failed to initialize database
+    pause
+    exit /b 1
+)
 
-REM Применяем миграции
 echo.
-echo ========================================
-echo    Применение миграций...
-echo ========================================
-python manage.py migrate
-echo ✅ Миграции применены
+echo Creating admin user...
+python create_admin.py
+if errorlevel 1 (
+    echo ERROR: Failed to create admin user
+    pause
+    exit /b 1
+)
 
-REM Создаем суперпользователя
 echo.
 echo ========================================
-echo    Создание администратора...
-echo ========================================
-python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@example.com', 'admin123') if not User.objects.filter(username='admin').exists() else None; user = User.objects.get(username='admin'); user.role = 'admin'; user.can_create_surveys = True; user.save()"
-echo ✅ Администратор создан
-
-REM Собираем статические файлы
-echo.
-echo ========================================
-echo    Сбор статических файлов...
-echo ========================================
-python manage.py collectstatic --noinput
-echo ✅ Статические файлы собраны
-
-REM Запускаем сервер
-echo.
-echo ========================================
-echo    Запуск сервера разработки...
+echo Setup completed successfully!
 echo ========================================
 echo.
-echo ✅ Сервер запущен!
-echo ✅ Откройте браузер и перейдите по адресу:
-echo ✅ http://127.0.0.1:8000
+echo Starting BG Survey Platform...
 echo.
-echo ✅ Админ панель:
-echo ✅ http://127.0.0.1:8000/admin
-echo ✅ Логин: admin
-echo ✅ Пароль: admin123
+echo The application will be available at:
+echo http://localhost:5000
 echo.
-echo Для остановки сервера нажмите Ctrl+C
+echo Default users:
+echo - Admin: admin / admin123
+echo - Test: test_user / test123
+echo - User: user / user123
+echo.
+echo Press Ctrl+C to stop the application
 echo.
 
-python manage.py runserver 127.0.0.1:8000
+python app.py
 
 pause
