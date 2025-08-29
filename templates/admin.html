@@ -255,6 +255,10 @@
                             <button class="btn btn-outline-info btn-sm" onclick="generateSelfSigned()">
                                 <i class="fas fa-certificate me-1"></i>Самоподписанный
                             </button>
+                            
+                            <button class="btn btn-outline-success btn-sm" onclick="setupLetsEncrypt()">
+                                <i class="fas fa-leaf me-1"></i>Let's Encrypt
+                            </button>
                         </div>
                         
                         <div class="mt-3">
@@ -431,6 +435,59 @@
     </div>
 </div>
 
+<!-- Let's Encrypt настройка -->
+<div class="modal fade" id="letsEncryptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-leaf text-success me-2"></i>
+                    Настройка Let's Encrypt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="letsEncryptForm">
+                    <div class="mb-3">
+                        <label for="domainName" class="form-label">Доменное имя</label>
+                        <input type="text" class="form-control" id="domainName" 
+                               placeholder="example.com" required>
+                        <small class="text-muted">Введите домен, для которого нужно получить сертификат</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailAddress" class="form-label">Email адрес</label>
+                        <input type="email" class="form-control" id="emailAddress" 
+                               placeholder="admin@example.com" required>
+                        <small class="text-muted">Для уведомлений о сертификате</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Требования:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Домен должен указывать на этот сервер</li>
+                            <li>Порт 80 должен быть открыт для проверки</li>
+                            <li>Certbot должен быть установлен на сервере</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Важно:</strong> После получения сертификата требуется перезапуск сервера
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" onclick="processLetsEncrypt()">
+                    <i class="fas fa-leaf me-1"></i>Получить сертификат
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Загрузка сертификата -->
 <div class="modal fade" id="uploadCertificateModal" tabindex="-1">
     <div class="modal-dialog">
@@ -521,6 +578,28 @@ function generateSelfSigned() {
         // Здесь будет AJAX запрос для генерации сертификата
         showNotification('Самоподписанный сертификат сгенерирован!', 'info');
     }
+}
+
+function setupLetsEncrypt() {
+    const modal = new bootstrap.Modal(document.getElementById('letsEncryptModal'));
+    modal.show();
+}
+
+function processLetsEncrypt() {
+    const domain = document.getElementById('domainName').value;
+    const email = document.getElementById('emailAddress').value;
+    
+    if (!domain || !email) {
+        showNotification('Заполните все поля!', 'error');
+        return;
+    }
+    
+    // Здесь будет AJAX запрос для настройки Let's Encrypt
+    showNotification(`Настройка Let's Encrypt для ${domain}...`, 'info');
+    
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('letsEncryptModal'));
+    modal.hide();
 }
 
 function processCertificateUpload() {

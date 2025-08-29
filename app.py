@@ -236,6 +236,32 @@ def toggle_survey_creation(user_id):
     flash(f'Права на создание опросов для {user.username} изменены', 'success')
     return redirect(url_for('admin_users'))
 
+@app.route('/admin/users/<int:user_id>/delete')
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Нельзя удалить самого себя
+    if user.id == current_user.id:
+        flash('Нельзя удалить свой собственный аккаунт', 'error')
+        return redirect(url_for('admin_users'))
+    
+    # Нельзя удалить последнего администратора
+    if user.is_admin:
+        admin_count = User.query.filter_by(is_admin=True).count()
+        if admin_count <= 1:
+            flash('Нельзя удалить последнего администратора', 'error')
+            return redirect(url_for('admin_users'))
+    
+    username = user.username
+    
+    # Удаляем пользователя (каскадное удаление)
+    db.session.delete(user)
+    db.session.commit()
+    
+    flash(f'Пользователь {username} удален успешно', 'success')
+    return redirect(url_for('admin_users'))
+
 @app.route('/surveys/create', methods=['GET', 'POST'])
 @login_required
 @survey_creation_required

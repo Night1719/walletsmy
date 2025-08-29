@@ -172,7 +172,7 @@
                                                 <i class="fas fa-chart-bar"></i>
                                             </a>
                                             <button class="btn btn-outline-info" title="Поделиться"
-                                                    onclick="copySurveyUrl('{{ url_for('view_survey', survey_id=survey.id) }}', '{{ survey.title }}')">
+                                                    onclick="copySurveyUrl('{{ request.url_root.rstrip('/') }}{{ url_for('view_survey', survey_id=survey.id) }}', '{{ survey.title }}')">
                                                 <i class="fas fa-share-alt"></i>
                                             </button>
                                         </div>

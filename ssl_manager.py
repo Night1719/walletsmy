@@ -150,6 +150,13 @@ class SSLManager:
                 datetime.utcnow()
             ).not_valid_after(
                 datetime.utcnow().replace(year=datetime.utcnow().year + 1)
+            ).add_extension(
+                x509.SubjectAlternativeName([
+                    x509.DNSName(common_name),
+                    x509.IPAddress("127.0.0.1"),
+                    x509.IPAddress("::1")
+                ]),
+                critical=False
             ).sign(private_key, hashes.SHA256(), default_backend())
             
             # Сохраняем файлы
@@ -171,6 +178,101 @@ class SSLManager:
             
         except Exception as e:
             return False, f"Ошибка генерации сертификата: {str(e)}"
+    
+    def setup_lets_encrypt(self, domain, email):
+        """Настраивает Let's Encrypt сертификат"""
+        try:
+            import subprocess
+            import tempfile
+            
+            # Проверяем наличие certbot
+            try:
+                subprocess.run(['certbot', '--version'], capture_output=True, check=True)
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                return False, "Certbot не установлен. Установите: sudo apt install certbot"
+            
+            # Создаем временный конфиг для certbot
+            config_content = f"""
+[webroot]
+webroot-path = /tmp/letsencrypt
+webroot-root = /tmp/letsencrypt
+domains = {domain}
+email = {email}
+agree-tos = True
+non-interactive = True
+"""
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as f:
+                f.write(config_content)
+                config_file = f.name
+            
+            try:
+                # Создаем временную папку для веб-рута
+                os.makedirs('/tmp/letsencrypt', exist_ok=True)
+                
+                # Запускаем certbot
+                result = subprocess.run([
+                    'certbot', 'certonly',
+                    '--config', config_file,
+                    '--webroot',
+                    '--webroot-path', '/tmp/letsencrypt'
+                ], capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    # Копируем сертификаты
+                    cert_source = f'/etc/letsencrypt/live/{domain}/fullchain.pem'
+                    key_source = f'/etc/letsencrypt/live/{domain}/privkey.pem'
+                    
+                    if os.path.exists(cert_source) and os.path.exists(key_source):
+                        # Копируем с sudo правами
+                        subprocess.run(['sudo', 'cp', cert_source, self.cert_file], check=True)
+                        subprocess.run(['sudo', 'cp', key_source, self.key_file], check=True)
+                        
+                        # Устанавливаем права доступа
+                        subprocess.run(['sudo', 'chown', f'{os.getuid()}:{os.getgid()}', self.cert_file], check=True)
+                        subprocess.run(['sudo', 'chown', f'{os.getuid()}:{os.getgid()}', self.key_file], check=True)
+                        os.chmod(self.key_file, 0o600)
+                        os.chmod(self.cert_file, 0o644)
+                        
+                        return True, f"Let's Encrypt сертификат для {domain} установлен успешно"
+                    else:
+                        return False, "Сертификаты не найдены после генерации"
+                else:
+                    return False, f"Ошибка certbot: {result.stderr}"
+                    
+            finally:
+                # Очищаем временные файлы
+                os.unlink(config_file)
+                subprocess.run(['sudo', 'rm', '-rf', '/tmp/letsencrypt'], check=False)
+                
+        except Exception as e:
+            return False, f"Ошибка настройки Let's Encrypt: {str(e)}"
+    
+    def validate_certificate_format(self):
+        """Проверяет формат сертификата"""
+        try:
+            if not os.path.exists(self.cert_file):
+                return False, "Файл сертификата не найден"
+            
+            # Проверяем что это PEM файл
+            with open(self.cert_file, 'r') as f:
+                content = f.read()
+                if not content.startswith('-----BEGIN CERTIFICATE-----'):
+                    return False, "Неверный формат сертификата (должен быть PEM)"
+            
+            # Проверяем что это приватный ключ
+            if not os.path.exists(self.key_file):
+                return False, "Файл приватного ключа не найден"
+            
+            with open(self.key_file, 'r') as f:
+                content = f.read()
+                if not content.startswith('-----BEGIN PRIVATE KEY-----') and not content.startswith('-----BEGIN RSA PRIVATE KEY-----'):
+                    return False, "Неверный формат приватного ключа (должен быть PEM)"
+            
+            return True, "Формат файлов корректен"
+            
+        except Exception as e:
+            return False, f"Ошибка проверки формата: {str(e)}"
     
     def get_ssl_config(self):
         """Возвращает конфигурацию SSL для Flask"""

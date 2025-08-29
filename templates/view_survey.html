@@ -94,7 +94,7 @@
                                     
                                 {% elif question.type == 'multiple_choice' %}
                                     <div class="mb-3">
-                                        {% set options = question.options|from_json %}
+                                        {% set options = question.options|string|replace('"', '')|replace('[', '')|replace(']', '')|split(',') if question.options else [] %}
                                         {% for option in options %}
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" 
@@ -221,7 +221,7 @@
             <div class="card-body">
                 <div class="input-group">
                     <input type="text" class="form-control" 
-                           value="{{ request.url }}" 
+                           value="{{ request.url_root.rstrip('/') }}{{ request.path }}" 
                            id="surveyUrl" readonly>
                     <button class="btn btn-outline-primary" type="button" 
                             onclick="copySurveyUrl()">

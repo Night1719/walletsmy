@@ -178,6 +178,13 @@
                                                    onclick="return confirm('{{ 'Убрать права на создание опросов у' if user.can_create_surveys else 'Дать права на создание опросов' }} {{ user.username }}?')">
                                                     <i class="fas fa-{{ 'ban' if user.can_create_surveys else 'check' }}"></i>
                                                 </a>
+                                                
+                                                <a href="{{ url_for('delete_user', user_id=user.id) }}" 
+                                                   class="btn btn-outline-danger"
+                                                   title="Удалить пользователя"
+                                                   onclick="return confirm('Вы уверены, что хотите удалить пользователя {{ user.username }}? Это действие нельзя отменить!')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
                                             {% else %}
                                                 <span class="btn btn-outline-secondary disabled" title="Нельзя изменить свои права">
                                                     <i class="fas fa-lock"></i>
