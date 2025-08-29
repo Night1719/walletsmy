@@ -497,7 +497,10 @@ def survey_results(survey_id):
         flash('У вас нет доступа к результатам этого опроса', 'error')
         return redirect(url_for('dashboard'))
     
-    # Анализ результатов
+    # Получаем все ответы на опрос
+    responses = SurveyResponse.query.filter_by(survey_id=survey_id).order_by(SurveyResponse.created_at.desc()).all()
+    
+    # Анализ общих результатов
     results = {}
     for question in survey.questions:
         try:
@@ -593,7 +596,7 @@ def survey_results(survey_id):
                 'error': f'Ошибка обработки: {str(e)}'
             }
     
-    return render_template('survey_results.html', survey=survey, results=results)
+    return render_template('survey_results.html', survey=survey, results=results, responses=responses)
 
 @app.route('/surveys/<int:survey_id>/export-excel')
 @login_required
@@ -715,6 +718,110 @@ def export_survey_excel(survey_id):
         print(f"❌ Ошибка экспорта в Excel: {e}")
         flash('Ошибка экспорта в Excel', 'error')
         return redirect(url_for('survey_results', survey_id=survey_id))
+
+@app.route('/surveys/<int:survey_id>/response/<int:response_id>')
+@login_required
+def view_response_detail(survey_id, response_id):
+    """Просмотр детального ответа пользователя"""
+    survey = Survey.query.get_or_404(survey_id)
+    response = SurveyResponse.query.get_or_404(response_id)
+    
+    if not current_user.is_admin and survey.creator_id != current_user.id:
+        flash('У вас нет доступа к результатам этого опроса', 'error')
+        return redirect(url_for('dashboard'))
+    
+    if response.survey_id != survey_id:
+        flash('Ответ не принадлежит указанному опросу', 'error')
+        return redirect(url_for('survey_results', survey_id=survey_id))
+    
+    # Получаем ответы на вопросы
+    answers = {}
+    for answer in response.answers:
+        question = answer.question
+        if question:
+            answers[question.id] = {
+                'question_text': question.text,
+                'question_type': question.type,
+                'answer_value': answer.value,
+                'question_options': question.options
+            }
+    
+    return render_template('response_detail.html', 
+                         survey=survey, 
+                         response=response, 
+                         answers=answers)
+
+# LDAP маршруты
+@app.route('/admin/ldap/test')
+@admin_required
+def test_ldap_connection():
+    """Тестирование подключения к LDAP"""
+    try:
+        from ldap_manager import ldap_manager
+        result = ldap_manager.test_connection()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Ошибка: {str(e)}'})
+
+@app.route('/admin/ldap/search')
+@admin_required
+def search_ldap_users():
+    """Поиск пользователей в LDAP"""
+    try:
+        from ldap_manager import ldap_manager
+        query = request.args.get('q', '')
+        max_results = int(request.args.get('max', 50))
+        
+        users = ldap_manager.search_users(query, max_results)
+        return jsonify({'success': True, 'users': users})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Ошибка: {str(e)}'})
+
+@app.route('/admin/ldap/import', methods=['POST'])
+@admin_required
+def import_ldap_users():
+    """Импорт пользователей из LDAP"""
+    try:
+        from ldap_manager import ldap_manager
+        from werkzeug.security import generate_password_hash
+        
+        data = request.get_json()
+        user_dns = data.get('user_dns', [])
+        
+        if not user_dns:
+            return jsonify({'success': False, 'error': 'Не выбраны пользователи для импорта'})
+        
+        # Импортируем пользователей
+        result = ldap_manager.import_users(user_dns)
+        
+        if result['success']:
+            # Создаем пользователей в системе
+            created_count = 0
+            for user_data in result['imported_users']:
+                # Проверяем, не существует ли уже пользователь
+                existing_user = User.query.filter_by(username=user_data['username']).first()
+                if not existing_user:
+                    # Создаем нового пользователя
+                    new_user = User(
+                        username=user_data['username'],
+                        email=user_data['email'] or f"{user_data['username']}@buntergroup.com",
+                        password_hash=generate_password_hash('changeme123'),  # Временный пароль
+                        is_admin=False,
+                        can_create_surveys=False
+                    )
+                    db.session.add(new_user)
+                    created_count += 1
+            
+            if created_count > 0:
+                db.session.commit()
+                flash(f'Импортировано {created_count} пользователей из LDAP', 'success')
+            else:
+                flash('Все выбранные пользователи уже существуют в системе', 'info')
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Ошибка импорта: {str(e)}'})
 
 if __name__ == '__main__':
     with app.app_context():

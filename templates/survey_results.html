@@ -232,6 +232,80 @@
     </div>
 </div>
 
+<!-- Список ответов пользователей -->
+{% if responses %}
+<div class="row mt-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users text-info me-2"></i>
+                    Ответы пользователей ({{ responses|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Дата</th>
+                                <th>Пользователь</th>
+                                <th>IP адрес</th>
+                                <th>Заполненность</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for response in responses %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ response.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>
+                                    {% if response.user_id %}
+                                        {% set user = response.user %}
+                                        {% if user %}
+                                            <span class="badge bg-primary">{{ user.username }}</span>
+                                            <small class="text-muted d-block">{{ user.email }}</small>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Удален</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-warning">Анонимный</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ response.ip_address }}</small>
+                                </td>
+                                <td>
+                                    {% set answers_count = response.answers|length %}
+                                    {% set questions_count = survey.questions|length %}
+                                    {% set completion = (answers_count / questions_count) * 100 %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar bg-{{ 'success' if completion == 100 else 'warning' }}" 
+                                                 style="width: {{ completion }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ "%.0f"|format(completion) }}%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_response_detail', survey_id=survey.id, response_id=response.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Просмотр
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Детальная информация об ответах -->
 {% if survey.responses %}
 <div class="row mt-4">

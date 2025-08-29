@@ -197,6 +197,73 @@
     <div class="col">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent border-0">
+                <!-- LDAP интеграция -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-server text-info me-2"></i>
+                                LDAP интеграция
+                            </h5>
+                            <button class="btn btn-outline-info btn-sm" onclick="testLDAPConnection()">
+                                <i class="fas fa-plug me-1"></i>Тест подключения
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Настройки LDAP</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Сервер LDAP</label>
+                                    <input type="text" class="form-control" id="ldapServer" 
+                                           placeholder="ldap://ldap.example.com:389" value="ldap://localhost:389">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Base DN</label>
+                                    <input type="text" class="form-control" id="ldapBaseDN" 
+                                           placeholder="dc=example,dc=com" value="dc=example,dc=com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Bind DN</label>
+                                    <input type="text" class="form-control" id="ldapBindDN" 
+                                           placeholder="cn=admin,dc=example,dc=com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Пароль</label>
+                                    <input type="password" class="form-control" id="ldapPassword" 
+                                           placeholder="Пароль для подключения">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Действия</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Поиск пользователей</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="ldapSearchQuery" 
+                                               placeholder="Имя, email или логин">
+                                        <button class="btn btn-outline-primary" onclick="searchLDAPUsers()">
+                                            <i class="fas fa-search me-1"></i>Поиск
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="ldapSearchResults" class="mb-3" style="display: none;">
+                                    <h6>Результаты поиска:</h6>
+                                    <div class="ldap-users-list" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Результаты поиска будут здесь -->
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-success" onclick="importSelectedUsers()" style="display: none;" id="importBtn">
+                                    <i class="fas fa-download me-2"></i>Импортировать выбранных
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-lock text-warning me-2"></i>
@@ -733,6 +800,148 @@ function processCertificateUpload() {
 function showSSLTutorial() {
     // Открываем руководство по настройке
     window.open('https://letsencrypt.org/getting-started/', '_blank');
+}
+
+// LDAP функции
+function testLDAPConnection() {
+    const server = document.getElementById('ldapServer').value;
+    const baseDN = document.getElementById('ldapBaseDN').value;
+    const bindDN = document.getElementById('ldapBindDN').value;
+    const password = document.getElementById('ldapPassword').value;
+    
+    if (!server || !baseDN || !bindDN || !password) {
+        showNotification('Заполните все поля LDAP настроек', 'error');
+        return;
+    }
+    
+    showNotification('Тестирование подключения к LDAP...', 'info');
+    
+    // Здесь будет AJAX запрос для тестирования LDAP
+    fetch('/admin/ldap/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            server: server,
+            base_dn: baseDN,
+            bind_dn: bindDN,
+            password: password
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Подключение к LDAP успешно!', 'success');
+        } else {
+            showNotification('Ошибка подключения: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
+}
+
+function searchLDAPUsers() {
+    const query = document.getElementById('ldapSearchQuery').value;
+    
+    if (!query.trim()) {
+        showNotification('Введите поисковый запрос', 'error');
+        return;
+    }
+    
+    showNotification('Поиск пользователей в LDAP...', 'info');
+    
+    fetch(`/admin/ldap/search?q=${encodeURIComponent(query)}&max=50`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayLDAPUsers(data.users);
+                showNotification(`Найдено ${data.users.length} пользователей`, 'success');
+            } else {
+                showNotification('Ошибка поиска: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Ошибка сети: ' + error, 'error');
+        });
+}
+
+function displayLDAPUsers(users) {
+    const resultsDiv = document.getElementById('ldapSearchResults');
+    const usersList = resultsDiv.querySelector('.ldap-users-list');
+    const importBtn = document.getElementById('importBtn');
+    
+    if (users.length === 0) {
+        usersList.innerHTML = '<p class="text-muted">Пользователи не найдены</p>';
+        importBtn.style.display = 'none';
+    } else {
+        let html = '';
+        users.forEach(user => {
+            html += `
+                <div class="ldap-user-item p-2 border rounded mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${user.dn}" id="user_${user.dn.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label class="form-check-label" for="user_${user.dn.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            <strong>${user.cn || user.sAMAccountName}</strong><br>
+                            <small class="text-muted">
+                                ${user.mail ? 'Email: ' + user.mail + '<br>' : ''}
+                                ${user.sAMAccountName ? 'Логин: ' + user.sAMAccountName + '<br>' : ''}
+                                ${user.department ? 'Отдел: ' + user.department + '<br>' : ''}
+                                ${user.title ? 'Должность: ' + user.title : ''}
+                            </small>
+                        </label>
+                    </div>
+                </div>
+            `;
+        });
+        usersList.innerHTML = html;
+        importBtn.style.display = 'block';
+    }
+    
+    resultsDiv.style.display = 'block';
+}
+
+function importSelectedUsers() {
+    const selectedUsers = [];
+    document.querySelectorAll('.ldap-user-item input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedUsers.push(checkbox.value);
+    });
+    
+    if (selectedUsers.length === 0) {
+        showNotification('Выберите пользователей для импорта', 'error');
+        return;
+    }
+    
+    if (!confirm(`Импортировать ${selectedUsers.length} пользователей?`)) {
+        return;
+    }
+    
+    showNotification('Импорт пользователей...', 'info');
+    
+    fetch('/admin/ldap/import', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_dns: selectedUsers
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Импортировано ${data.total_imported} пользователей`, 'success');
+            // Скрываем результаты поиска
+            document.getElementById('ldapSearchResults').style.display = 'none';
+            document.getElementById('importBtn').style.display = 'none';
+        } else {
+            showNotification('Ошибка импорта: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети: ' + error, 'error');
+    });
 }
 
 function showNotification(message, type) {
