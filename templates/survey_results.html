@@ -373,6 +373,13 @@ function createPieChart(canvasId, data, title) {
 
 function createRatingChart(canvasId, data, title) {
     const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Проверяем что data существует и не пустой
+    if (!data || Object.keys(data).length === 0) {
+        console.warn('Нет данных для графика рейтинга:', canvasId);
+        return;
+    }
+    
     const labels = Array.from({length: 10}, (_, i) => i + 1);
     const values = labels.map(label => data[label] || 0);
     
@@ -396,6 +403,11 @@ function createRatingChart(canvasId, data, title) {
                     beginAtZero: true,
                     ticks: {
                         stepSize: 1
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxTicksLimit: 10
                     }
                 }
             },

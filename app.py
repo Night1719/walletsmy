@@ -402,49 +402,13 @@ def upload_ssl_text():
                 private_key.startswith('-----BEGIN RSA PRIVATE KEY-----')) or not private_key.endswith('-----END PRIVATE KEY-----'):
             return jsonify({'success': False, 'message': 'Неверный формат приватного ключа'})
         
-        # Создаем папку ssl если её нет
-        ssl_dir = 'ssl'
-        if not os.path.exists(ssl_dir):
-            os.makedirs(ssl_dir)
-            print(f"✅ Создана папка {ssl_dir}")
+        # Используем новый SSL менеджер
+        from simple_ssl import ssl_manager
         
-        # Сохраняем файлы
-        cert_path = os.path.join(ssl_dir, 'cert.pem')
-        key_path = os.path.join(ssl_dir, 'key.pem')
-        
-        print(f"💾 Сохранение сертификата в: {cert_path}")
-        print(f"💾 Сохранение ключа в: {key_path}")
-        
-        # Записываем содержимое в файлы
-        try:
-            with open(cert_path, 'w', encoding='utf-8') as f:
-                f.write(certificate)
-            print(f"✅ Сертификат записан в {cert_path}")
-            
-            with open(key_path, 'w', encoding='utf-8') as f:
-                f.write(private_key)
-            print(f"✅ Ключ записан в {key_path}")
-        except Exception as e:
-            print(f"❌ Ошибка записи файлов: {e}")
-            return jsonify({'success': False, 'message': f'Ошибка записи файлов: {str(e)}'})
-        
-        # Устанавливаем правильные права доступа
-        os.chmod(key_path, 0o600)
-        os.chmod(cert_path, 0o644)
-        
-        print(f"✅ Файлы сохранены с правами:")
-        print(f"   Сертификат: {oct(os.stat(cert_path).st_mode)[-3:]}")
-        print(f"   Ключ: {oct(os.stat(key_path).st_mode)[-3:]}")
-        
-        # Проверяем что файлы действительно созданы
-        if os.path.exists(cert_path) and os.path.exists(key_path):
-            print(f"✅ SSL файлы успешно созданы в папке {ssl_dir}")
-            print(f"   Размер сертификата: {os.path.getsize(cert_path)} байт")
-            print(f"   Размер ключа: {os.path.getsize(key_path)} байт")
+        if ssl_manager.save_certificate(certificate, private_key):
+            return jsonify({'success': True, 'message': 'SSL сертификат успешно сохранен! Перезапустите сервер для применения изменений.'})
         else:
-            print(f"❌ Ошибка: файлы не созданы")
-        
-        return jsonify({'success': True, 'message': 'SSL сертификат успешно сохранен! Перезапустите сервер для применения изменений.'})
+            return jsonify({'success': False, 'message': 'Ошибка сохранения SSL файлов'})
         
     except Exception as e:
         print(f"❌ Ошибка сохранения SSL: {e}")
@@ -637,21 +601,21 @@ if __name__ == '__main__':
     
     # Проверяем SSL и запускаем соответственно
     try:
-        from ssl_manager import is_ssl_enabled, get_ssl_config
+        from simple_ssl import ssl_manager
         
         print("🔍 Проверка SSL конфигурации...")
         
-        if is_ssl_enabled():
+        if ssl_manager.is_ssl_ready():
             print("✅ SSL статус: Включен")
-            ssl_config = get_ssl_config()
+            ssl_context = ssl_manager.get_ssl_context()
             
-            if ssl_config:
+            if ssl_context:
                 print("🔒 Запуск с SSL сертификатом...")
                 print(f"   Порт: 5000 (HTTPS)")
-                print(f"   Сертификат: {ssl_config['ssl_context'][0]}")
-                print(f"   Ключ: {ssl_config['ssl_context'][1]}")
+                print(f"   Сертификат: {ssl_manager.cert_file}")
+                print(f"   Ключ: {ssl_manager.key_file}")
                 
-                app.run(debug=True, host='0.0.0.0', port=5000, **ssl_config)
+                app.run(debug=True, host='0.0.0.0', port=5000, ssl_context=ssl_context)
             else:
                 print("⚠️  SSL файлы найдены, но не валидны. Запуск без SSL...")
                 print("   Проверьте права доступа и формат файлов")
