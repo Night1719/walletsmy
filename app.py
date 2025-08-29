@@ -397,18 +397,33 @@ if __name__ == '__main__':
     try:
         from ssl_manager import is_ssl_enabled, get_ssl_config
         
+        print("🔍 Проверка SSL конфигурации...")
+        
         if is_ssl_enabled():
+            print("✅ SSL статус: Включен")
             ssl_config = get_ssl_config()
+            
             if ssl_config:
                 print("🔒 Запуск с SSL сертификатом...")
+                print(f"   Порт: 5000 (HTTPS)")
+                print(f"   Сертификат: {ssl_config['ssl_context'][0]}")
+                print(f"   Ключ: {ssl_config['ssl_context'][1]}")
+                
                 app.run(debug=True, host='0.0.0.0', port=5000, **ssl_config)
             else:
                 print("⚠️  SSL файлы найдены, но не валидны. Запуск без SSL...")
+                print("   Проверьте права доступа и формат файлов")
                 app.run(debug=True, host='0.0.0.0', port=5000)
         else:
             print("🌐 Запуск без SSL...")
+            print("   Проверьте наличие файлов cert.pem и key.pem в папке ssl/")
             app.run(debug=True, host='0.0.0.0', port=5000)
             
-    except ImportError:
-        print("⚠️  SSL менеджер недоступен. Запуск без SSL...")
+    except ImportError as e:
+        print(f"⚠️  SSL менеджер недоступен: {e}")
+        print("   Запуск без SSL...")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    except Exception as e:
+        print(f"❌ Ошибка SSL конфигурации: {e}")
+        print("   Запуск без SSL...")
         app.run(debug=True, host='0.0.0.0', port=5000)

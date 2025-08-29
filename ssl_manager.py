@@ -279,12 +279,34 @@ non-interactive = True
         if not self.is_ssl_ready():
             return None
         
-        return {
-            'ssl_context': (
-                self.cert_file,
-                self.key_file
-            )
-        }
+        try:
+            # Проверяем что файлы действительно читаются
+            with open(self.cert_file, 'r') as f:
+                cert_content = f.read()
+                if not cert_content.startswith('-----BEGIN CERTIFICATE-----'):
+                    print(f"❌ Неверный формат сертификата в {self.cert_file}")
+                    return None
+            
+            with open(self.key_file, 'r') as f:
+                key_content = f.read()
+                if not key_content.startswith('-----BEGIN PRIVATE KEY-----') and not key_content.startswith('-----BEGIN RSA PRIVATE KEY-----'):
+                    print(f"❌ Неверный формат ключа в {self.key_file}")
+                    return None
+            
+            print(f"✅ SSL файлы прочитаны успешно:")
+            print(f"   Сертификат: {self.cert_file}")
+            print(f"   Ключ: {self.key_file}")
+            
+            return {
+                'ssl_context': (
+                    self.cert_file,
+                    self.key_file
+                )
+            }
+            
+        except Exception as e:
+            print(f"❌ Ошибка чтения SSL файлов: {e}")
+            return None
     
     def is_ssl_ready(self):
         """Проверяет готовность SSL к использованию"""
