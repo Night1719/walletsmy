@@ -176,23 +176,17 @@ def admin_panel():
     users = User.query.all()
     surveys = Survey.query.all()
     
-    # SSL статус (заглушка для демонстрации)
-    ssl_status = {
-        'enabled': False,
-        'certificate': None
-    }
-    
-    # Проверяем наличие SSL файлов
+    # Используем SSL менеджер для получения реального статуса
     try:
-        if os.path.exists('ssl/cert.pem') and os.path.exists('ssl/key.pem'):
-            ssl_status['enabled'] = True
-            # Здесь можно добавить парсинг сертификата
-            ssl_status['certificate'] = {
-                'subject': 'SSL Certificate',
-                'expires': '2025-12-31'
-            }
-    except:
-        pass
+        from ssl_manager import get_ssl_status
+        ssl_status = get_ssl_status()
+    except ImportError:
+        # Fallback если SSL менеджер недоступен
+        ssl_status = {
+            'enabled': False,
+            'certificate': None,
+            'error': 'SSL менеджер недоступен'
+        }
     
     return render_template('admin.html', users=users, surveys=surveys, ssl_status=ssl_status)
 
@@ -360,4 +354,23 @@ def survey_results(survey_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    # Проверяем SSL и запускаем соответственно
+    try:
+        from ssl_manager import is_ssl_enabled, get_ssl_config
+        
+        if is_ssl_enabled():
+            ssl_config = get_ssl_config()
+            if ssl_config:
+                print("🔒 Запуск с SSL сертификатом...")
+                app.run(debug=True, host='0.0.0.0', port=5000, **ssl_config)
+            else:
+                print("⚠️  SSL файлы найдены, но не валидны. Запуск без SSL...")
+                app.run(debug=True, host='0.0.0.0', port=5000)
+        else:
+            print("🌐 Запуск без SSL...")
+            app.run(debug=True, host='0.0.0.0', port=5000)
+            
+    except ImportError:
+        print("⚠️  SSL менеджер недоступен. Запуск без SSL...")
+        app.run(debug=True, host='0.0.0.0', port=5000)
