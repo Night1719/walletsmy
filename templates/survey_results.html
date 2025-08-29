@@ -104,68 +104,104 @@
                             </h5>
                             
                             {% if result.type == 'multiple_choice' %}
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                {% if result.error %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ result.error }}
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="chart-legend">
-                                            <h6 class="mb-3">Статистика:</h6>
-                                            {% for option, count in result.data.items() %}
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <span class="small">{{ option }}</span>
-                                                    <span class="badge bg-primary">{{ count }}</span>
+                                {% elif result.data %}
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="chart-legend">
+                                                <h6 class="mb-3">Статистика:</h6>
+                                                {% for option, count in result.data.items() %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="small">{{ option }}</span>
+                                                        <span class="badge bg-primary">{{ count }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Нет данных для отображения
+                                    </div>
+                                {% endif %}
+                                
+                            {% elif result.type == 'rating' %}
+                                {% if result.error %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ result.error }}
+                                    </div>
+                                {% elif result.count > 0 %}
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="rating-summary mb-3">
+                                                <div class="d-flex align-items-center">
+                                                    <h4 class="text-warning mb-0 me-3">
+                                                        {{ "%.1f"|format(result.average) }}
+                                                    </h4>
+                                                    <div>
+                                                        <div class="stars">
+                                                            {% for i in range(1, 11) %}
+                                                                <i class="fas fa-star {{ 'text-warning' if i <= result.average else 'text-muted' }}"></i>
+                                                            {% endfor %}
+                                                        </div>
+                                                        <small class="text-muted">Средний рейтинг</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="rating-stats">
+                                                <h6 class="mb-3">Детали:</h6>
+                                                <p><strong>Средний рейтинг:</strong> {{ "%.1f"|format(result.average) }}/10</p>
+                                                <p><strong>Всего ответов:</strong> {{ result.count }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Нет ответов для отображения
+                                    </div>
+                                {% endif %}
+                                
+                            {% elif result.type == 'text' %}
+                                <!-- Текстовые ответы -->
+                                {% if result.answers %}
+                                    <div class="text-answers">
+                                        <h6 class="mb-3">Текстовые ответы ({{ result.answers|length }}):</h6>
+                                        <div class="row">
+                                            {% for answer in result.answers %}
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body p-2">
+                                                            <small class="text-muted">Ответ {{ loop.index }}:</small>
+                                                            <p class="mb-0">{{ answer }}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             {% endfor %}
                                         </div>
                                     </div>
-                                </div>
-                                
-                            {% elif result.type == 'rating' %}
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="rating-summary mb-3">
-                                            <div class="d-flex align-items-center">
-                                                <h4 class="text-warning mb-0 me-3">
-                                                    {{ "%.1f"|format(result.average) }}
-                                                </h4>
-                                                <div>
-                                                    <div class="stars">
-                                                        {% for i in range(1, 11) %}
-                                                            <i class="fas fa-star {{ 'text-warning' if i <= result.average else 'text-muted' }}"></i>
-                                                        {% endfor %}
-                                                    </div>
-                                                    <small class="text-muted">Средний рейтинг</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Нет текстовых ответов
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="rating-stats">
-                                            <h6 class="mb-3">Детали:</h6>
-                                            <p><strong>Средний рейтинг:</strong> {{ "%.1f"|format(result.average) }}/10</p>
-                                            <p><strong>Всего ответов:</strong> {{ result.count }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                            {% else %}
-                                <!-- Текстовые ответы -->
-                                <div class="text-answers">
-                                    <h6 class="mb-3">Текстовые ответы ({{ result.answers|length }}):</h6>
-                                    <div class="row">
-                                        {% for answer in result.answers %}
-                                            <div class="col-md-6 mb-2">
-                                                <div class="card bg-light">
-                                                    <div class="card-body p-2">
-                                                        <small class="text-muted">Ответ {{ loop.index }}:</small>
-                                                        <p class="mb-0">{{ answer }}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
+                                {% endif %}
+                            {% elif result.type == 'error' %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Ошибка:</strong> {{ result.error }}
                                 </div>
                             {% endif %}
                         </div>

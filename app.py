@@ -430,6 +430,14 @@ def upload_ssl_text():
         print(f"   Сертификат: {oct(os.stat(cert_path).st_mode)[-3:]}")
         print(f"   Ключ: {oct(os.stat(key_path).st_mode)[-3:]}")
         
+        # Проверяем что файлы действительно созданы
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            print(f"✅ SSL файлы успешно созданы в папке {ssl_dir}")
+            print(f"   Размер сертификата: {os.path.getsize(cert_path)} байт")
+            print(f"   Размер ключа: {os.path.getsize(key_path)} байт")
+        else:
+            print(f"❌ Ошибка: файлы не созданы")
+        
         return jsonify({'success': True, 'message': 'SSL сертификат успешно сохранен! Перезапустите сервер для применения изменений.'})
         
     except Exception as e:
@@ -522,31 +530,90 @@ def survey_results(survey_id):
     # Анализ результатов
     results = {}
     for question in survey.questions:
-        if question.type == 'multiple_choice':
-            options = json.loads(question.options)
-            counts = {opt: 0 for opt in options}
-            for answer in question.answers:
-                if answer.value in counts:
-                    counts[answer.value] += 1
-            results[question.id] = {
-                'type': 'multiple_choice',
-                'text': question.text,
-                'data': counts
-            }
-        elif question.type == 'rating':
-            ratings = [int(answer.value) for answer in question.answers if answer.value.isdigit()]
-            if ratings:
+        try:
+            if question.type == 'multiple_choice':
+                # Безопасно загружаем опции
+                try:
+                    if question.options and question.options.strip():
+                        options = json.loads(question.options)
+                        if isinstance(options, list) and options:
+                            counts = {opt: 0 for opt in options}
+                            for answer in question.answers:
+                                if answer.value in counts:
+                                    counts[answer.value] += 1
+                            results[question.id] = {
+                                'type': 'multiple_choice',
+                                'text': question.text,
+                                'data': counts
+                            }
+                        else:
+                            # Если опции пустые или невалидные
+                            results[question.id] = {
+                                'type': 'multiple_choice',
+                                'text': question.text,
+                                'data': {},
+                                'error': 'Варианты ответов не настроены'
+                            }
+                    else:
+                        # Если опции отсутствуют
+                        results[question.id] = {
+                            'type': 'multiple_choice',
+                            'text': question.text,
+                            'data': {},
+                            'error': 'Варианты ответов не настроены'
+                        }
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"❌ Ошибка парсинга опций для вопроса {question.id}: {e}")
+                    results[question.id] = {
+                        'type': 'multiple_choice',
+                        'text': question.text,
+                        'data': {},
+                        'error': 'Ошибка в настройке вариантов ответов'
+                    }
+                    
+            elif question.type == 'rating':
+                ratings = []
+                for answer in question.answers:
+                    try:
+                        if answer.value and answer.value.isdigit():
+                            ratings.append(int(answer.value))
+                    except (ValueError, TypeError):
+                        continue
+                
+                if ratings:
+                    results[question.id] = {
+                        'type': 'rating',
+                        'text': question.text,
+                        'average': sum(ratings) / len(ratings),
+                        'count': len(ratings)
+                    }
+                else:
+                    results[question.id] = {
+                        'type': 'rating',
+                        'text': question.text,
+                        'average': 0,
+                        'count': 0,
+                        'error': 'Нет валидных ответов'
+                    }
+                    
+            else:  # text
+                answers = []
+                for answer in question.answers:
+                    if answer.value and answer.value.strip():
+                        answers.append(answer.value.strip())
+                
                 results[question.id] = {
-                    'type': 'rating',
+                    'type': 'text',
                     'text': question.text,
-                    'average': sum(ratings) / len(ratings),
-                    'count': len(ratings)
+                    'answers': answers
                 }
-        else:  # text
+                
+        except Exception as e:
+            print(f"❌ Ошибка обработки вопроса {question.id}: {e}")
             results[question.id] = {
-                'type': 'text',
+                'type': 'error',
                 'text': question.text,
-                'answers': [answer.value for answer in question.answers]
+                'error': f'Ошибка обработки: {str(e)}'
             }
     
     return render_template('survey_results.html', survey=survey, results=results)
