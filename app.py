@@ -416,11 +416,17 @@ def upload_ssl_text():
         print(f"💾 Сохранение ключа в: {key_path}")
         
         # Записываем содержимое в файлы
-        with open(cert_path, 'w') as f:
-            f.write(certificate)
-        
-        with open(key_path, 'w') as f:
-            f.write(private_key)
+        try:
+            with open(cert_path, 'w', encoding='utf-8') as f:
+                f.write(certificate)
+            print(f"✅ Сертификат записан в {cert_path}")
+            
+            with open(key_path, 'w', encoding='utf-8') as f:
+                f.write(private_key)
+            print(f"✅ Ключ записан в {key_path}")
+        except Exception as e:
+            print(f"❌ Ошибка записи файлов: {e}")
+            return jsonify({'success': False, 'message': f'Ошибка записи файлов: {str(e)}'})
         
         # Устанавливаем правильные права доступа
         os.chmod(key_path, 0o600)
@@ -581,11 +587,17 @@ def survey_results(survey_id):
                         continue
                 
                 if ratings:
+                    # Создаем данные для графика рейтингов
+                    rating_data = {}
+                    for rating in range(1, 11):
+                        rating_data[rating] = ratings.count(rating)
+                    
                     results[question.id] = {
                         'type': 'rating',
                         'text': question.text,
                         'average': sum(ratings) / len(ratings),
-                        'count': len(ratings)
+                        'count': len(ratings),
+                        'data': rating_data
                     }
                 else:
                     results[question.id] = {
@@ -593,6 +605,7 @@ def survey_results(survey_id):
                         'text': question.text,
                         'average': 0,
                         'count': 0,
+                        'data': {},
                         'error': 'Нет валидных ответов'
                     }
                     
