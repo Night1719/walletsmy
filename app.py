@@ -74,14 +74,6 @@ def load_user(user_id):
 # Вспомогательные функции для шаблонов
 @app.context_processor
 def utility_processor():
-    def from_json(json_string):
-        """Преобразует JSON строку в Python объект"""
-        try:
-            if json_string:
-                return json.loads(json_string)
-            return []
-        except (json.JSONDecodeError, TypeError):
-            return []
     def count_responses(surveys):
         """Подсчитывает общее количество ответов для списка опросов"""
         total = 0
@@ -107,12 +99,32 @@ def utility_processor():
                 return str(date_obj)
         return '-'
     
+    def from_json(json_string):
+        """Преобразует JSON строку в Python объект"""
+        try:
+            if json_string:
+                return json.loads(json_string)
+            return []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
     return {
         'count_responses': count_responses,
         'count_active_surveys': count_active_surveys,
         'format_date': format_date,
         'from_json': from_json
     }
+
+# Регистрируем фильтр from_json отдельно
+@app.template_filter('from_json')
+def from_json_filter(json_string):
+    """Фильтр для преобразования JSON строки в Python объект"""
+    try:
+        if json_string:
+            return json.loads(json_string)
+        return []
+    except (json.JSONDecodeError, TypeError):
+        return []
 
 def admin_required(f):
     @wraps(f)

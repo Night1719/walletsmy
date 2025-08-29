@@ -92,20 +92,28 @@
                                                   placeholder="Введите ваш ответ..." required></textarea>
                                     </div>
                                     
-                                {% elif question.type == 'multiple_choice' %}
+                                                                {% elif question.type == 'multiple_choice' %}
                                     <div class="mb-3">
-                                        {% set options = question.options|string|replace('"', '')|replace('[', '')|replace(']', '')|split(',') if question.options else [] %}
-                                        {% for option in options %}
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" 
-                                                       name="question_{{ question.id }}" 
-                                                       value="{{ option }}" 
-                                                       id="option_{{ question.id }}_{{ loop.index }}" required>
-                                                <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
-                                                    {{ option }}
-                                                </label>
-                                            </div>
-                                        {% endfor %}
+                                        {% if question.options %}
+                                            {% set options = question.options|from_json %}
+                                            {% if options %}
+                                                {% for option in options %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="{{ option }}" 
+                                                               id="option_{{ question.id }}_{{ loop.index }}" required>
+                                                        <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
+                                                            {{ option }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <p class="text-muted">Варианты ответов не настроены</p>
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted">Варианты ответов не настроены</p>
+                                        {% endif %}
                                     </div>
                                     
                                 {% elif question.type == 'rating' %}
