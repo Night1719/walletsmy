@@ -80,7 +80,7 @@
                 {% else %}
                     <form method="POST" action="{{ url_for('submit_survey', survey_id=survey.id) }}">
                         {% for question in survey.questions %}
-                            <div class="question-item mb-4 p-3 border rounded">
+                            <div class="question-item mb-4 p-3 border rounded survey-question">
                                 <h5 class="mb-3">
                                     <span class="badge bg-primary me-2">{{ loop.index }}</span>
                                     {{ question.text }}

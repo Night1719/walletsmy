@@ -99,7 +99,74 @@ body.dark-theme .dropdown-item {
 
 body.dark-theme .dropdown-item:hover {
     background-color: #404040 !important;
+}
+
+/* Дополнительные стили для темной темы - опросы */
+body.dark-theme .survey-question {
+    background-color: #2d2d2d !important;
+    border: 1px solid #404040 !important;
     color: #ffffff !important;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+body.dark-theme .survey-question h5 {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+body.dark-theme .survey-question p {
+    color: #e0e0e0 !important;
+}
+
+body.dark-theme .form-check-label {
+    color: #ffffff !important;
+}
+
+body.dark-theme .form-check-input:checked {
+    background-color: var(--bg-red) !important;
+    border-color: var(--bg-red) !important;
+}
+
+body.dark-theme .form-range::-webkit-slider-track {
+    background-color: #555;
+}
+
+body.dark-theme .form-range::-webkit-slider-thumb {
+    background-color: var(--bg-red);
+}
+
+body.dark-theme .form-range::-moz-range-track {
+    background-color: #555;
+}
+
+body.dark-theme .form-range::-moz-range-thumb {
+    background-color: var(--bg-red);
+}
+
+body.dark-theme .form-select {
+    background-color: #3a3a3a !important;
+    border: 1px solid #555 !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .form-select:focus {
+    background-color: #3a3a3a !important;
+    border-color: var(--bg-red) !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .form-text {
+    color: #b0b0b0 !important;
+}
+
+body.dark-theme .invalid-feedback {
+    color: #ff6b6b !important;
+}
+
+body.dark-theme .valid-feedback {
+    color: #6bcf7f !important;
 }
 
 body.dark-theme .alert {

@@ -126,6 +126,16 @@ def from_json_filter(json_string):
     except (json.JSONDecodeError, TypeError):
         return []
 
+@app.template_filter('strftime')
+def strftime_filter(date, format='%d.%m.%Y %H:%M'):
+    """Фильтр для форматирования даты"""
+    try:
+        if date:
+            return date.strftime(format)
+        return ''
+    except (AttributeError, TypeError):
+        return ''
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -273,6 +283,103 @@ def delete_user(user_id):
     
     flash(f'Пользователь {username} удален успешно', 'success')
     return redirect(url_for('admin_users'))
+
+@app.route('/admin/ssl/upload', methods=['POST'])
+@admin_required
+def upload_ssl_certificate():
+    """Загрузка SSL сертификата"""
+    try:
+        if 'certificate' not in request.files or 'private_key' not in request.files:
+            return jsonify({'success': False, 'message': 'Необходимо загрузить оба файла'})
+        
+        cert_file = request.files['certificate']
+        key_file = request.files['private_key']
+        
+        if cert_file.filename == '' or key_file.filename == '':
+            return jsonify({'success': False, 'message': 'Файлы не выбраны'})
+        
+        # Проверяем расширения
+        if not cert_file.filename.endswith('.pem') and not cert_file.filename.endswith('.crt'):
+            return jsonify({'success': False, 'message': 'Сертификат должен быть в формате .pem или .crt'})
+        
+        if not key_file.filename.endswith('.pem') and not key_file.filename.endswith('.key'):
+            return jsonify({'success': False, 'message': 'Приватный ключ должен быть в формате .pem или .key'})
+        
+        # Создаем папку ssl если её нет
+        ssl_dir = 'ssl'
+        if not os.path.exists(ssl_dir):
+            os.makedirs(ssl_dir)
+            print(f"✅ Создана папка {ssl_dir}")
+        
+        # Сохраняем файлы
+        cert_path = os.path.join(ssl_dir, 'cert.pem')
+        key_path = os.path.join(ssl_dir, 'key.pem')
+        
+        print(f"💾 Сохранение сертификата в: {cert_path}")
+        print(f"💾 Сохранение ключа в: {key_path}")
+        
+        cert_file.save(cert_path)
+        key_file.save(key_path)
+        
+        # Устанавливаем правильные права доступа
+        os.chmod(key_path, 0o600)
+        os.chmod(cert_path, 0o644)
+        
+        print(f"✅ Файлы сохранены с правами:")
+        print(f"   Сертификат: {oct(os.stat(cert_path).st_mode)[-3:]}")
+        print(f"   Ключ: {oct(os.stat(key_path).st_mode)[-3:]}")
+        
+        flash('SSL сертификат успешно загружен! Перезапустите сервер для применения изменений.', 'success')
+        return jsonify({'success': True, 'message': 'SSL сертификат загружен успешно'})
+        
+    except Exception as e:
+        print(f"❌ Ошибка загрузки SSL: {e}")
+        return jsonify({'success': False, 'message': f'Ошибка загрузки: {str(e)}'})
+
+@app.route('/admin/ssl/generate', methods=['POST'])
+@admin_required
+def generate_self_signed_certificate():
+    """Генерация самоподписанного сертификата"""
+    try:
+        from ssl_manager import SSLManager
+        
+        ssl_manager = SSLManager()
+        result = ssl_manager.generate_self_signed()
+        
+        if result['success']:
+            flash('Самоподписанный сертификат успешно создан! Перезапустите сервер для применения изменений.', 'success')
+            return jsonify({'success': True, 'message': 'Сертификат создан успешно'})
+        else:
+            return jsonify({'success': False, 'message': result['message']})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка генерации: {str(e)}'})
+
+@app.route('/admin/ssl/letsencrypt', methods=['POST'])
+@admin_required
+def setup_lets_encrypt():
+    """Настройка Let's Encrypt сертификата"""
+    try:
+        data = request.get_json()
+        domain = data.get('domain')
+        email = data.get('email')
+        
+        if not domain or not email:
+            return jsonify({'success': False, 'message': 'Необходимо указать домен и email'})
+        
+        from ssl_manager import SSLManager
+        
+        ssl_manager = SSLManager()
+        result = ssl_manager.setup_lets_encrypt(domain, email)
+        
+        if result['success']:
+            flash('Let\'s Encrypt сертификат успешно настроен! Перезапустите сервер для применения изменений.', 'success')
+            return jsonify({'success': True, 'message': 'Сертификат настроен успешно'})
+        else:
+            return jsonify({'success': False, 'message': result['message']})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка настройки: {str(e)}'})
 
 @app.route('/surveys/create', methods=['GET', 'POST'])
 @login_required
