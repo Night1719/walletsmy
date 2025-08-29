@@ -133,46 +133,58 @@
                                     </div>
                                 {% endif %}
                                 
-                            {% elif result.type == 'rating' %}
-                                {% if result.error %}
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        {{ result.error }}
-                                    </div>
-                                {% elif result.count > 0 %}
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <div class="rating-summary mb-3">
-                                                <div class="d-flex align-items-center">
-                                                    <h4 class="text-warning mb-0 me-3">
-                                                        {{ "%.1f"|format(result.average) }}
-                                                    </h4>
-                                                    <div>
-                                                        <div class="stars">
-                                                            {% for i in range(1, 11) %}
-                                                                <i class="fas fa-star {{ 'text-warning' if i <= result.average else 'text-muted' }}"></i>
-                                                            {% endfor %}
-                                                        </div>
-                                                        <small class="text-muted">Средний рейтинг</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <canvas id="chart_{{ question_id }}" width="400" height="200"></canvas>
+                                        {% elif result.type == 'rating' %}
+                {% if result.error %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {{ result.error }}
+                    </div>
+                {% elif result.count > 0 %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="rating-summary mb-3">
+                                <div class="d-flex align-items-center">
+                                    <h4 class="text-warning mb-0 me-3">
+                                        {{ "%.1f"|format(result.average) }}
+                                    </h4>
+                                    <div>
+                                        <div class="stars">
+                                            {% for i in range(1, 11) %}
+                                                <i class="fas fa-star {{ 'text-warning' if i <= result.average else 'text-muted' }}"></i>
+                                            {% endfor %}
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="rating-stats">
-                                                <h6 class="mb-3">Детали:</h6>
-                                                <p><strong>Средний рейтинг:</strong> {{ "%.1f"|format(result.average) }}/10</p>
-                                                <p><strong>Всего ответов:</strong> {{ result.count }}</p>
-                                            </div>
+                                        <small class="text-muted">Средний рейтинг</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="rating-chart-container" style="height: 300px;">
+                                <canvas id="chart_{{ question_id }}" width="400" height="300"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="rating-stats">
+                                <h6 class="mb-3">Детали:</h6>
+                                <p><strong>Средний рейтинг:</strong> {{ "%.1f"|format(result.average) }}/10</p>
+                                <p><strong>Всего ответов:</strong> {{ result.count }}</p>
+                                
+                                <h6 class="mt-3 mb-2">Распределение:</h6>
+                                {% for rating in range(1, 11) %}
+                                    {% if result.data[rating] > 0 %}
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="small">{{ rating }}</span>
+                                            <span class="badge bg-warning">{{ result.data[rating] }}</span>
                                         </div>
-                                    </div>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Нет ответов для отображения
-                                    </div>
-                                {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Нет ответов для отображения
+                    </div>
+                {% endif %}
                                 
                             {% elif result.type == 'text' %}
                                 <!-- Текстовые ответы -->
@@ -309,9 +321,9 @@
             </a>
             
             <div class="btn-group">
-                <button class="btn btn-outline-primary" onclick="exportResults()">
-                    <i class="fas fa-download me-2"></i>Экспорт
-                </button>
+                <a href="{{ url_for('export_survey_excel', survey_id=survey.id) }}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-excel me-2"></i>Экспорт в Excel
+                </a>
                 <button class="btn btn-outline-success" onclick="printResults()">
                     <i class="fas fa-print me-2"></i>Печать
                 </button>
@@ -380,8 +392,22 @@ function createRatingChart(canvasId, data, title) {
         return;
     }
     
-    const labels = Array.from({length: 10}, (_, i) => i + 1);
-    const values = labels.map(label => data[label] || 0);
+    // Создаем массив только с существующими рейтингами
+    const labels = [];
+    const values = [];
+    
+    for (let i = 1; i <= 10; i++) {
+        if (data[i] && data[i] > 0) {
+            labels.push(i.toString());
+            values.push(data[i]);
+        }
+    }
+    
+    // Если нет данных, показываем пустой график
+    if (labels.length === 0) {
+        console.warn('Нет данных для отображения в графике рейтинга');
+        return;
+    }
     
     new Chart(ctx, {
         type: 'bar',
@@ -402,7 +428,8 @@ function createRatingChart(canvasId, data, title) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        precision: 0
                     }
                 },
                 x: {
@@ -448,10 +475,7 @@ function showResponseDetails(responseId) {
     }, 1000);
 }
 
-function exportResults() {
-    // Экспорт результатов в CSV
-    alert('Функция экспорта будет доступна в следующих версиях');
-}
+
 
 function printResults() {
     window.print();

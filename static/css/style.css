@@ -169,6 +169,135 @@ body.dark-theme .valid-feedback {
     color: #6bcf7f !important;
 }
 
+/* Дополнительные стили для темной темы - улучшение видимости */
+body.dark-theme .card {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .card-header {
+    background-color: #3a3a3a !important;
+    border-bottom-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .card-body {
+    color: #ffffff !important;
+}
+
+body.dark-theme .alert {
+    background-color: #3a3a3a !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .alert-info {
+    background-color: #1a3a4a !important;
+    border-color: #2a5a6a !important;
+    color: #b0d4ff !important;
+}
+
+body.dark-theme .alert-warning {
+    background-color: #4a3a1a !important;
+    border-color: #6a5a2a !important;
+    color: #ffd4b0 !important;
+}
+
+body.dark-theme .alert-success {
+    background-color: #1a4a1a !important;
+    border-color: #2a6a2a !important;
+    color: #b0ffb0 !important;
+}
+
+body.dark-theme .alert-danger {
+    background-color: #4a1a1a !important;
+    border-color: #6a2a2a !important;
+    color: #ffb0b0 !important;
+}
+
+body.dark-theme .badge {
+    color: #ffffff !important;
+}
+
+body.dark-theme .text-muted {
+    color: #b0b0b0 !important;
+}
+
+body.dark-theme .text-dark {
+    color: #ffffff !important;
+}
+
+body.dark-theme .bg-light {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .border {
+    border-color: #404040 !important;
+}
+
+body.dark-theme .border-top {
+    border-top-color: #404040 !important;
+}
+
+body.dark-theme .border-bottom {
+    border-bottom-color: #404040 !important;
+}
+
+body.dark-theme .border-start {
+    border-left-color: #404040 !important;
+}
+
+body.dark-theme .border-end {
+    border-right-color: #404040 !important;
+}
+
+/* Специальные стили для результатов опросов */
+body.dark-theme .question-result {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .rating-summary h4 {
+    color: #ffc107 !important;
+}
+
+body.dark-theme .rating-stats p {
+    color: #ffffff !important;
+}
+
+body.dark-theme .rating-stats strong {
+    color: #ffc107 !important;
+}
+
+body.dark-theme .chart-legend h6 {
+    color: #ffffff !important;
+}
+
+body.dark-theme .chart-legend .small {
+    color: #e0e0e0 !important;
+}
+
+body.dark-theme .text-answers h6 {
+    color: #ffffff !important;
+}
+
+body.dark-theme .text-answers .card {
+    background-color: #3a3a3a !important;
+    border-color: #404040 !important;
+}
+
+body.dark-theme .text-answers .card-body {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme .text-answers .text-muted {
+    color: #b0b0b0 !important;
+}
+
 body.dark-theme .alert {
     background-color: #2d2d2d !important;
     border-color: #404040 !important;

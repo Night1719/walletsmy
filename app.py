@@ -595,6 +595,127 @@ def survey_results(survey_id):
     
     return render_template('survey_results.html', survey=survey, results=results)
 
+@app.route('/surveys/<int:survey_id>/export-excel')
+@login_required
+def export_survey_excel(survey_id):
+    """Экспорт результатов опроса в Excel"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from io import BytesIO
+        from flask import send_file
+        
+        survey = Survey.query.get_or_404(survey_id)
+        
+        if not current_user.is_admin and survey.creator_id != current_user.id:
+            flash('У вас нет доступа к результатам этого опроса', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Создаем Excel файл
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Результаты опроса"
+        
+        # Заголовки
+        headers = ['№', 'Вопрос', 'Тип', 'Ответы', 'Статистика']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Данные
+        row = 2
+        for question in survey.questions:
+            # Номер вопроса
+            ws.cell(row=row, column=1, value=row-1)
+            
+            # Текст вопроса
+            ws.cell(row=row, column=2, value=question.text)
+            
+            # Тип вопроса
+            type_names = {
+                'text': 'Текстовый',
+                'multiple_choice': 'Множественный выбор',
+                'rating': 'Рейтинг'
+            }
+            ws.cell(row=row, column=3, value=type_names.get(question.type, question.type))
+            
+            # Ответы
+            if question.type == 'multiple_choice':
+                try:
+                    options = json.loads(question.options) if question.options else []
+                    answers_text = ', '.join(options) if options else 'Варианты не настроены'
+                except:
+                    answers_text = 'Ошибка в вариантах'
+            elif question.type == 'rating':
+                answers_text = 'Рейтинг от 1 до 10'
+            else:
+                answers_text = 'Текстовые ответы'
+            
+            ws.cell(row=row, column=4, value=answers_text)
+            
+            # Статистика
+            if question.type == 'multiple_choice':
+                try:
+                    options = json.loads(question.options) if question.options else []
+                    if options:
+                        counts = {opt: 0 for opt in options}
+                        for answer in question.answers:
+                            if answer.value in counts:
+                                counts[answer.value] += 1
+                        stats = '; '.join([f"{opt}: {count}" for opt, count in counts.items()])
+                    else:
+                        stats = 'Нет вариантов'
+                except:
+                    stats = 'Ошибка в данных'
+            elif question.type == 'rating':
+                ratings = [int(answer.value) for answer in question.answers if answer.value and answer.value.isdigit()]
+                if ratings:
+                    avg = sum(ratings) / len(ratings)
+                    stats = f"Средний: {avg:.1f}, Всего: {len(ratings)}"
+                else:
+                    stats = 'Нет ответов'
+            else:
+                answers_count = len([a for a in question.answers if a.value])
+                stats = f"Ответов: {answers_count}"
+            
+            ws.cell(row=row, column=5, value=stats)
+            
+            row += 1
+        
+        # Автоматическая ширина столбцов
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Сохраняем в BytesIO
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        filename = f"survey_results_{survey.title.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        print(f"❌ Ошибка экспорта в Excel: {e}")
+        flash('Ошибка экспорта в Excel', 'error')
+        return redirect(url_for('survey_results', survey_id=survey_id))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
