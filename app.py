@@ -38,6 +38,7 @@ class Survey(db.Model):
     is_anonymous = db.Column(db.Boolean, default=False)
     require_auth = db.Column(db.Boolean, default=False)
     require_name = db.Column(db.Boolean, default=False)  # Новый тип опроса - ввод имени
+    is_active = db.Column(db.Boolean, default=True)  # Активен ли опрос
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
@@ -534,6 +535,12 @@ def create_survey():
 @app.route('/surveys/<int:survey_id>')
 def view_survey(survey_id):
     survey = Survey.query.get_or_404(survey_id)
+    
+    # Проверяем, активен ли опрос
+    if not survey.is_active:
+        flash('Этот опрос временно недоступен', 'error')
+        return redirect(url_for('index'))
+    
     return render_template('view_survey.html', survey=survey)
 
 @app.route('/surveys/<int:survey_id>/edit', methods=['GET', 'POST'])
@@ -583,9 +590,34 @@ def edit_survey(survey_id):
     
     return render_template('edit_survey.html', survey=survey)
 
+@app.route('/surveys/<int:survey_id>/toggle-active', methods=['POST'])
+@login_required
+def toggle_survey_active(survey_id):
+    """Переключение статуса активности опроса"""
+    survey = Survey.query.get_or_404(survey_id)
+    
+    # Проверяем права на изменение
+    if survey.creator_id != current_user.id and not current_user.is_admin:
+        flash('У вас нет прав для изменения этого опроса', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Переключаем статус
+    survey.is_active = not survey.is_active
+    db.session.commit()
+    
+    status = "активирован" if survey.is_active else "деактивирован"
+    flash(f'Опрос "{survey.title}" {status}', 'success')
+    
+    return redirect(url_for('dashboard'))
+
 @app.route('/surveys/<int:survey_id>/submit', methods=['POST'])
 def submit_survey(survey_id):
     survey = Survey.query.get_or_404(survey_id)
+    
+    # Проверяем, активен ли опрос
+    if not survey.is_active:
+        flash('Этот опрос временно недоступен', 'error')
+        return redirect(url_for('index'))
     
     if survey.require_auth and not current_user.is_authenticated:
         flash('Для прохождения этого опроса требуется авторизация', 'error')
@@ -1683,13 +1715,60 @@ def user_analytics(user_id):
                          user=user, 
                          analytics=analytics_data)
 
+@app.route('/analytics/my-activity')
+@login_required
+def my_activity():
+    """Персональная аналитика пользователя"""
+    analytics_data = get_user_analytics(current_user.id)
+    user_surveys = Survey.query.filter_by(creator_id=current_user.id).all()
+    user_responses = SurveyResponse.query.filter_by(user_id=current_user.id).all()
+    
+    # Достижения
+    achievements = [
+        {
+            'title': 'Первый опрос',
+            'description': 'Создайте свой первый опрос',
+            'icon': 'star',
+            'color': 'warning',
+            'unlocked': len(user_surveys) > 0
+        },
+        {
+            'title': 'Активный создатель',
+            'description': 'Создайте 5 опросов',
+            'icon': 'trophy',
+            'color': 'success',
+            'unlocked': len(user_surveys) >= 5
+        },
+        {
+            'title': 'Популярный опрос',
+            'description': 'Получите 100 ответов на один опрос',
+            'icon': 'fire',
+            'color': 'danger',
+            'unlocked': any(len(survey.responses) >= 100 for survey in user_surveys)
+        }
+    ]
+    
+    return render_template('analytics/user_analytics.html', 
+                         user_stats=analytics_data,
+                         user_surveys=user_surveys,
+                         user_responses=user_responses,
+                         achievements=achievements)
+
 @app.route('/analytics/cross-analysis')
 @login_required
 @admin_required
 def cross_analysis():
     """Кросс-анализ между опросами"""
-    analytics_data = get_cross_analysis()
-    return render_template('analytics/cross_analysis.html', analytics=analytics_data)
+    # Получаем параметры фильтрации
+    period = request.args.get('period', 'month')
+    survey_type = request.args.get('survey_type', 'all')
+    user_id = request.args.get('user_id', 'all')
+    
+    analytics_data = get_cross_analysis(period, survey_type, user_id)
+    users = User.query.all()
+    return render_template('analytics/cross_analysis.html', 
+                         users=users, period=period, survey_type=survey_type, 
+                         user_id=user_id, **analytics_data)
 
 @app.route('/api/analytics/survey/<int:survey_id>/chart-data')
 @login_required
