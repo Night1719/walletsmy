@@ -396,15 +396,35 @@ function showTextAnswers(questionId) {
 function getQuestionTypeName(type) {
     const names = {
         'text': 'Текстовый ответ',
-        'multiple_choice': 'Множественный выбор',
-        'checkbox': 'Флажки',
-        'rating': 'Рейтинг',
-        'dropdown': 'Выпадающий список',
-        'checkbox_grid': 'Сетка флажков',
+        'text_paragraph': 'Текст (Абзац)',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
         'date': 'Дата',
         'time': 'Время'
     };
     return names[type] || 'Неизвестный тип';
+}
+
+function getQuestionIcon(type) {
+    const icons = {
+        'text': 'font',
+        'text_paragraph': 'align-left',
+        'single_choice': 'list-ul',
+        'multiple_choice': 'check-square',
+        'dropdown': 'chevron-down',
+        'scale': 'sliders-h',
+        'rating': 'star',
+        'grid': 'th',
+        'checkbox_grid': 'th-list',
+        'date': 'calendar',
+        'time': 'clock'
+    };
+    return icons[type] || 'question';
 }
 </script>
 {% endblock %}

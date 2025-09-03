@@ -132,6 +132,40 @@ def utility_processor():
                 return str(date_obj)
         return '-'
     
+    def get_question_icon(question_type):
+        """Получает иконку для типа вопроса"""
+        icons = {
+            'text': 'font',
+            'text_paragraph': 'align-left',
+            'single_choice': 'list-ul',
+            'multiple_choice': 'check-square',
+            'dropdown': 'chevron-down',
+            'scale': 'sliders-h',
+            'rating': 'star',
+            'grid': 'th',
+            'checkbox_grid': 'th-list',
+            'date': 'calendar',
+            'time': 'clock'
+        }
+        return icons.get(question_type, 'question')
+    
+    def get_question_type_name(question_type):
+        """Получает название типа вопроса"""
+        names = {
+            'text': 'Текст (строка)',
+            'text_paragraph': 'Текст (Абзац)',
+            'single_choice': 'Один из списка',
+            'multiple_choice': 'Несколько из списка',
+            'dropdown': 'Раскрывающийся список',
+            'scale': 'Шкала',
+            'rating': 'Оценка',
+            'grid': 'Сетка',
+            'checkbox_grid': 'Сетка из флажков',
+            'date': 'Дата',
+            'time': 'Время'
+        }
+        return names.get(question_type, 'Неизвестный тип')
+    
     def from_json(json_string):
         """Преобразует JSON строку в Python объект"""
         try:
@@ -145,7 +179,9 @@ def utility_processor():
         'count_responses': count_responses,
         'count_active_surveys': count_active_surveys,
         'format_date': format_date,
-        'from_json': from_json
+        'from_json': from_json,
+        'get_question_icon': get_question_icon,
+        'get_question_type_name': get_question_type_name
     }
 
 # Регистрируем фильтр from_json отдельно
@@ -876,12 +912,15 @@ def get_survey_type_name(survey):
 def get_question_type_name(question_type):
     """Получение названия типа вопроса"""
     type_names = {
-        'text': 'Текстовый ответ',
-        'multiple_choice': 'Множественный выбор',
-        'checkbox': 'Флажки',
-        'rating': 'Рейтинг',
-        'dropdown': 'Выпадающий список',
-        'checkbox_grid': 'Сетка флажков',
+        'text': 'Текст (строка)',
+        'text_paragraph': 'Текст (Абзац)',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
         'date': 'Дата',
         'time': 'Время'
     }
@@ -889,7 +928,7 @@ def get_question_type_name(question_type):
 
 def get_question_options_text(question):
     """Получение текста вариантов ответов"""
-    if question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+    if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
         try:
             options = json.loads(question.options) if question.options else []
             if options:
@@ -899,9 +938,14 @@ def get_question_options_text(question):
                 return options_text
         except:
             pass
-    elif question.type == 'rating':
-        return f"Рейтинг от {question.rating_min} до {question.rating_max}"
-    elif question.type == 'checkbox_grid':
+    elif question.type in ['rating', 'scale']:
+        min_val = question.rating_min or 1
+        max_val = question.rating_max or 10
+        labels = question.rating_labels or []
+        if labels and len(labels) >= 2:
+            return f"От {min_val} до {max_val} ({labels[0]} - {labels[1]})"
+        return f"От {min_val} до {max_val}"
+    elif question.type in ['grid', 'checkbox_grid']:
         try:
             rows = json.loads(question.grid_rows) if question.grid_rows else []
             cols = json.loads(question.grid_columns) if question.grid_columns else []
@@ -915,7 +959,7 @@ def get_question_statistics(question):
     answers = question.answers
     total_answers = len(answers)
     
-    if question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+    if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
         try:
             options = json.loads(question.options) if question.options else []
             if options:
@@ -935,15 +979,23 @@ def get_question_statistics(question):
                 return f"Всего: {total_answers}; " + "; ".join(stats_parts)
         except:
             pass
-    elif question.type == 'rating':
+    elif question.type in ['rating', 'scale']:
         ratings = [int(answer.value) for answer in answers if answer.value and answer.value.isdigit()]
         if ratings:
             avg = sum(ratings) / len(ratings)
             return f"Всего: {len(ratings)}; Средний: {avg:.2f}; Мин: {min(ratings)}; Макс: {max(ratings)}"
-    elif question.type == 'text':
+    elif question.type in ['text', 'text_paragraph']:
         if answers:
             avg_length = sum(len(answer.value) for answer in answers if answer.value) / len(answers)
             return f"Всего: {total_answers}; Средняя длина: {avg_length:.0f} символов"
+    elif question.type in ['grid', 'checkbox_grid']:
+        grid_count = 0
+        for answer in answers:
+            if '|' in answer.value:
+                grid_count += 1
+        return f"Всего: {total_answers}; Заполненных ячеек: {grid_count}"
+    elif question.type in ['date', 'time']:
+        return f"Всего: {total_answers}; Тип: {question.type}"
     
     return f"Всего ответов: {total_answers}"
 
@@ -955,18 +1007,19 @@ def get_question_analysis(question):
     if total_answers == 0:
         return "Нет ответов"
     
-    if question.type == 'rating':
+    if question.type in ['rating', 'scale']:
         ratings = [int(answer.value) for answer in answers if answer.value and answer.value.isdigit()]
         if ratings:
             avg = sum(ratings) / len(ratings)
-            if avg >= question.rating_max * 0.8:
+            max_rating = question.rating_max or 10
+            if avg >= max_rating * 0.8:
                 return "Высокие оценки"
-            elif avg <= question.rating_min * 1.2:
+            elif avg <= (question.rating_min or 1) * 1.2:
                 return "Низкие оценки"
             else:
                 return "Средние оценки"
     
-    elif question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+    elif question.type in ['single_choice', 'multiple_choice', 'dropdown']:
         try:
             options = json.loads(question.options) if question.options else []
             if options:
@@ -980,6 +1033,51 @@ def get_question_analysis(question):
                 return f"Популярный ответ: {max_option[0]} ({percentage:.1f}%)"
         except:
             pass
+    
+    elif question.type == 'checkbox':
+        try:
+            options = json.loads(question.options) if question.options else []
+            if options:
+                counts = {opt: 0 for opt in options}
+                for answer in answers:
+                    if answer.value.startswith('['):
+                        selected_options = json.loads(answer.value)
+                        for opt in selected_options:
+                            if opt in counts:
+                                counts[opt] += 1
+                    elif answer.value in counts:
+                        counts[answer.value] += 1
+                
+                max_option = max(counts.items(), key=lambda x: x[1])
+                percentage = (max_option[1] / total_answers) * 100
+                return f"Популярный ответ: {max_option[0]} ({percentage:.1f}%)"
+        except:
+            pass
+    
+    elif question.type in ['text', 'text_paragraph']:
+        if answers:
+            avg_length = sum(len(answer.value) for answer in answers if answer.value) / len(answers)
+            if avg_length > 100:
+                return "Длинные ответы"
+            elif avg_length < 20:
+                return "Короткие ответы"
+            else:
+                return "Средние ответы"
+    
+    elif question.type in ['grid', 'checkbox_grid']:
+        grid_count = 0
+        for answer in answers:
+            if '|' in answer.value:
+                grid_count += 1
+        if grid_count > total_answers * 0.8:
+            return "Высокая заполняемость"
+        elif grid_count < total_answers * 0.3:
+            return "Низкая заполняемость"
+        else:
+            return "Средняя заполняемость"
+    
+    elif question.type in ['date', 'time']:
+        return f"Всего ответов: {total_answers}"
     
     return "Анализ недоступен"
 
@@ -996,6 +1094,11 @@ def format_answer_for_excel(answer, question):
                 return '; '.join(selected_options)
         except:
             pass
+    
+    if question.type in ['grid', 'checkbox_grid']:
+        if '|' in answer.value:
+            row, col = answer.value.split('|', 1)
+            return f"{row} → {col}"
     
     return str(answer.value)
 
@@ -1218,7 +1321,7 @@ def analyze_question(question, responses):
         'data': {}
     }
     
-    if question.type == 'multiple_choice':
+    if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
         options = json.loads(question.options) if question.options else []
         option_counts = {option: 0 for option in options}
         
@@ -1250,15 +1353,37 @@ def analyze_question(question, responses):
         analytics['data'] = option_counts
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
-    elif question.type == 'rating':
+    elif question.type in ['rating', 'scale']:
         ratings = [int(answer.value) for answer in answers if answer.value.isdigit()]
         if ratings:
             analytics['data'] = {
                 'min': min(ratings),
                 'max': max(ratings),
                 'avg': sum(ratings) / len(ratings),
-                'distribution': {str(i): ratings.count(i) for i in range(question.rating_min, question.rating_max + 1)}
+                'distribution': {str(i): ratings.count(i) for i in range(question.rating_min or 1, (question.rating_max or 10) + 1)}
             }
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type in ['text', 'text_paragraph']:
+        analytics['data'] = [answer.value for answer in answers]
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type in ['grid', 'checkbox_grid']:
+        grid_data = {}
+        for answer in answers:
+            if '|' in answer.value:
+                row, col = answer.value.split('|', 1)
+                key = f"{row}|{col}"
+                if key in grid_data:
+                    grid_data[key] += 1
+                else:
+                    grid_data[key] = 1
+        
+        analytics['data'] = grid_data
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type in ['date', 'time']:
+        analytics['data'] = [answer.value for answer in answers]
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type == 'text':

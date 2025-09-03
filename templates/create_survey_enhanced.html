@@ -84,31 +84,62 @@
                         </div>
                         
                         <div class="text-center">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-danger" id="addTextQuestion">
-                                    <i class="fas fa-font me-2"></i>Текстовый ответ
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addMultipleChoice">
-                                    <i class="fas fa-list-ul me-2"></i>Множественный выбор
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addCheckbox">
-                                    <i class="fas fa-check-square me-2"></i>Флажки
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addRating">
-                                    <i class="fas fa-star me-2"></i>Рейтинг
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addDropdown">
-                                    <i class="fas fa-chevron-down me-2"></i>Выпадающий список
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addCheckboxGrid">
-                                    <i class="fas fa-th me-2"></i>Сетка флажков
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addDate">
-                                    <i class="fas fa-calendar me-2"></i>Дата
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" id="addTime">
-                                    <i class="fas fa-clock me-2"></i>Время
-                                </button>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addTextQuestion">
+                                        <i class="fas fa-font me-2"></i>Текст (строка)
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addTextParagraph">
+                                        <i class="fas fa-align-left me-2"></i>Текст (Абзац)
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addSingleChoice">
+                                        <i class="fas fa-list-ul me-2"></i>Один из списка
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addMultipleChoice">
+                                        <i class="fas fa-check-square me-2"></i>Несколько из списка
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addDropdown">
+                                        <i class="fas fa-chevron-down me-2"></i>Раскрывающийся список
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addScale">
+                                        <i class="fas fa-sliders-h me-2"></i>Шкала
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addRating">
+                                        <i class="fas fa-star me-2"></i>Оценка
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addGrid">
+                                        <i class="fas fa-th me-2"></i>Сетка
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addCheckboxGrid">
+                                        <i class="fas fa-th-list me-2"></i>Сетка из флажков
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addDate">
+                                        <i class="fas fa-calendar me-2"></i>Дата
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <button type="button" class="btn btn-outline-danger w-100" id="addTime">
+                                        <i class="fas fa-clock me-2"></i>Время
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -264,11 +295,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeEventListeners() {
     // Кнопки добавления вопросов
     document.getElementById('addTextQuestion').addEventListener('click', () => addQuestion('text'));
+    document.getElementById('addTextParagraph').addEventListener('click', () => addQuestion('text_paragraph'));
+    document.getElementById('addSingleChoice').addEventListener('click', () => addQuestion('single_choice'));
     document.getElementById('addMultipleChoice').addEventListener('click', () => addQuestion('multiple_choice'));
-    document.getElementById('addCheckbox').addEventListener('click', () => addQuestion('checkbox'));
-    document.getElementById('addRating').addEventListener('click', () => showRatingModal());
     document.getElementById('addDropdown').addEventListener('click', () => addQuestion('dropdown'));
-    document.getElementById('addCheckboxGrid').addEventListener('click', () => showGridModal());
+    document.getElementById('addScale').addEventListener('click', () => showRatingModal('scale'));
+    document.getElementById('addRating').addEventListener('click', () => showRatingModal('rating'));
+    document.getElementById('addGrid').addEventListener('click', () => showGridModal('grid'));
+    document.getElementById('addCheckboxGrid').addEventListener('click', () => showGridModal('checkbox_grid'));
     document.getElementById('addDate').addEventListener('click', () => addQuestion('date'));
     document.getElementById('addTime').addEventListener('click', () => addQuestion('time'));
     
@@ -311,6 +345,7 @@ function generateQuestionHtml(questionData) {
     
     switch(type) {
         case 'text':
+        case 'text_paragraph':
             typeSpecificHtml = `
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
@@ -319,8 +354,8 @@ function generateQuestionHtml(questionData) {
             `;
             break;
             
+        case 'single_choice':
         case 'multiple_choice':
-        case 'checkbox':
         case 'dropdown':
             optionsHtml = generateOptionsHtml(id, options, allow_other, other_text);
             typeSpecificHtml = `
@@ -333,6 +368,7 @@ function generateQuestionHtml(questionData) {
             break;
             
         case 'rating':
+        case 'scale':
             const { rating_min = 1, rating_max = 10, rating_labels = [] } = questionData;
             typeSpecificHtml = `
                 <div class="row">
@@ -366,6 +402,7 @@ function generateQuestionHtml(questionData) {
             `;
             break;
             
+        case 'grid':
         case 'checkbox_grid':
             const { grid_rows = [], grid_columns = [] } = questionData;
             typeSpecificHtml = `
@@ -482,11 +519,14 @@ function generateOptionsHtml(questionId, options, allowOther, otherText) {
 function getQuestionIcon(type) {
     const icons = {
         'text': 'font',
-        'multiple_choice': 'list-ul',
-        'checkbox': 'check-square',
-        'rating': 'star',
+        'text_paragraph': 'align-left',
+        'single_choice': 'list-ul',
+        'multiple_choice': 'check-square',
         'dropdown': 'chevron-down',
-        'checkbox_grid': 'th',
+        'scale': 'sliders-h',
+        'rating': 'star',
+        'grid': 'th',
+        'checkbox_grid': 'th-list',
         'date': 'calendar',
         'time': 'clock'
     };
@@ -495,26 +535,29 @@ function getQuestionIcon(type) {
 
 function getQuestionTypeName(type) {
     const names = {
-        'text': 'Текстовый ответ',
-        'multiple_choice': 'Множественный выбор',
-        'checkbox': 'Флажки',
-        'rating': 'Рейтинг',
-        'dropdown': 'Выпадающий список',
-        'checkbox_grid': 'Сетка флажков',
+        'text': 'Текст (строка)',
+        'text_paragraph': 'Текст (Абзац)',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
         'date': 'Дата',
         'time': 'Время'
     };
     return names[type] || 'Неизвестный тип';
 }
 
-function showRatingModal() {
-    currentQuestionType = 'rating';
+function showRatingModal(type = 'rating') {
+    currentQuestionType = type;
     const modal = new bootstrap.Modal(document.getElementById('ratingModal'));
     modal.show();
 }
 
-function showGridModal() {
-    currentQuestionType = 'checkbox_grid';
+function showGridModal(type = 'checkbox_grid') {
+    currentQuestionType = type;
     const modal = new bootstrap.Modal(document.getElementById('gridModal'));
     modal.show();
 }
@@ -525,7 +568,7 @@ function saveRatingSettings() {
     const labelMin = document.getElementById('ratingLabelMin').value;
     const labelMax = document.getElementById('ratingLabelMax').value;
     
-    addQuestion('rating', {
+    addQuestion(currentQuestionType, {
         rating_min: min,
         rating_max: max,
         rating_labels: [labelMin, labelMax]
@@ -538,7 +581,7 @@ function saveGridSettings() {
     const rows = Array.from(document.querySelectorAll('#gridRows .grid-row-input')).map(input => input.value);
     const columns = Array.from(document.querySelectorAll('#gridColumns .grid-column-input')).map(input => input.value);
     
-    addQuestion('checkbox_grid', {
+    addQuestion(currentQuestionType, {
         grid_rows: rows,
         grid_columns: columns
     });
