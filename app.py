@@ -1292,6 +1292,21 @@ def get_survey_analytics(survey_id):
     question_analytics = []
     for question in questions:
         q_analytics = analyze_question(question, responses)
+        # Преобразуем объект Question в словарь для JSON сериализации
+        q_analytics['question'] = {
+            'id': question.id,
+            'text': question.text,
+            'type': question.type,
+            'is_required': question.is_required,
+            'options': question.options,
+            'allow_other': question.allow_other,
+            'other_text': question.other_text,
+            'rating_min': question.rating_min,
+            'rating_max': question.rating_max,
+            'rating_labels': question.rating_labels,
+            'grid_rows': question.grid_rows,
+            'grid_columns': question.grid_columns
+        }
         question_analytics.append(q_analytics)
     
     # Временная аналитика

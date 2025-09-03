@@ -171,9 +171,17 @@
         <div class="mb-3">
             <label class="form-label">Тип вопроса *</label>
             <select class="form-select question-type">
-                <option value="text">Текстовый ответ</option>
-                <option value="multiple_choice">Множественный выбор</option>
-                <option value="rating">Рейтинг (1-10)</option>
+                <option value="text">Текст (строка)</option>
+                <option value="text_paragraph">Текст (Абзац)</option>
+                <option value="single_choice">Один из списка</option>
+                <option value="multiple_choice">Несколько из списка</option>
+                <option value="dropdown">Раскрывающийся список</option>
+                <option value="scale">Шкала</option>
+                <option value="rating">Оценка</option>
+                <option value="grid">Сетка</option>
+                <option value="checkbox_grid">Сетка из флажков</option>
+                <option value="date">Дата</option>
+                <option value="time">Время</option>
             </select>
         </div>
         
@@ -309,21 +317,32 @@ function updatePreview() {
                 <br><small class="text-muted">${getQuestionTypeName(questionType)}</small>
         `;
         
-        if (questionType === 'multiple_choice') {
+        if (questionType === 'multiple_choice' || questionType === 'single_choice') {
             const options = question.querySelectorAll('.option-input');
             if (options.length > 0) {
                 previewHTML += '<div class="mt-2">';
                 options.forEach(option => {
                     if (option.value) {
-                        previewHTML += `<div class="form-check"><input class="form-check-input" type="radio" disabled><label class="form-check-label small">${option.value}</label></div>`;
+                        const inputType = questionType === 'single_choice' ? 'radio' : 'checkbox';
+                        previewHTML += `<div class="form-check"><input class="form-check-input" type="${inputType}" disabled><label class="form-check-label small">${option.value}</label></div>`;
                     }
                 });
                 previewHTML += '</div>';
             }
-        } else if (questionType === 'rating') {
-            previewHTML += '<div class="mt-2"><small class="text-muted">Рейтинг от 1 до 10</small></div>';
+        } else if (questionType === 'dropdown') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Выпадающий список</small></div>';
+        } else if (questionType === 'rating' || questionType === 'scale') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Рейтинг/Шкала</small></div>';
+        } else if (questionType === 'grid' || questionType === 'checkbox_grid') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Сетка</small></div>';
+        } else if (questionType === 'date') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Поле выбора даты</small></div>';
+        } else if (questionType === 'time') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Поле выбора времени</small></div>';
+        } else if (questionType === 'text_paragraph') {
+            previewHTML += '<div class="mt-2"><small class="text-muted">Многострочное текстовое поле</small></div>';
         } else {
-            previewHTML += '<div class="mt-2"><small class="text-muted">Текстовое поле</small></div>';
+            previewHTML += '<div class="mt-2"><small class="text-muted">Однострочное текстовое поле</small></div>';
         }
         
         previewHTML += '</div>';
@@ -334,9 +353,17 @@ function updatePreview() {
 
 function getQuestionTypeName(type) {
     const types = {
-        'text': 'Текстовый ответ',
-        'multiple_choice': 'Множественный выбор',
-        'rating': 'Рейтинг (1-10)'
+        'text': 'Текст (строка)',
+        'text_paragraph': 'Текст (Абзац)',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
+        'date': 'Дата',
+        'time': 'Время'
     };
     return types[type] || type;
 }
@@ -347,10 +374,18 @@ function collectQuestionsData() {
         const questionData = {
             text: question.querySelector('.question-text').value,
             type: question.querySelector('.question-type').value,
-            options: []
+            options: [],
+            is_required: question.querySelector('.question-required') ? question.querySelector('.question-required').checked : false,
+            allow_other: false,
+            other_text: '',
+            rating_min: 1,
+            rating_max: 10,
+            rating_labels: [],
+            grid_rows: [],
+            grid_columns: []
         };
         
-        if (questionData.type === 'multiple_choice') {
+        if (questionData.type === 'multiple_choice' || questionData.type === 'single_choice' || questionData.type === 'dropdown') {
             question.querySelectorAll('.option-input').forEach(option => {
                 if (option.value.trim()) {
                     questionData.options.push(option.value.trim());
