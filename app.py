@@ -1365,7 +1365,13 @@ def analyze_question(question, responses):
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['text', 'text_paragraph']:
-        analytics['data'] = [answer.value for answer in answers]
+        text_answers = [answer.value for answer in answers if answer.value]
+        avg_length = sum(len(text) for text in text_answers) / len(text_answers) if text_answers else 0
+        analytics['data'] = {
+            'total_texts': len(text_answers),
+            'avg_length': avg_length,
+            'answers': text_answers
+        }
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['grid', 'checkbox_grid']:
@@ -1383,7 +1389,8 @@ def analyze_question(question, responses):
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['date', 'time']:
-        analytics['data'] = [answer.value for answer in answers]
+        date_time_answers = [answer.value for answer in answers if answer.value]
+        analytics['data'] = date_time_answers
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type == 'text':
@@ -1573,7 +1580,9 @@ def get_survey_chart_data_internal(survey_id):
             'question_id': question.id,
             'question_text': question.text,
             'type': question.type,
-            'data': q_data['data']
+            'data': q_data['data'],
+            'total_answers': q_data['total_answers'],
+            'response_rate': q_data['response_rate']
         })
     
     return chart_data

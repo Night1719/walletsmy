@@ -156,7 +156,7 @@
                     
                     <!-- Данные вопроса -->
                     <div class="mt-3">
-                        {% if q_analytics.question.type == 'multiple_choice' or q_analytics.question.type == 'checkbox' %}
+                        {% if q_analytics.question.type in ['single_choice', 'multiple_choice', 'dropdown'] %}
                             <div class="row">
                                 {% for option, count in q_analytics.data.items() %}
                                 <div class="col-md-6 mb-2">
@@ -173,7 +173,24 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                        {% elif q_analytics.question.type == 'rating' %}
+                        {% elif q_analytics.question.type == 'checkbox' %}
+                            <div class="row">
+                                {% for option, count in q_analytics.data.items() %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>{{ option }}</span>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 100px; height: 20px;">
+                                                <div class="progress-bar bg-warning" 
+                                                     style="width: {{ (count / q_analytics.total_answers * 100) if q_analytics.total_answers > 0 else 0 }}%"></div>
+                                            </div>
+                                            <span class="badge bg-secondary">{{ count }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% elif q_analytics.question.type in ['rating', 'scale'] %}
                             {% if q_analytics.data %}
                             <div class="row">
                                 <div class="col-md-4">
@@ -190,7 +207,7 @@
                                 <canvas id="ratingChart{{ q_analytics.question.id }}" height="100"></canvas>
                             </div>
                             {% endif %}
-                        {% elif q_analytics.question.type == 'text' %}
+                        {% elif q_analytics.question.type in ['text', 'text_paragraph'] %}
                             <div class="row">
                                 <div class="col-md-4">
                                     <p><strong>Всего ответов:</strong> {{ q_analytics.data.total_texts }}</p>
@@ -203,6 +220,45 @@
                                         <i class="fas fa-eye"></i> Показать ответы
                                     </button>
                                 </div>
+                            </div>
+                        {% elif q_analytics.question.type in ['grid', 'checkbox_grid'] %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <p><strong>Заполненных ячеек:</strong> {{ q_analytics.data|length }}</p>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ячейка</th>
+                                                    <th>Количество</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for cell, count in q_analytics.data.items() %}
+                                                <tr>
+                                                    <td>{{ cell }}</td>
+                                                    <td>{{ count }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        {% elif q_analytics.question.type in ['date', 'time'] %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Всего ответов:</strong> {{ q_analytics.data|length }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="showTextAnswers({{ q_analytics.question.id }})">
+                                        <i class="fas fa-eye"></i> Показать ответы
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Аналитика для этого типа вопроса пока не поддерживается
                             </div>
                         {% endif %}
                     </div>
@@ -320,9 +376,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Графики рейтингов
+    // Графики рейтингов и шкал
     questionAnalytics.forEach(q => {
-        if (q.question.type === 'rating' && q.data && q.data.distribution) {
+        if ((q.question.type === 'rating' || q.question.type === 'scale') && q.data && q.data.distribution) {
             const ratingCtx = document.getElementById('ratingChart' + q.question.id);
             if (ratingCtx) {
                 const distribution = q.data.distribution;
@@ -363,13 +419,38 @@ function showQuestionDetails(questionId) {
     const question = questionAnalytics.find(q => q.question.id === questionId);
     if (question) {
         const modalBody = document.getElementById('questionModalBody');
-        modalBody.innerHTML = `
+        let detailsHtml = `
             <h6>${question.question.text}</h6>
             <p><strong>Тип:</strong> ${getQuestionTypeName(question.question.type)}</p>
             <p><strong>Всего ответов:</strong> ${question.total_answers}</p>
             <p><strong>Процент ответов:</strong> ${question.response_rate.toFixed(1)}%</p>
             <p><strong>Обязательный:</strong> ${question.question.is_required ? 'Да' : 'Нет'}</p>
         `;
+        
+        // Добавляем специфичную информацию для разных типов вопросов
+        if (question.question.type in ['single_choice', 'multiple_choice', 'dropdown']) {
+            if (question.question.options) {
+                const options = JSON.parse(question.question.options);
+                detailsHtml += `<p><strong>Варианты ответов:</strong> ${options.join(', ')}</p>`;
+            }
+        } else if (question.question.type in ['rating', 'scale']) {
+            detailsHtml += `<p><strong>Диапазон:</strong> от ${question.question.rating_min || 1} до ${question.question.rating_max || 10}</p>`;
+            if (question.question.rating_labels) {
+                const labels = JSON.parse(question.question.rating_labels);
+                if (labels.length >= 2) {
+                    detailsHtml += `<p><strong>Подписи:</strong> ${labels[0]} - ${labels[1]}</p>`;
+                }
+            }
+        } else if (question.question.type in ['grid', 'checkbox_grid']) {
+            if (question.question.grid_rows && question.question.grid_columns) {
+                const rows = JSON.parse(question.question.grid_rows);
+                const cols = JSON.parse(question.question.grid_columns);
+                detailsHtml += `<p><strong>Строки:</strong> ${rows.join(', ')}</p>`;
+                detailsHtml += `<p><strong>Столбцы:</strong> ${cols.join(', ')}</p>`;
+            }
+        }
+        
+        modalBody.innerHTML = detailsHtml;
         new bootstrap.Modal(document.getElementById('questionModal')).show();
     }
 }
@@ -377,25 +458,39 @@ function showQuestionDetails(questionId) {
 function showTextAnswers(questionId) {
     // Показать текстовые ответы
     const question = questionAnalytics.find(q => q.question.id === questionId);
-    if (question && question.data && question.data.sample_answers) {
+    if (question && question.data) {
         const modalBody = document.getElementById('textAnswersModalBody');
-        modalBody.innerHTML = `
-            <h6>Примеры ответов:</h6>
-            <div class="list-group">
-                ${question.data.sample_answers.map(answer => `
-                    <div class="list-group-item">
-                        <p class="mb-0">${answer}</p>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        let answersHtml = `<h6>${question.question.text}</h6><div class="mt-3">`;
+        
+        if (question.question.type in ['text', 'text_paragraph'] && question.data.answers) {
+            answersHtml += `<div class="list-group">`;
+            answersHtml += question.data.answers.map(answer => `
+                <div class="list-group-item">
+                    <p class="mb-0">${answer}</p>
+                </div>
+            `).join('');
+            answersHtml += `</div>`;
+        } else if (question.question.type in ['date', 'time'] && Array.isArray(question.data)) {
+            answersHtml += `<div class="list-group">`;
+            answersHtml += question.data.map(answer => `
+                <div class="list-group-item">
+                    <p class="mb-0">${answer}</p>
+                </div>
+            `).join('');
+            answersHtml += `</div>`;
+        } else {
+            answersHtml += '<p class="text-muted">Нет ответов для отображения</p>';
+        }
+        
+        answersHtml += '</div>';
+        modalBody.innerHTML = answersHtml;
         new bootstrap.Modal(document.getElementById('textAnswersModal')).show();
     }
 }
 
 function getQuestionTypeName(type) {
     const names = {
-        'text': 'Текстовый ответ',
+        'text': 'Текст (строка)',
         'text_paragraph': 'Текст (Абзац)',
         'single_choice': 'Один из списка',
         'multiple_choice': 'Несколько из списка',
