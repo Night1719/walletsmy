@@ -167,6 +167,10 @@
                                                class="btn btn-outline-primary" title="Просмотр">
                                                 <i class="fas fa-eye"></i>
                                             </a>
+                                            <a href="{{ url_for('edit_survey', survey_id=survey.id) }}" 
+                                               class="btn btn-outline-warning" title="Редактировать">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
                                             <a href="{{ url_for('survey_results', survey_id=survey.id) }}" 
                                                class="btn btn-outline-success" title="Результаты">
                                                 <i class="fas fa-chart-bar"></i>
