@@ -1,0 +1,754 @@
+{% extends "base.html" %}
+
+{% block title %}Создать опрос - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-plus text-danger me-2"></i>
+            Создать новый опрос
+        </h2>
+        <p class="text-muted">Создайте профессиональный опрос с различными типами вопросов как в Google Forms</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="POST" id="surveyForm">
+                    <!-- Основная информация -->
+                    <div class="mb-4">
+                        <h5 class="text-dark mb-3">
+                            <i class="fas fa-info-circle text-danger me-2"></i>
+                            Основная информация
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название опроса *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Краткое описание цели опроса..."></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_anonymous" name="is_anonymous">
+                                    <label class="form-check-label" for="is_anonymous">
+                                        Анонимный опрос
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        IP-адреса будут отслеживаться для статистики
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="require_auth" name="require_auth">
+                                    <label class="form-check-label" for="require_auth">
+                                        Требует авторизации
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        Только авторизованные пользователи смогут пройти опрос
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="require_name" name="require_name">
+                                    <label class="form-check-label" for="require_name">
+                                        Запросить имя
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        В конце опроса будет запрошено имя респондента
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Вопросы -->
+                    <div class="mb-4">
+                        <h5 class="text-dark mb-3">
+                            <i class="fas fa-question-circle text-danger me-2"></i>
+                            Вопросы
+                        </h5>
+                        
+                        <div id="questionsContainer">
+                            <!-- Вопросы будут добавляться сюда -->
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-danger" id="addTextQuestion">
+                                    <i class="fas fa-font me-2"></i>Текстовый ответ
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addMultipleChoice">
+                                    <i class="fas fa-list-ul me-2"></i>Множественный выбор
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addCheckbox">
+                                    <i class="fas fa-check-square me-2"></i>Флажки
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addRating">
+                                    <i class="fas fa-star me-2"></i>Рейтинг
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addDropdown">
+                                    <i class="fas fa-chevron-down me-2"></i>Выпадающий список
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addCheckboxGrid">
+                                    <i class="fas fa-th me-2"></i>Сетка флажков
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addDate">
+                                    <i class="fas fa-calendar me-2"></i>Дата
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="addTime">
+                                    <i class="fas fa-clock me-2"></i>Время
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Скрытое поле для вопросов -->
+                    <input type="hidden" name="questions" id="questionsData">
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-save me-2"></i>Создать опрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Советы по созданию
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-danger">Типы вопросов:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-font text-muted me-2"></i><strong>Текстовый ответ</strong> - для развернутых ответов</li>
+                        <li><i class="fas fa-list-ul text-muted me-2"></i><strong>Множественный выбор</strong> - один вариант из списка</li>
+                        <li><i class="fas fa-check-square text-muted me-2"></i><strong>Флажки</strong> - несколько вариантов</li>
+                        <li><i class="fas fa-star text-muted me-2"></i><strong>Рейтинг</strong> - оценка по шкале</li>
+                        <li><i class="fas fa-th text-muted me-2"></i><strong>Сетка флажков</strong> - матрица оценок</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-danger">Настройки опроса:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-user-secret text-muted me-2"></i><strong>Анонимный</strong> - без привязки к пользователю</li>
+                        <li><i class="fas fa-lock text-muted me-2"></i><strong>Авторизация</strong> - только для зарегистрированных</li>
+                        <li><i class="fas fa-signature text-muted me-2"></i><strong>Запросить имя</strong> - имя в конце опроса</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Предварительный просмотр
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="previewContainer">
+                    <p class="text-muted text-center">Добавьте вопросы для предварительного просмотра</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для настройки рейтинга -->
+<div class="modal fade" id="ratingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Настройка рейтинга</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="ratingMin" class="form-label">Минимальное значение</label>
+                    <input type="number" class="form-control" id="ratingMin" value="1" min="1">
+                </div>
+                <div class="mb-3">
+                    <label for="ratingMax" class="form-label">Максимальное значение</label>
+                    <input type="number" class="form-control" id="ratingMax" value="10" min="2">
+                </div>
+                <div class="mb-3">
+                    <label for="ratingLabelMin" class="form-label">Подпись для минимального значения</label>
+                    <input type="text" class="form-control" id="ratingLabelMin" placeholder="Плохо">
+                </div>
+                <div class="mb-3">
+                    <label for="ratingLabelMax" class="form-label">Подпись для максимального значения</label>
+                    <input type="text" class="form-control" id="ratingLabelMax" placeholder="Отлично">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="saveRatingSettings">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для настройки сетки флажков -->
+<div class="modal fade" id="gridModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Настройка сетки флажков</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Строки (вопросы)</h6>
+                        <div id="gridRows">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control grid-row-input" placeholder="Строка 1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-row">×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addGridRow">+ Добавить строку</button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Столбцы (варианты ответов)</h6>
+                        <div id="gridColumns">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control grid-column-input" placeholder="Столбец 1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-column">×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addGridColumn">+ Добавить столбец</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="saveGridSettings">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let questionCounter = 0;
+let currentQuestionType = '';
+let currentQuestionData = {};
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    initializeEventListeners();
+});
+
+function initializeEventListeners() {
+    // Кнопки добавления вопросов
+    document.getElementById('addTextQuestion').addEventListener('click', () => addQuestion('text'));
+    document.getElementById('addMultipleChoice').addEventListener('click', () => addQuestion('multiple_choice'));
+    document.getElementById('addCheckbox').addEventListener('click', () => addQuestion('checkbox'));
+    document.getElementById('addRating').addEventListener('click', () => showRatingModal());
+    document.getElementById('addDropdown').addEventListener('click', () => addQuestion('dropdown'));
+    document.getElementById('addCheckboxGrid').addEventListener('click', () => showGridModal());
+    document.getElementById('addDate').addEventListener('click', () => addQuestion('date'));
+    document.getElementById('addTime').addEventListener('click', () => addQuestion('time'));
+    
+    // Модальные окна
+    document.getElementById('saveRatingSettings').addEventListener('click', saveRatingSettings);
+    document.getElementById('saveGridSettings').addEventListener('click', saveGridSettings);
+    
+    // Сетка флажков
+    document.getElementById('addGridRow').addEventListener('click', addGridRow);
+    document.getElementById('addGridColumn').addEventListener('click', addGridColumn);
+}
+
+function addQuestion(type, customData = {}) {
+    questionCounter++;
+    const questionId = `question_${questionCounter}`;
+    
+    const questionData = {
+        id: questionId,
+        type: type,
+        text: '',
+        options: [],
+        is_required: true,
+        allow_other: false,
+        other_text: 'Другой вариант',
+        ...customData
+    };
+    
+    const questionHtml = generateQuestionHtml(questionData);
+    
+    document.getElementById('questionsContainer').insertAdjacentHTML('beforeend', questionHtml);
+    updateQuestionsData();
+    updatePreview();
+}
+
+function generateQuestionHtml(questionData) {
+    const { id, type, text, options, is_required, allow_other, other_text } = questionData;
+    
+    let optionsHtml = '';
+    let typeSpecificHtml = '';
+    
+    switch(type) {
+        case 'text':
+            typeSpecificHtml = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
+                    <label class="form-check-label" for="${id}_required">Обязательный вопрос</label>
+                </div>
+            `;
+            break;
+            
+        case 'multiple_choice':
+        case 'checkbox':
+        case 'dropdown':
+            optionsHtml = generateOptionsHtml(id, options, allow_other, other_text);
+            typeSpecificHtml = `
+                ${optionsHtml}
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
+                    <label class="form-check-label" for="${id}_required">Обязательный вопрос</label>
+                </div>
+            `;
+            break;
+            
+        case 'rating':
+            const { rating_min = 1, rating_max = 10, rating_labels = [] } = questionData;
+            typeSpecificHtml = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">От</label>
+                        <input type="number" class="form-control" id="${id}_min" value="${rating_min}" min="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">До</label>
+                        <input type="number" class="form-control" id="${id}_max" value="${rating_max}" min="2">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Шаг</label>
+                        <input type="number" class="form-control" id="${id}_step" value="1" min="1">
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Подпись для минимального значения</label>
+                        <input type="text" class="form-control" id="${id}_label_min" value="${rating_labels[0] || ''}" placeholder="Плохо">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Подпись для максимального значения</label>
+                        <input type="text" class="form-control" id="${id}_label_max" value="${rating_labels[1] || ''}" placeholder="Отлично">
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
+                    <label class="form-check-label" for="${id}_required">Обязательный вопрос</label>
+                </div>
+            `;
+            break;
+            
+        case 'checkbox_grid':
+            const { grid_rows = [], grid_columns = [] } = questionData;
+            typeSpecificHtml = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Строки (вопросы)</h6>
+                        <div id="${id}_rows">
+                            ${grid_rows.map((row, index) => `
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" value="${row}" data-row="${index}">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm add-row" data-target="${id}_rows">+ Добавить строку</button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Столбцы (варианты ответов)</h6>
+                        <div id="${id}_columns">
+                            ${grid_columns.map((col, index) => `
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" value="${col}" data-column="${index}">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-column">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm add-column" data-target="${id}_columns">+ Добавить столбец</button>
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
+                    <label class="form-check-label" for="${id}_required">Обязательный вопрос</label>
+                </div>
+            `;
+            break;
+            
+        case 'date':
+        case 'time':
+            typeSpecificHtml = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="${id}_required" ${is_required ? 'checked' : ''}>
+                    <label class="form-check-label" for="${id}_required">Обязательный вопрос</label>
+                </div>
+            `;
+            break;
+    }
+    
+    return `
+        <div class="card mb-3 question-card" data-question-id="${id}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-${getQuestionIcon(type)} text-danger me-2"></i>
+                    ${getQuestionTypeName(type)}
+                </h6>
+                <div>
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2 move-up" title="Переместить вверх">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2 move-down" title="Переместить вниз">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-question" title="Удалить вопрос">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Текст вопроса *</label>
+                    <input type="text" class="form-control question-text" value="${text}" placeholder="Введите текст вопроса...">
+                </div>
+                ${typeSpecificHtml}
+            </div>
+        </div>
+    `;
+}
+
+function generateOptionsHtml(questionId, options, allowOther, otherText) {
+    let html = '<div class="options-container">';
+    
+    options.forEach((option, index) => {
+        html += `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control option-input" value="${option}" data-index="${index}">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-option">×</button>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    html += '<button type="button" class="btn btn-outline-primary btn-sm add-option">+ Добавить вариант</button>';
+    
+    if (allowOther) {
+        html += `
+            <div class="form-check mt-2">
+                <input class="form-check-input allow-other" type="checkbox" checked>
+                <label class="form-check-label">Разрешить "Другой вариант"</label>
+                <input type="text" class="form-control mt-1 other-text" value="${otherText}" placeholder="Текст для другого варианта">
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="form-check mt-2">
+                <input class="form-check-input allow-other" type="checkbox">
+                <label class="form-check-label">Разрешить "Другой вариант"</label>
+                <input type="text" class="form-control mt-1 other-text" value="${otherText}" placeholder="Текст для другого варианта" style="display: none;">
+            </div>
+        `;
+    }
+    
+    return html;
+}
+
+function getQuestionIcon(type) {
+    const icons = {
+        'text': 'font',
+        'multiple_choice': 'list-ul',
+        'checkbox': 'check-square',
+        'rating': 'star',
+        'dropdown': 'chevron-down',
+        'checkbox_grid': 'th',
+        'date': 'calendar',
+        'time': 'clock'
+    };
+    return icons[type] || 'question';
+}
+
+function getQuestionTypeName(type) {
+    const names = {
+        'text': 'Текстовый ответ',
+        'multiple_choice': 'Множественный выбор',
+        'checkbox': 'Флажки',
+        'rating': 'Рейтинг',
+        'dropdown': 'Выпадающий список',
+        'checkbox_grid': 'Сетка флажков',
+        'date': 'Дата',
+        'time': 'Время'
+    };
+    return names[type] || 'Неизвестный тип';
+}
+
+function showRatingModal() {
+    currentQuestionType = 'rating';
+    const modal = new bootstrap.Modal(document.getElementById('ratingModal'));
+    modal.show();
+}
+
+function showGridModal() {
+    currentQuestionType = 'checkbox_grid';
+    const modal = new bootstrap.Modal(document.getElementById('gridModal'));
+    modal.show();
+}
+
+function saveRatingSettings() {
+    const min = parseInt(document.getElementById('ratingMin').value);
+    const max = parseInt(document.getElementById('ratingMax').value);
+    const labelMin = document.getElementById('ratingLabelMin').value;
+    const labelMax = document.getElementById('ratingLabelMax').value;
+    
+    addQuestion('rating', {
+        rating_min: min,
+        rating_max: max,
+        rating_labels: [labelMin, labelMax]
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('ratingModal')).hide();
+}
+
+function saveGridSettings() {
+    const rows = Array.from(document.querySelectorAll('#gridRows .grid-row-input')).map(input => input.value);
+    const columns = Array.from(document.querySelectorAll('#gridColumns .grid-column-input')).map(input => input.value);
+    
+    addQuestion('checkbox_grid', {
+        grid_rows: rows,
+        grid_columns: columns
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('gridModal')).hide();
+}
+
+function addGridRow() {
+    const container = document.getElementById('gridRows');
+    const rowCount = container.children.length + 1;
+    const html = `
+        <div class="input-group mb-2">
+            <input type="text" class="form-control grid-row-input" placeholder="Строка ${rowCount}">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-row">×</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function addGridColumn() {
+    const container = document.getElementById('gridColumns');
+    const colCount = container.children.length + 1;
+    const html = `
+        <div class="input-group mb-2">
+            <input type="text" class="form-control grid-column-input" placeholder="Столбец ${colCount}">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-column">×</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function updateQuestionsData() {
+    const questions = [];
+    const questionCards = document.querySelectorAll('.question-card');
+    
+    questionCards.forEach((card, index) => {
+        const questionId = card.dataset.questionId;
+        const text = card.querySelector('.question-text').value;
+        const type = getQuestionTypeFromCard(card);
+        const isRequired = card.querySelector('input[type="checkbox"]')?.checked || false;
+        
+        const questionData = {
+            text: text,
+            type: type,
+            is_required: isRequired,
+            order: index
+        };
+        
+        // Добавляем специфичные для типа данные
+        switch(type) {
+            case 'multiple_choice':
+            case 'checkbox':
+            case 'dropdown':
+                const options = Array.from(card.querySelectorAll('.option-input')).map(input => input.value);
+                const allowOther = card.querySelector('.allow-other')?.checked || false;
+                const otherText = card.querySelector('.other-text')?.value || 'Другой вариант';
+                
+                questionData.options = options;
+                questionData.allow_other = allowOther;
+                questionData.other_text = otherText;
+                break;
+                
+            case 'rating':
+                const min = parseInt(card.querySelector('input[id$="_min"]')?.value || 1);
+                const max = parseInt(card.querySelector('input[id$="_max"]')?.value || 10);
+                const labelMin = card.querySelector('input[id$="_label_min"]')?.value || '';
+                const labelMax = card.querySelector('input[id$="_label_max"]')?.value || '';
+                
+                questionData.rating_min = min;
+                questionData.rating_max = max;
+                questionData.rating_labels = [labelMin, labelMax];
+                break;
+                
+            case 'checkbox_grid':
+                const rows = Array.from(card.querySelectorAll('input[data-row]')).map(input => input.value);
+                const columns = Array.from(card.querySelectorAll('input[data-column]')).map(input => input.value);
+                
+                questionData.grid_rows = rows;
+                questionData.grid_columns = columns;
+                break;
+        }
+        
+        questions.push(questionData);
+    });
+    
+    document.getElementById('questionsData').value = JSON.stringify(questions);
+}
+
+function getQuestionTypeFromCard(card) {
+    const icon = card.querySelector('.fas').className;
+    if (icon.includes('font')) return 'text';
+    if (icon.includes('list-ul')) return 'multiple_choice';
+    if (icon.includes('check-square')) return 'checkbox';
+    if (icon.includes('star')) return 'rating';
+    if (icon.includes('chevron-down')) return 'dropdown';
+    if (icon.includes('th')) return 'checkbox_grid';
+    if (icon.includes('calendar')) return 'date';
+    if (icon.includes('clock')) return 'time';
+    return 'text';
+}
+
+function updatePreview() {
+    const container = document.getElementById('previewContainer');
+    const questions = JSON.parse(document.getElementById('questionsData').value || '[]');
+    
+    if (questions.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Добавьте вопросы для предварительного просмотра</p>';
+        return;
+    }
+    
+    let html = '<div class="preview-questions">';
+    questions.forEach((q, index) => {
+        html += `<div class="mb-3"><strong>${index + 1}. ${q.text}</strong></div>`;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+// Обработчики событий для динамических элементов
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-question')) {
+        e.target.closest('.question-card').remove();
+        updateQuestionsData();
+        updatePreview();
+    }
+    
+    if (e.target.classList.contains('add-option')) {
+        const container = e.target.previousElementSibling;
+        const index = container.children.length;
+        const html = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control option-input" data-index="${index}">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-option">×</button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+    
+    if (e.target.classList.contains('remove-option')) {
+        e.target.closest('.input-group').remove();
+    }
+    
+    if (e.target.classList.contains('allow-other')) {
+        const otherTextInput = e.target.closest('.form-check').querySelector('.other-text');
+        otherTextInput.style.display = e.target.checked ? 'block' : 'none';
+    }
+    
+    if (e.target.classList.contains('remove-row') || e.target.classList.contains('remove-column')) {
+        e.target.closest('.input-group').remove();
+    }
+    
+    if (e.target.classList.contains('add-row')) {
+        const target = e.target.dataset.target;
+        const container = document.getElementById(target);
+        const rowCount = container.children.length + 1;
+        const html = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" data-row="${rowCount - 1}">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-row">×</button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+    
+    if (e.target.classList.contains('add-column')) {
+        const target = e.target.dataset.target;
+        const container = document.getElementById(target);
+        const colCount = container.children.length + 1;
+        const html = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" data-column="${colCount - 1}">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-column">×</button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+});
+
+// Обновление данных при изменении полей
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('question-text') || 
+        e.target.classList.contains('option-input') ||
+        e.target.classList.contains('other-text') ||
+        e.target.type === 'checkbox' ||
+        e.target.type === 'number') {
+        updateQuestionsData();
+        updatePreview();
+    }
+});
+
+// Обработка отправки формы
+document.getElementById('surveyForm').addEventListener('submit', function(e) {
+    updateQuestionsData();
+    const questions = JSON.parse(document.getElementById('questionsData').value || '[]');
+    
+    if (questions.length === 0) {
+        e.preventDefault();
+        alert('Добавьте хотя бы один вопрос');
+        return;
+    }
+    
+    // Проверяем, что все вопросы имеют текст
+    for (let q of questions) {
+        if (!q.text.trim()) {
+            e.preventDefault();
+            alert('Все вопросы должны иметь текст');
+            return;
+        }
+    }
+});
+</script>
+{% endblock %}

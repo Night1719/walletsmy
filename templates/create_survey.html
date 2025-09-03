@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "create_survey_enhanced.html" %}
 
 {% block title %}Создать опрос - BG Survey Platform{% endblock %}
 
@@ -36,7 +36,7 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="is_anonymous" name="is_anonymous">
                                     <label class="form-check-label" for="is_anonymous">
@@ -47,7 +47,7 @@
                                     </small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="require_auth" name="require_auth">
                                     <label class="form-check-label" for="require_auth">
@@ -55,6 +55,17 @@
                                     </label>
                                     <small class="form-text text-muted d-block">
                                         Только авторизованные пользователи смогут пройти опрос
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="require_name" name="require_name">
+                                    <label class="form-check-label" for="require_name">
+                                        Запросить имя
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        В конце опроса будет запрошено имя респондента
                                     </small>
                                 </div>
                             </div>

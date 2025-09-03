@@ -39,15 +39,17 @@
                             <span class="badge bg-success me-1">
                                 <i class="fas fa-user-secret me-1"></i>Анонимный
                             </span>
+                        {% elif survey.require_auth %}
+                            <span class="badge bg-warning me-1">
+                                <i class="fas fa-lock me-1"></i>Требует авторизации
+                            </span>
+                        {% elif survey.require_name %}
+                            <span class="badge bg-info me-1">
+                                <i class="fas fa-signature me-1"></i>Запрос имени
+                            </span>
                         {% else %}
                             <span class="badge bg-primary me-1">
-                                <i class="fas fa-user me-1"></i>Авторизованный
-                            </span>
-                        {% endif %}
-                        
-                        {% if survey.require_auth %}
-                            <span class="badge bg-warning">
-                                <i class="fas fa-lock me-1"></i>Требует вход
+                                <i class="fas fa-user me-1"></i>Обычный
                             </span>
                         {% endif %}
                     </div>
@@ -152,6 +154,18 @@
                                     {% endif %}
                                 </small>
                             </div>
+                            
+                            {% if survey.require_name %}
+                                <div class="mb-3">
+                                    <label for="respondent_name" class="form-label">
+                                        <i class="fas fa-signature me-2"></i>Ваше имя *
+                                    </label>
+                                    <input type="text" class="form-control" id="respondent_name" name="respondent_name" required>
+                                    <small class="form-text text-muted">
+                                        Пожалуйста, укажите ваше имя для завершения опроса
+                                    </small>
+                                </div>
+                            {% endif %}
                             
                             <button type="submit" class="btn btn-danger btn-lg">
                                 <i class="fas fa-paper-plane me-2"></i>Отправить ответы

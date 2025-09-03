@@ -37,6 +37,7 @@ class Survey(db.Model):
     description = db.Column(db.Text)
     is_anonymous = db.Column(db.Boolean, default=False)
     require_auth = db.Column(db.Boolean, default=False)
+    require_name = db.Column(db.Boolean, default=False)  # Новый тип опроса - ввод имени
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
@@ -46,9 +47,18 @@ class Survey(db.Model):
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    type = db.Column(db.String(20), nullable=False)  # text, multiple_choice, rating
+    type = db.Column(db.String(30), nullable=False)  # text, multiple_choice, checkbox, rating, checkbox_grid, dropdown, date, time, file_upload
     options = db.Column(db.Text)  # JSON для вариантов ответов
+    is_required = db.Column(db.Boolean, default=True)  # Обязательный вопрос
+    allow_other = db.Column(db.Boolean, default=False)  # Разрешить "Другой вариант"
+    other_text = db.Column(db.String(200))  # Текст для "Другой вариант"
+    rating_min = db.Column(db.Integer, default=1)  # Минимальное значение рейтинга
+    rating_max = db.Column(db.Integer, default=10)  # Максимальное значение рейтинга
+    rating_labels = db.Column(db.Text)  # JSON для подписей рейтинга (например, ["Плохо", "Отлично"])
+    grid_rows = db.Column(db.Text)  # JSON для строк сетки флажков
+    grid_columns = db.Column(db.Text)  # JSON для столбцов сетки флажков
     survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'), nullable=False)
+    question_order = db.Column(db.Integer, default=0)  # Порядок вопроса
     
     answers = db.relationship('Answer', backref='question', lazy=True, cascade='all, delete-orphan')
 
@@ -56,7 +66,10 @@ class SurveyResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    respondent_name = db.Column(db.String(200), nullable=True)  # Имя респондента для require_name опросов
     ip_address = db.Column(db.String(45), nullable=False)
+    user_agent = db.Column(db.Text, nullable=True)  # User Agent браузера
+    completion_time = db.Column(db.Integer, nullable=True)  # Время прохождения в секундах
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     answers = db.relationship('Answer', backref='response', lazy=True, cascade='all, delete-orphan')
@@ -66,6 +79,26 @@ class Answer(db.Model):
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
     response_id = db.Column(db.Integer, db.ForeignKey('survey_response.id'), nullable=False)
     value = db.Column(db.Text, nullable=False)
+    is_other = db.Column(db.Boolean, default=False)  # Является ли ответ "Другим вариантом"
+
+# Новые модели для аналитики
+class AnalyticsCache(db.Model):
+    """Кеш для аналитических данных"""
+    id = db.Column(db.Integer, primary_key=True)
+    cache_key = db.Column(db.String(200), unique=True, nullable=False)
+    data = db.Column(db.Text, nullable=False)  # JSON данные
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+class SurveyAnalytics(db.Model):
+    """Детальная аналитика по опросам"""
+    id = db.Column(db.Integer, primary_key=True)
+    survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'), nullable=False)
+    metric_name = db.Column(db.String(100), nullable=False)  # completion_rate, avg_time, etc.
+    metric_value = db.Column(db.Float, nullable=False)
+    calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    survey = db.relationship('Survey', backref='analytics')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -423,12 +456,14 @@ def create_survey():
         description = request.form.get('description')
         is_anonymous = 'is_anonymous' in request.form
         require_auth = 'require_auth' in request.form
+        require_name = 'require_name' in request.form
         
         survey = Survey(
             title=title,
             description=description,
             is_anonymous=is_anonymous,
             require_auth=require_auth,
+            require_name=require_name,
             creator_id=current_user.id
         )
         db.session.add(survey)
@@ -436,11 +471,20 @@ def create_survey():
         
         # Добавляем вопросы
         questions_data = json.loads(request.form.get('questions', '[]'))
-        for q_data in questions_data:
+        for i, q_data in enumerate(questions_data):
             question = Question(
                 text=q_data['text'],
                 type=q_data['type'],
                 options=json.dumps(q_data.get('options', [])),
+                is_required=q_data.get('is_required', True),
+                allow_other=q_data.get('allow_other', False),
+                other_text=q_data.get('other_text', 'Другой вариант'),
+                rating_min=q_data.get('rating_min', 1),
+                rating_max=q_data.get('rating_max', 10),
+                rating_labels=json.dumps(q_data.get('rating_labels', [])),
+                grid_rows=json.dumps(q_data.get('grid_rows', [])),
+                grid_columns=json.dumps(q_data.get('grid_columns', [])),
+                question_order=i,
                 survey_id=survey.id
             )
             db.session.add(question)
@@ -464,11 +508,22 @@ def submit_survey(survey_id):
         flash('Для прохождения этого опроса требуется авторизация', 'error')
         return redirect(url_for('login'))
     
+    # Получаем имя респондента, если требуется
+    respondent_name = None
+    if survey.require_name:
+        respondent_name = request.form.get('respondent_name')
+        if not respondent_name:
+            flash('Пожалуйста, укажите ваше имя', 'error')
+            return redirect(url_for('view_survey', survey_id=survey_id))
+    
     # Создаем ответ на опрос
     response = SurveyResponse(
         survey_id=survey.id,
         user_id=current_user.id if current_user.is_authenticated else None,
-        ip_address=request.remote_addr
+        respondent_name=respondent_name,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', ''),
+        completion_time=request.form.get('completion_time', type=int)  # Время в секундах
     )
     db.session.add(response)
     db.session.commit()
@@ -477,10 +532,17 @@ def submit_survey(survey_id):
     for question in survey.questions:
         answer_value = request.form.get(f'question_{question.id}')
         if answer_value:
+            # Обрабатываем разные типы ответов
+            if question.type == 'checkbox':
+                # Для флажков ответ может быть списком
+                if isinstance(answer_value, list):
+                    answer_value = json.dumps(answer_value)
+            
             answer = Answer(
                 question_id=question.id,
                 response_id=response.id,
-                value=answer_value
+                value=answer_value,
+                is_other=request.form.get(f'question_{question.id}_other') == 'true'
             )
             db.session.add(answer)
     
@@ -601,10 +663,12 @@ def survey_results(survey_id):
 @app.route('/surveys/<int:survey_id>/export-excel')
 @login_required
 def export_survey_excel(survey_id):
-    """Экспорт результатов опроса в Excel"""
+    """Улучшенный экспорт результатов опроса в Excel с красивым форматированием"""
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from openpyxl.chart import BarChart, PieChart, Reference
         from io import BytesIO
         from flask import send_file
         
@@ -616,96 +680,175 @@ def export_survey_excel(survey_id):
         
         # Создаем Excel файл
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Результаты опроса"
         
-        # Заголовки
-        headers = ['№', 'Вопрос', 'Тип', 'Ответы', 'Статистика']
+        # ========== ЛИСТ 1: ОБЗОР ОПРОСА ==========
+        ws_overview = wb.active
+        ws_overview.title = "Обзор опроса"
+        
+        # Стили
+        header_font = Font(bold=True, size=14, color="FFFFFF")
+        header_fill = PatternFill(start_color="DC3545", end_color="DC3545", fill_type="solid")
+        subheader_font = Font(bold=True, size=12)
+        subheader_fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+        border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                       top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        # Заголовок
+        ws_overview.merge_cells('A1:F1')
+        ws_overview['A1'] = f"ОТЧЕТ ПО ОПРОСУ: {survey.title}"
+        ws_overview['A1'].font = header_font
+        ws_overview['A1'].fill = header_fill
+        ws_overview['A1'].alignment = Alignment(horizontal="center", vertical="center")
+        ws_overview.row_dimensions[1].height = 30
+        
+        # Информация об опросе
+        row = 3
+        info_data = [
+            ("Название опроса:", survey.title),
+            ("Описание:", survey.description or "Не указано"),
+            ("Создатель:", survey.creator.username),
+            ("Дата создания:", survey.created_at.strftime('%d.%m.%Y %H:%M')),
+            ("Тип опроса:", get_survey_type_name(survey)),
+            ("Всего ответов:", len(survey.responses)),
+            ("Всего вопросов:", len(survey.questions))
+        ]
+        
+        for label, value in info_data:
+            ws_overview[f'A{row}'] = label
+            ws_overview[f'A{row}'].font = subheader_font
+            ws_overview[f'A{row}'].fill = subheader_fill
+            ws_overview[f'B{row}'] = str(value)
+            ws_overview[f'B{row}'].border = border
+            row += 1
+        
+        # ========== ЛИСТ 2: ДЕТАЛЬНЫЕ РЕЗУЛЬТАТЫ ==========
+        ws_details = wb.create_sheet("Детальные результаты")
+        
+        # Заголовки для детального листа
+        headers = ['№', 'Вопрос', 'Тип вопроса', 'Обязательный', 'Варианты ответов', 'Статистика', 'Анализ']
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
-            cell.alignment = Alignment(horizontal="center")
+            cell = ws_details.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
         
-        # Данные
+        # Данные по вопросам
         row = 2
-        for question in survey.questions:
+        for i, question in enumerate(survey.questions, 1):
             # Номер вопроса
-            ws.cell(row=row, column=1, value=row-1)
+            ws_details.cell(row=row, column=1, value=i).border = border
             
             # Текст вопроса
-            ws.cell(row=row, column=2, value=question.text)
+            ws_details.cell(row=row, column=2, value=question.text).border = border
             
             # Тип вопроса
-            type_names = {
-                'text': 'Текстовый',
-                'multiple_choice': 'Множественный выбор',
-                'rating': 'Рейтинг'
-            }
-            ws.cell(row=row, column=3, value=type_names.get(question.type, question.type))
+            type_name = get_question_type_name(question.type)
+            ws_details.cell(row=row, column=3, value=type_name).border = border
             
-            # Ответы
-            if question.type == 'multiple_choice':
-                try:
-                    options = json.loads(question.options) if question.options else []
-                    answers_text = ', '.join(options) if options else 'Варианты не настроены'
-                except:
-                    answers_text = 'Ошибка в вариантах'
-            elif question.type == 'rating':
-                answers_text = 'Рейтинг от 1 до 10'
-            else:
-                answers_text = 'Текстовые ответы'
+            # Обязательный
+            ws_details.cell(row=row, column=4, value="Да" if question.is_required else "Нет").border = border
             
-            ws.cell(row=row, column=4, value=answers_text)
+            # Варианты ответов
+            options_text = get_question_options_text(question)
+            ws_details.cell(row=row, column=5, value=options_text).border = border
             
             # Статистика
-            if question.type == 'multiple_choice':
-                try:
-                    options = json.loads(question.options) if question.options else []
-                    if options:
-                        counts = {opt: 0 for opt in options}
-                        for answer in question.answers:
-                            if answer.value in counts:
-                                counts[answer.value] += 1
-                        stats = '; '.join([f"{opt}: {count}" for opt, count in counts.items()])
-                    else:
-                        stats = 'Нет вариантов'
-                except:
-                    stats = 'Ошибка в данных'
-            elif question.type == 'rating':
-                ratings = [int(answer.value) for answer in question.answers if answer.value and answer.value.isdigit()]
-                if ratings:
-                    avg = sum(ratings) / len(ratings)
-                    stats = f"Средний: {avg:.1f}, Всего: {len(ratings)}"
-                else:
-                    stats = 'Нет ответов'
-            else:
-                answers_count = len([a for a in question.answers if a.value])
-                stats = f"Ответов: {answers_count}"
+            stats = get_question_statistics(question)
+            ws_details.cell(row=row, column=6, value=stats).border = border
             
-            ws.cell(row=row, column=5, value=stats)
+            # Анализ
+            analysis = get_question_analysis(question)
+            ws_details.cell(row=row, column=7, value=analysis).border = border
             
             row += 1
         
-        # Автоматическая ширина столбцов
-        for column in ws.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
+        # ========== ЛИСТ 3: ОТВЕТЫ РЕСПОНДЕНТОВ ==========
+        ws_responses = wb.create_sheet("Ответы респондентов")
+        
+        # Заголовки для ответов
+        response_headers = ['№', 'Дата ответа', 'IP адрес', 'Имя респондента', 'Время прохождения (мин)']
+        question_headers = [f"Вопрос {i+1}" for i in range(len(survey.questions))]
+        all_headers = response_headers + question_headers
+        
+        for col, header in enumerate(all_headers, 1):
+            cell = ws_responses.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
+        
+        # Данные ответов
+        row = 2
+        for i, response in enumerate(survey.responses, 1):
+            # Основная информация
+            ws_responses.cell(row=row, column=1, value=i).border = border
+            ws_responses.cell(row=row, column=2, value=response.created_at.strftime('%d.%m.%Y %H:%M')).border = border
+            ws_responses.cell(row=row, column=3, value=response.ip_address).border = border
+            ws_responses.cell(row=row, column=4, value=response.respondent_name or "Не указано").border = border
+            completion_time = f"{response.completion_time/60:.1f}" if response.completion_time else "Не указано"
+            ws_responses.cell(row=row, column=5, value=completion_time).border = border
+            
+            # Ответы на вопросы
+            col = 6
+            for question in survey.questions:
+                answer = Answer.query.filter_by(response_id=response.id, question_id=question.id).first()
+                answer_text = format_answer_for_excel(answer, question) if answer else "Нет ответа"
+                ws_responses.cell(row=row, column=col, value=answer_text).border = border
+                col += 1
+            
+            row += 1
+        
+        # ========== ЛИСТ 4: АНАЛИТИКА ==========
+        ws_analytics = wb.create_sheet("Аналитика")
+        
+        # Заголовок аналитики
+        ws_analytics.merge_cells('A1:D1')
+        ws_analytics['A1'] = "АНАЛИТИЧЕСКИЙ ОТЧЕТ"
+        ws_analytics['A1'].font = header_font
+        ws_analytics['A1'].fill = header_fill
+        ws_analytics['A1'].alignment = Alignment(horizontal="center", vertical="center")
+        ws_analytics.row_dimensions[1].height = 30
+        
+        # Аналитические данные
+        analytics_data = get_survey_analytics(survey_id)
+        if analytics_data:
+            row = 3
+            analytics_info = [
+                ("Общее количество ответов:", analytics_data['total_responses']),
+                ("Процент завершенности:", f"{analytics_data['completion_rate']:.1f}%"),
+                ("Среднее время прохождения:", f"{analytics_data['avg_completion_time']/60:.1f} минут"),
+                ("Уникальных IP адресов:", analytics_data['geo_analytics']['unique_ips'] if analytics_data['geo_analytics'] else 0)
+            ]
+            
+            for label, value in analytics_info:
+                ws_analytics[f'A{row}'] = label
+                ws_analytics[f'A{row}'].font = subheader_font
+                ws_analytics[f'A{row}'].fill = subheader_fill
+                ws_analytics[f'B{row}'] = str(value)
+                ws_analytics[f'B{row}'].border = border
+                row += 1
+        
+        # Автоматическая ширина столбцов для всех листов
+        for ws in [ws_overview, ws_details, ws_responses, ws_analytics]:
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
         
         # Сохраняем в BytesIO
         excel_file = BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
         
-        filename = f"survey_results_{survey.title.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = f"survey_report_{survey.title.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
         return send_file(
             excel_file,
@@ -718,6 +861,143 @@ def export_survey_excel(survey_id):
         print(f"❌ Ошибка экспорта в Excel: {e}")
         flash('Ошибка экспорта в Excel', 'error')
         return redirect(url_for('survey_results', survey_id=survey_id))
+
+def get_survey_type_name(survey):
+    """Получение названия типа опроса"""
+    if survey.is_anonymous:
+        return "Анонимный"
+    elif survey.require_auth:
+        return "С авторизацией"
+    elif survey.require_name:
+        return "С запросом имени"
+    else:
+        return "Обычный"
+
+def get_question_type_name(question_type):
+    """Получение названия типа вопроса"""
+    type_names = {
+        'text': 'Текстовый ответ',
+        'multiple_choice': 'Множественный выбор',
+        'checkbox': 'Флажки',
+        'rating': 'Рейтинг',
+        'dropdown': 'Выпадающий список',
+        'checkbox_grid': 'Сетка флажков',
+        'date': 'Дата',
+        'time': 'Время'
+    }
+    return type_names.get(question_type, question_type)
+
+def get_question_options_text(question):
+    """Получение текста вариантов ответов"""
+    if question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+        try:
+            options = json.loads(question.options) if question.options else []
+            if options:
+                options_text = '; '.join(options)
+                if question.allow_other:
+                    options_text += f"; {question.other_text or 'Другой вариант'}"
+                return options_text
+        except:
+            pass
+    elif question.type == 'rating':
+        return f"Рейтинг от {question.rating_min} до {question.rating_max}"
+    elif question.type == 'checkbox_grid':
+        try:
+            rows = json.loads(question.grid_rows) if question.grid_rows else []
+            cols = json.loads(question.grid_columns) if question.grid_columns else []
+            return f"Строки: {', '.join(rows)}; Столбцы: {', '.join(cols)}"
+        except:
+            pass
+    return "Нет вариантов"
+
+def get_question_statistics(question):
+    """Получение статистики по вопросу"""
+    answers = question.answers
+    total_answers = len(answers)
+    
+    if question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+        try:
+            options = json.loads(question.options) if question.options else []
+            if options:
+                counts = {opt: 0 for opt in options}
+                other_count = 0
+                
+                for answer in answers:
+                    if answer.is_other:
+                        other_count += 1
+                    elif answer.value in counts:
+                        counts[answer.value] += 1
+                
+                stats_parts = [f"{opt}: {count}" for opt, count in counts.items()]
+                if other_count > 0:
+                    stats_parts.append(f"Другие: {other_count}")
+                
+                return f"Всего: {total_answers}; " + "; ".join(stats_parts)
+        except:
+            pass
+    elif question.type == 'rating':
+        ratings = [int(answer.value) for answer in answers if answer.value and answer.value.isdigit()]
+        if ratings:
+            avg = sum(ratings) / len(ratings)
+            return f"Всего: {len(ratings)}; Средний: {avg:.2f}; Мин: {min(ratings)}; Макс: {max(ratings)}"
+    elif question.type == 'text':
+        if answers:
+            avg_length = sum(len(answer.value) for answer in answers if answer.value) / len(answers)
+            return f"Всего: {total_answers}; Средняя длина: {avg_length:.0f} символов"
+    
+    return f"Всего ответов: {total_answers}"
+
+def get_question_analysis(question):
+    """Получение анализа вопроса"""
+    answers = question.answers
+    total_answers = len(answers)
+    
+    if total_answers == 0:
+        return "Нет ответов"
+    
+    if question.type == 'rating':
+        ratings = [int(answer.value) for answer in answers if answer.value and answer.value.isdigit()]
+        if ratings:
+            avg = sum(ratings) / len(ratings)
+            if avg >= question.rating_max * 0.8:
+                return "Высокие оценки"
+            elif avg <= question.rating_min * 1.2:
+                return "Низкие оценки"
+            else:
+                return "Средние оценки"
+    
+    elif question.type in ['multiple_choice', 'checkbox', 'dropdown']:
+        try:
+            options = json.loads(question.options) if question.options else []
+            if options:
+                counts = {opt: 0 for opt in options}
+                for answer in answers:
+                    if answer.value in counts:
+                        counts[answer.value] += 1
+                
+                max_option = max(counts.items(), key=lambda x: x[1])
+                percentage = (max_option[1] / total_answers) * 100
+                return f"Популярный ответ: {max_option[0]} ({percentage:.1f}%)"
+        except:
+            pass
+    
+    return "Анализ недоступен"
+
+def format_answer_for_excel(answer, question):
+    """Форматирование ответа для Excel"""
+    if not answer or not answer.value:
+        return "Нет ответа"
+    
+    if question.type == 'checkbox':
+        try:
+            # Для флажков ответ может быть JSON массивом
+            if answer.value.startswith('['):
+                selected_options = json.loads(answer.value)
+                return '; '.join(selected_options)
+        except:
+            pass
+    
+    return str(answer.value)
 
 @app.route('/surveys/<int:survey_id>/response/<int:response_id>')
 @login_required
@@ -822,6 +1102,356 @@ def import_ldap_users():
         
     except Exception as e:
         return jsonify({'success': False, 'error': f'Ошибка импорта: {str(e)}'})
+
+# ==================== РАСШИРЕННАЯ АНАЛИТИКА ====================
+
+@app.route('/analytics')
+@login_required
+def analytics_dashboard():
+    """Главная страница аналитики"""
+    return render_template('analytics/dashboard.html')
+
+@app.route('/analytics/survey/<int:survey_id>')
+@login_required
+def survey_analytics(survey_id):
+    """Детальная аналитика по конкретному опросу"""
+    survey = Survey.query.get_or_404(survey_id)
+    
+    # Проверяем права доступа
+    if not current_user.is_admin and survey.creator_id != current_user.id:
+        flash('У вас нет прав для просмотра аналитики этого опроса', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Получаем аналитические данные
+    analytics_data = get_survey_analytics(survey_id)
+    
+    return render_template('analytics/survey_analytics.html', 
+                         survey=survey, 
+                         analytics=analytics_data)
+
+@app.route('/analytics/global')
+@login_required
+@admin_required
+def global_analytics():
+    """Глобальная аналитика по всем опросам"""
+    analytics_data = get_global_analytics()
+    return render_template('analytics/global_analytics.html', analytics=analytics_data)
+
+@app.route('/analytics/user/<int:user_id>')
+@login_required
+@admin_required
+def user_analytics(user_id):
+    """Аналитика по конкретному пользователю"""
+    user = User.query.get_or_404(user_id)
+    analytics_data = get_user_analytics(user_id)
+    return render_template('analytics/user_analytics.html', 
+                         user=user, 
+                         analytics=analytics_data)
+
+@app.route('/analytics/cross-analysis')
+@login_required
+@admin_required
+def cross_analysis():
+    """Кросс-анализ между опросами"""
+    analytics_data = get_cross_analysis()
+    return render_template('analytics/cross_analysis.html', analytics=analytics_data)
+
+@app.route('/api/analytics/survey/<int:survey_id>/chart-data')
+@login_required
+def get_survey_chart_data(survey_id):
+    """API для получения данных для графиков опроса"""
+    survey = Survey.query.get_or_404(survey_id)
+    
+    if not current_user.is_admin and survey.creator_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    chart_data = get_survey_chart_data_internal(survey_id)
+    return jsonify(chart_data)
+
+def get_survey_analytics(survey_id):
+    """Получение аналитических данных по опросу"""
+    survey = Survey.query.get(survey_id)
+    if not survey:
+        return None
+    
+    responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
+    questions = Question.query.filter_by(survey_id=survey_id).order_by(Question.question_order).all()
+    
+    # Основные метрики
+    total_responses = len(responses)
+    completion_rate = 100.0  # Все начатые опросы считаются завершенными
+    
+    # Время прохождения
+    completion_times = [r.completion_time for r in responses if r.completion_time]
+    avg_completion_time = sum(completion_times) / len(completion_times) if completion_times else 0
+    
+    # Анализ по вопросам
+    question_analytics = []
+    for question in questions:
+        q_analytics = analyze_question(question, responses)
+        question_analytics.append(q_analytics)
+    
+    # Временная аналитика
+    time_analytics = get_time_analytics(responses)
+    
+    # Географическая аналитика (по IP)
+    geo_analytics = get_geo_analytics(responses)
+    
+    return {
+        'survey': survey,
+        'total_responses': total_responses,
+        'completion_rate': completion_rate,
+        'avg_completion_time': avg_completion_time,
+        'question_analytics': question_analytics,
+        'time_analytics': time_analytics,
+        'geo_analytics': geo_analytics
+    }
+
+def analyze_question(question, responses):
+    """Анализ конкретного вопроса"""
+    answers = Answer.query.filter_by(question_id=question.id).all()
+    
+    analytics = {
+        'question': question,
+        'total_answers': len(answers),
+        'response_rate': 0,
+        'data': {}
+    }
+    
+    if question.type == 'multiple_choice':
+        options = json.loads(question.options) if question.options else []
+        option_counts = {option: 0 for option in options}
+        
+        for answer in answers:
+            if answer.value in option_counts:
+                option_counts[answer.value] += 1
+            elif answer.is_other:
+                if 'Другие' not in option_counts:
+                    option_counts['Другие'] = 0
+                option_counts['Другие'] += 1
+        
+        analytics['data'] = option_counts
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type == 'checkbox':
+        options = json.loads(question.options) if question.options else []
+        option_counts = {option: 0 for option in options}
+        
+        for answer in answers:
+            selected_options = json.loads(answer.value) if answer.value.startswith('[') else [answer.value]
+            for option in selected_options:
+                if option in option_counts:
+                    option_counts[option] += 1
+                elif answer.is_other:
+                    if 'Другие' not in option_counts:
+                        option_counts['Другие'] = 0
+                    option_counts['Другие'] += 1
+        
+        analytics['data'] = option_counts
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type == 'rating':
+        ratings = [int(answer.value) for answer in answers if answer.value.isdigit()]
+        if ratings:
+            analytics['data'] = {
+                'min': min(ratings),
+                'max': max(ratings),
+                'avg': sum(ratings) / len(ratings),
+                'distribution': {str(i): ratings.count(i) for i in range(question.rating_min, question.rating_max + 1)}
+            }
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+        
+    elif question.type == 'text':
+        text_answers = [answer.value for answer in answers]
+        analytics['data'] = {
+            'total_texts': len(text_answers),
+            'avg_length': sum(len(text) for text in text_answers) / len(text_answers) if text_answers else 0,
+            'sample_answers': text_answers[:5]  # Первые 5 ответов для примера
+        }
+        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+    
+    return analytics
+
+def get_time_analytics(responses):
+    """Анализ по времени"""
+    if not responses:
+        return {}
+    
+    # Группировка по дням
+    daily_responses = {}
+    for response in responses:
+        date_key = response.created_at.strftime('%Y-%m-%d')
+        daily_responses[date_key] = daily_responses.get(date_key, 0) + 1
+    
+    # Группировка по часам
+    hourly_responses = {}
+    for response in responses:
+        hour_key = response.created_at.hour
+        hourly_responses[hour_key] = hourly_responses.get(hour_key, 0) + 1
+    
+    return {
+        'daily': daily_responses,
+        'hourly': hourly_responses,
+        'peak_hour': max(hourly_responses.items(), key=lambda x: x[1])[0] if hourly_responses else 0
+    }
+
+def get_geo_analytics(responses):
+    """Географическая аналитика (упрощенная по IP)"""
+    if not responses:
+        return {}
+    
+    # Группировка по IP (упрощенная геолокация)
+    ip_groups = {}
+    for response in responses:
+        # Упрощенная группировка по первым трем октетам IP
+        ip_parts = response.ip_address.split('.')
+        if len(ip_parts) >= 3:
+            ip_group = '.'.join(ip_parts[:3]) + '.x'
+            ip_groups[ip_group] = ip_groups.get(ip_group, 0) + 1
+    
+    return {
+        'ip_groups': ip_groups,
+        'unique_ips': len(set(r.ip_address for r in responses))
+    }
+
+def get_global_analytics():
+    """Глобальная аналитика по всем опросам"""
+    surveys = Survey.query.all()
+    users = User.query.all()
+    all_responses = SurveyResponse.query.all()
+    
+    # Общая статистика
+    total_surveys = len(surveys)
+    total_users = len(users)
+    total_responses = len(all_responses)
+    
+    # Активные опросы (с ответами)
+    active_surveys = len([s for s in surveys if len(s.responses) > 0])
+    
+    # Топ опросы по количеству ответов
+    top_surveys = sorted(surveys, key=lambda x: len(x.responses), reverse=True)[:10]
+    
+    # Статистика по пользователям
+    user_stats = {
+        'total': total_users,
+        'admins': len([u for u in users if u.is_admin]),
+        'survey_creators': len([u for u in users if u.can_create_surveys]),
+        'active_respondents': len(set(r.user_id for r in all_responses if r.user_id))
+    }
+    
+    # Временная статистика
+    time_stats = get_time_analytics(all_responses)
+    
+    return {
+        'total_surveys': total_surveys,
+        'active_surveys': active_surveys,
+        'total_responses': total_responses,
+        'user_stats': user_stats,
+        'top_surveys': top_surveys,
+        'time_stats': time_stats
+    }
+
+def get_user_analytics(user_id):
+    """Аналитика по пользователю"""
+    user = User.query.get(user_id)
+    if not user:
+        return None
+    
+    # Опросы пользователя
+    user_surveys = Survey.query.filter_by(creator_id=user_id).all()
+    
+    # Ответы пользователя
+    user_responses = SurveyResponse.query.filter_by(user_id=user_id).all()
+    
+    # Статистика
+    total_surveys_created = len(user_surveys)
+    total_responses_given = len(user_responses)
+    
+    # Активность по времени
+    activity_stats = get_time_analytics(user_responses)
+    
+    return {
+        'user': user,
+        'surveys_created': user_surveys,
+        'responses_given': user_responses,
+        'total_surveys_created': total_surveys_created,
+        'total_responses_given': total_responses_given,
+        'activity_stats': activity_stats
+    }
+
+def get_cross_analysis():
+    """Кросс-анализ между опросами"""
+    surveys = Survey.query.all()
+    
+    # Корреляции между опросами
+    correlations = []
+    
+    # Анализ популярности типов вопросов
+    question_types = {}
+    for survey in surveys:
+        for question in survey.questions:
+            question_types[question.type] = question_types.get(question.type, 0) + 1
+    
+    # Анализ эффективности типов опросов
+    survey_type_effectiveness = {
+        'anonymous': {'total': 0, 'responses': 0},
+        'auth_required': {'total': 0, 'responses': 0},
+        'name_required': {'total': 0, 'responses': 0}
+    }
+    
+    for survey in surveys:
+        if survey.is_anonymous:
+            survey_type_effectiveness['anonymous']['total'] += 1
+            survey_type_effectiveness['anonymous']['responses'] += len(survey.responses)
+        if survey.require_auth:
+            survey_type_effectiveness['auth_required']['total'] += 1
+            survey_type_effectiveness['auth_required']['responses'] += len(survey.responses)
+        if survey.require_name:
+            survey_type_effectiveness['name_required']['total'] += 1
+            survey_type_effectiveness['name_required']['responses'] += len(survey.responses)
+    
+    return {
+        'question_types': question_types,
+        'survey_type_effectiveness': survey_type_effectiveness,
+        'correlations': correlations
+    }
+
+def get_survey_chart_data_internal(survey_id):
+    """Внутренняя функция для получения данных графиков"""
+    survey = Survey.query.get(survey_id)
+    if not survey:
+        return {}
+    
+    responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
+    questions = Question.query.filter_by(survey_id=survey_id).order_by(Question.question_order).all()
+    
+    chart_data = {
+        'response_timeline': [],
+        'question_charts': []
+    }
+    
+    # Временная линия ответов
+    daily_counts = {}
+    for response in responses:
+        date_key = response.created_at.strftime('%Y-%m-%d')
+        daily_counts[date_key] = daily_counts.get(date_key, 0) + 1
+    
+    chart_data['response_timeline'] = [
+        {'date': date, 'count': count} 
+        for date, count in sorted(daily_counts.items())
+    ]
+    
+    # Данные для графиков вопросов
+    for question in questions:
+        q_data = analyze_question(question, responses)
+        chart_data['question_charts'].append({
+            'question_id': question.id,
+            'question_text': question.text,
+            'type': question.type,
+            'data': q_data['data']
+        })
+    
+    return chart_data
 
 if __name__ == '__main__':
     with app.app_context():
