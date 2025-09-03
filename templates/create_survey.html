@@ -199,6 +199,40 @@
                 <i class="fas fa-plus me-1"></i>Добавить вариант
             </button>
         </div>
+        
+        <!-- Конфигурация сетки -->
+        <div class="question-grid-config" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Строки (вопросы)</label>
+                    <div class="grid-rows-container">
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control grid-row-input" placeholder="Строка 1">
+                            <button type="button" class="btn btn-outline-secondary remove-grid-row">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary add-grid-row">
+                        <i class="fas fa-plus me-1"></i>Добавить строку
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Столбцы (варианты ответов)</label>
+                    <div class="grid-columns-container">
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control grid-column-input" placeholder="Столбец 1">
+                            <button type="button" class="btn btn-outline-secondary remove-grid-column">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary add-grid-column">
+                        <i class="fas fa-plus me-1"></i>Добавить столбец
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 {% endblock %}
@@ -245,12 +279,19 @@ function addQuestion() {
     const removeBtn = questionItem.querySelector('.remove-question');
     const addOptionBtn = questionItem.querySelector('.add-option');
     
-    // Показать/скрыть варианты ответов
+    // Показать/скрыть варианты ответов и конфигурацию сеток
     questionType.addEventListener('change', function() {
-        if (this.value === 'multiple_choice') {
+        const questionGridConfig = questionItem.querySelector('.question-grid-config');
+        
+        if (this.value === 'multiple_choice' || this.value === 'single_choice' || this.value === 'dropdown') {
             questionOptions.style.display = 'block';
+            questionGridConfig.style.display = 'none';
+        } else if (this.value === 'grid' || this.value === 'checkbox_grid') {
+            questionOptions.style.display = 'none';
+            questionGridConfig.style.display = 'block';
         } else {
             questionOptions.style.display = 'none';
+            questionGridConfig.style.display = 'none';
         }
         updatePreview();
     });
@@ -277,6 +318,35 @@ function addQuestion() {
         }
     });
     
+    // Обработчики для конфигурации сетки
+    const addGridRowBtn = questionItem.querySelector('.add-grid-row');
+    const addGridColumnBtn = questionItem.querySelector('.add-grid-column');
+    
+    if (addGridRowBtn) {
+        addGridRowBtn.addEventListener('click', function() {
+            addGridRow(questionItem);
+        });
+    }
+    
+    if (addGridColumnBtn) {
+        addGridColumnBtn.addEventListener('click', function() {
+            addGridColumn(questionItem);
+        });
+    }
+    
+    // Удалить строку/столбец сетки
+    questionItem.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-grid-row')) {
+            if (e.target.closest('.grid-rows-container').children.length > 1) {
+                e.target.closest('.input-group').remove();
+            }
+        } else if (e.target.classList.contains('remove-grid-column')) {
+            if (e.target.closest('.grid-columns-container').children.length > 1) {
+                e.target.closest('.input-group').remove();
+            }
+        }
+    });
+    
     document.getElementById('questionsContainer').appendChild(clone);
     updatePreview();
 }
@@ -295,6 +365,38 @@ function addOption(questionItem) {
     `;
     
     optionsContainer.appendChild(optionDiv);
+}
+
+function addGridRow(questionItem) {
+    const gridRowsContainer = questionItem.querySelector('.grid-rows-container');
+    const rowCount = gridRowsContainer.children.length + 1;
+    
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'input-group mb-2';
+    rowDiv.innerHTML = `
+        <input type="text" class="form-control grid-row-input" placeholder="Строка ${rowCount}">
+        <button type="button" class="btn btn-outline-secondary remove-grid-row">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    
+    gridRowsContainer.appendChild(rowDiv);
+}
+
+function addGridColumn(questionItem) {
+    const gridColumnsContainer = questionItem.querySelector('.grid-columns-container');
+    const columnCount = gridColumnsContainer.children.length + 1;
+    
+    const columnDiv = document.createElement('div');
+    columnDiv.className = 'input-group mb-2';
+    columnDiv.innerHTML = `
+        <input type="text" class="form-control grid-column-input" placeholder="Столбец ${columnCount}">
+        <button type="button" class="btn btn-outline-secondary remove-grid-column">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    
+    gridColumnsContainer.appendChild(columnDiv);
 }
 
 function updatePreview() {
@@ -334,7 +436,32 @@ function updatePreview() {
         } else if (questionType === 'rating' || questionType === 'scale') {
             previewHTML += '<div class="mt-2"><small class="text-muted">Рейтинг/Шкала</small></div>';
         } else if (questionType === 'grid' || questionType === 'checkbox_grid') {
-            previewHTML += '<div class="mt-2"><small class="text-muted">Сетка</small></div>';
+            const gridRows = question.querySelectorAll('.grid-row-input');
+            const gridColumns = question.querySelectorAll('.grid-column-input');
+            if (gridRows.length > 0 && gridColumns.length > 0) {
+                previewHTML += '<div class="mt-2">';
+                previewHTML += '<table class="table table-sm table-bordered">';
+                previewHTML += '<thead><tr><th></th>';
+                gridColumns.forEach(column => {
+                    if (column.value.trim()) {
+                        previewHTML += `<th class="text-center">${column.value.trim()}</th>`;
+                    }
+                });
+                previewHTML += '</tr></thead><tbody>';
+                gridRows.forEach(row => {
+                    if (row.value.trim()) {
+                        previewHTML += `<tr><td><strong>${row.value.trim()}</strong></td>`;
+                        gridColumns.forEach(() => {
+                            previewHTML += '<td class="text-center">○</td>';
+                        });
+                        previewHTML += '</tr>';
+                    }
+                });
+                previewHTML += '</tbody></table>';
+                previewHTML += '</div>';
+            } else {
+                previewHTML += '<div class="mt-2"><small class="text-muted">Настройте строки и столбцы сетки</small></div>';
+            }
         } else if (questionType === 'date') {
             previewHTML += '<div class="mt-2"><small class="text-muted">Поле выбора даты</small></div>';
         } else if (questionType === 'time') {
@@ -391,6 +518,20 @@ function collectQuestionsData() {
                     questionData.options.push(option.value.trim());
                 }
             });
+        } else if (questionData.type === 'grid' || questionData.type === 'checkbox_grid') {
+            // Собираем строки сетки
+            question.querySelectorAll('.grid-row-input').forEach(row => {
+                if (row.value.trim()) {
+                    questionData.grid_rows.push(row.value.trim());
+                }
+            });
+            
+            // Собираем столбцы сетки
+            question.querySelectorAll('.grid-column-input').forEach(column => {
+                if (column.value.trim()) {
+                    questionData.grid_columns.push(column.value.trim());
+                }
+            });
         }
         
         questions.push(questionData);
@@ -401,7 +542,10 @@ function collectQuestionsData() {
 
 // Обновлять предварительный просмотр при изменении полей
 document.addEventListener('input', function(e) {
-    if (e.target.classList.contains('question-text') || e.target.classList.contains('option-input')) {
+    if (e.target.classList.contains('question-text') || 
+        e.target.classList.contains('option-input') ||
+        e.target.classList.contains('grid-row-input') ||
+        e.target.classList.contains('grid-column-input')) {
         updatePreview();
     }
 });
