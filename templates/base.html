@@ -3,69 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BG Опросник{% endblock %}</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>{% block title %}BG Survey Platform - BunterGroup{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-red: #dc3545;
-            --bg-grey: #6c757d;
-            --bg-white: #ffffff;
-            --bg-black: #000000;
-            --bg-light-grey: #f8f9fa;
-            --bg-dark-grey: #343a40;
-        }
-        
-        body {
-            background-color: var(--bg-light-grey);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .navbar-brand {
-            font-weight: bold;
-            color: var(--bg-red) !important;
-        }
-        
-        .btn-primary {
-            background-color: var(--bg-red);
-            border-color: var(--bg-red);
-        }
-        
-        .btn-primary:hover {
-            background-color: #c82333;
-            border-color: #bd2130;
-        }
-        
-        .card {
-            border: none;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            transition: box-shadow 0.15s ease-in-out;
-        }
-        
-        .card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-        
-        .footer {
-            background-color: var(--bg-dark-grey);
-            color: var(--bg-white);
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
-    </style>
-    
-    {% block extra_css %}{% endblock %}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 </head>
-<body>
+<body class="{% if request.cookies.get('theme') == 'dark' %}dark-theme{% else %}light-theme{% endif %} d-flex flex-column min-vh-100">
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'surveys:list' %}">
-                <i class="bi bi-clipboard-data"></i> BG Опросник
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-chart-bar text-danger me-2"></i>
+                <span class="fw-bold">BG Survey Platform</span>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -75,46 +25,62 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'surveys:list' %}">
-                            <i class="bi bi-list-ul"></i> Опросы
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i>Главная
                         </a>
                     </li>
-                    {% if user.is_authenticated %}
+                    {% if current_user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'surveys:dashboard' %}">
-                                <i class="bi bi-speedometer2"></i> Дашборд
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-1"></i>Панель управления
                             </a>
                         </li>
-                        {% if user.can_create_surveys or user.is_superuser %}
+                        {% if current_user.can_create_surveys %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'surveys:create' %}">
-                                    <i class="bi bi-plus-circle"></i> Создать опрос
+                                <a class="nav-link" href="{{ url_for('create_survey') }}">
+                                    <i class="fas fa-plus me-1"></i>Создать опрос
                                 </a>
+                            </li>
+                        {% endif %}
+                        {% if current_user.is_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog me-1"></i>Администрирование
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_panel') }}">
+                                        <i class="fas fa-users-cog me-2"></i>Панель администратора
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_users') }}">
+                                        <i class="fas fa-user-plus me-2"></i>Управление пользователями
+                                    </a></li>
+                                </ul>
                             </li>
                         {% endif %}
                     {% endif %}
                 </ul>
                 
                 <ul class="navbar-nav">
-                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm me-2" id="theme-toggle">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </li>
+                    {% if current_user.is_authenticated %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ user.username }}
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>{{ current_user.username }}
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'users:profile' %}">
-                                    <i class="bi bi-person"></i> Профиль
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'users:logout' %}">
-                                    <i class="bi bi-box-arrow-right"></i> Выйти
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Выйти
                                 </a></li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:login' %}">
-                                <i class="bi bi-box-arrow-in-right"></i> Войти
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Войти
                             </a>
                         </li>
                     {% endif %}
@@ -124,51 +90,40 @@
     </nav>
 
     <!-- Основной контент -->
-    <main class="container my-4">
-        <!-- Сообщения -->
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+    <main class="container my-4 flex-grow-1">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         
-        <!-- Заголовок страницы -->
-        {% if title %}
-            <div class="row mb-4">
-                <div class="col">
-                    <h1 class="display-5 text-center text-dark">
-                        {{ title }}
-                    </h1>
-                    <hr class="my-4">
-                </div>
-            </div>
-        {% endif %}
-        
-        <!-- Контент страницы -->
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Подвал -->
-    <footer class="footer">
+    <!-- Футер -->
+    <footer class="bg-dark text-light py-4 mt-auto">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h5>BG Опросник</h5>
-                    <p class="mb-0">Система для создания и проведения опросов</p>
+                    <h5><i class="fas fa-chart-bar text-danger me-2"></i>BG Survey Platform</h5>
+                    <p class="mb-0">Корпоративная платформа для создания и анализа опросов</p>
                 </div>
                 <div class="col-md-6 text-md-end">
-                    <p class="mb-0">&copy; 2024 Бантер Групп. Все права защищены.</p>
+                    <p class="mb-0">&copy; 2024 BunterGroup. Все права защищены.</p>
+                    <p class="mb-0">Версия 1.0.0</p>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    {% block extra_js %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

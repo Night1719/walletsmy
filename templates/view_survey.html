@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}{{ survey.title }} - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('index') }}" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Главная
+                    </a>
+                </li>
+                {% if current_user.is_authenticated %}
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('dashboard') }}" class="text-decoration-none">Панель управления</a>
+                    </li>
+                {% endif %}
+                <li class="breadcrumb-item active" aria-current="page">{{ survey.title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="fw-bold text-dark mb-2">{{ survey.title }}</h2>
+                        {% if survey.description %}
+                            <p class="text-muted mb-0">{{ survey.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        {% if survey.is_anonymous %}
+                            <span class="badge bg-success me-1">
+                                <i class="fas fa-user-secret me-1"></i>Анонимный
+                            </span>
+                        {% else %}
+                            <span class="badge bg-primary me-1">
+                                <i class="fas fa-user me-1"></i>Авторизованный
+                            </span>
+                        {% endif %}
+                        
+                        {% if survey.require_auth %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-lock me-1"></i>Требует вход
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Создан: {{ survey.created_at.strftime('%d.%m.%Y в %H:%M') }}
+                        {% if survey.creator %}
+                            <i class="fas fa-user me-2 ms-3"></i>
+                            Автор: {{ survey.creator.username }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if survey.require_auth and not current_user.is_authenticated %}
+                    <div class="text-center py-5">
+                        <div class="auth-required mb-3">
+                            <i class="fas fa-lock text-warning fa-3x"></i>
+                        </div>
+                        <h5 class="text-warning">Требуется авторизация</h5>
+                        <p class="text-muted">Для прохождения этого опроса необходимо войти в систему</p>
+                        <a href="{{ url_for('login') }}" class="btn btn-warning">
+                            <i class="fas fa-sign-in-alt me-2"></i>Войти в систему
+                        </a>
+                    </div>
+                {% else %}
+                    <form method="POST" action="{{ url_for('submit_survey', survey_id=survey.id) }}">
+                        {% for question in survey.questions %}
+                            <div class="question-item mb-4 p-3 border rounded survey-question">
+                                <h5 class="mb-3">
+                                    <span class="badge bg-primary me-2">{{ loop.index }}</span>
+                                    {{ question.text }}
+                                </h5>
+                                
+                                {% if question.type == 'text' %}
+                                    <div class="mb-3">
+                                        <textarea class="form-control" name="question_{{ question.id }}" rows="3" 
+                                                  placeholder="Введите ваш ответ..." required></textarea>
+                                    </div>
+                                    
+                                                                {% elif question.type == 'multiple_choice' %}
+                                    <div class="mb-3">
+                                        {% if question.options %}
+                                            {% set options = question.options|from_json %}
+                                            {% if options %}
+                                                {% for option in options %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="{{ option }}" 
+                                                               id="option_{{ question.id }}_{{ loop.index }}" required>
+                                                        <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
+                                                            {{ option }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <p class="text-muted">Варианты ответов не настроены</p>
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted">Варианты ответов не настроены</p>
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'rating' %}
+                                    <div class="mb-3">
+                                        <label class="form-label">Оцените от 1 до 10:</label>
+                                        <div class="rating-container">
+                                            {% for i in range(1, 11) %}
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" 
+                                                           name="question_{{ question.id }}" 
+                                                           value="{{ i }}" 
+                                                           id="rating_{{ question.id }}_{{ i }}" required>
+                                                    <label class="form-check-label" for="rating_{{ question.id }}_{{ i }}">
+                                                        {{ i }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <small class="text-muted">1 - Очень плохо</small>
+                                            <small class="text-muted">10 - Отлично</small>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    {% if survey.is_anonymous %}
+                                        Ваши ответы будут анонимными
+                                    {% else %}
+                                        Ваши ответы будут связаны с вашим аккаунтом
+                                    {% endif %}
+                                </small>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Отправить ответы
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle text-info me-2"></i>
+                    Информация об опросе
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="fas fa-question-circle text-primary me-2"></i>
+                        <strong>Вопросов:</strong> {{ survey.questions|length }}
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-users text-success me-2"></i>
+                        <strong>Ответов:</strong> {{ survey.responses|length }}
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-calendar text-warning me-2"></i>
+                        <strong>Создан:</strong> {{ survey.created_at.strftime('%d.%m.%Y') }}
+                    </li>
+                    {% if survey.creator %}
+                        <li class="mb-2">
+                            <i class="fas fa-user text-info me-2"></i>
+                            <strong>Автор:</strong> {{ survey.creator.username }}
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        {% if current_user.is_authenticated and (current_user.is_admin or survey.creator_id == current_user.id) %}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-transparent border-0">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar text-success me-2"></i>
+                        Управление
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('survey_results', survey_id=survey.id) }}" 
+                           class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-chart-bar me-2"></i>Просмотр результатов
+                        </a>
+                        <a href="{{ url_for('dashboard') }}" 
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i>К панели управления
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="fas fa-share-alt text-primary me-2"></i>
+                    Поделиться
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="input-group">
+                    <input type="text" class="form-control" 
+                           value="{{ request.url_root.rstrip('/') }}{{ request.path }}" 
+                           id="surveyUrl" readonly>
+                    <button class="btn btn-outline-primary" type="button" 
+                            onclick="copySurveyUrl()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <small class="text-muted">
+                    Скопируйте ссылку и отправьте участникам
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copySurveyUrl() {
+    const urlInput = document.getElementById('surveyUrl');
+    urlInput.select();
+    urlInput.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        // Показать уведомление об успешном копировании
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+        }, 2000);
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+    }
+}
+
+// Подтверждение отправки формы
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Вы уверены, что хотите отправить ответы? После отправки их нельзя будет изменить.')) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

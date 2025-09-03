@@ -1,75 +1,45 @@
 @echo off
-echo BG Опросник - Простой запуск
+echo BG Survey Platform - Simple Launcher
+echo ====================================
 echo.
 
-REM Проверяем Python
-python --version >nul 2>&1
+echo Checking Python...
+python --version
 if errorlevel 1 (
-    echo ОШИБКА: Python не найден!
-    echo Установите Python с https://python.org
+    echo Python not found. Please install Python 3.8+
     pause
     exit /b 1
 )
 
-REM Проверяем наличие manage.py
-if not exist "manage.py" (
-    echo ОШИБКА: Файл manage.py не найден!
-    echo Убедитесь, что вы в папке survey_platform
-    echo.
-    echo Текущая папка:
-    cd
-    echo.
-    echo Содержимое папки:
-    dir
-    pause
-    exit /b 1
-)
+echo.
+echo Creating virtual environment...
+python -m venv venv
 
-REM Создаем виртуальное окружение
-if not exist "venv" (
-    echo Создание виртуального окружения...
-    python -m venv venv
-)
-
-REM Активируем
-echo Активация виртуального окружения...
+echo.
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
-REM Устанавливаем зависимости
-echo Установка зависимостей...
+echo.
+echo Installing dependencies...
 pip install -r requirements.txt
 
-REM Создаем папки
-if not exist "staticfiles" mkdir staticfiles
-if not exist "media" mkdir media
-
-REM Миграции
-echo Создание миграций...
-python manage.py makemigrations users
-python manage.py makemigrations surveys
-
-echo Применение миграций...
-python manage.py migrate
-
-REM Администратор
-echo Создание администратора...
-python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@example.com', 'admin123') if not User.objects.filter(username='admin').exists() else None; user = User.objects.get(username='admin'); user.role = 'admin'; user.can_create_surveys = True; user.save()"
-
-REM Статические файлы
-echo Сбор статических файлов...
-python manage.py collectstatic --noinput
-
-REM Запуск сервера
 echo.
-echo Сервер запускается...
-echo Сайт: http://127.0.0.1:8000
-echo Админка: http://127.0.0.1:8000/admin
-echo Логин: admin
-echo Пароль: admin123
+echo Initializing database...
+python init_db.py
+
 echo.
-echo Для остановки нажмите Ctrl+C
+echo Creating admin user...
+python create_admin.py
+
+echo.
+echo Starting application...
+echo.
+echo Open browser: http://localhost:5000
+echo Users: admin/admin123, test_user/test123, user/user123
+echo.
+echo Press Ctrl+C to stop
 echo.
 
-python manage.py runserver 127.0.0.1:8000
+python app.py
 
 pause

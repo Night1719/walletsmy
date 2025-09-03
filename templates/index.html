@@ -1,332 +1,151 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Solana Trading Bot{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block title %}Главная - BG Survey Platform{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-400">Portfolio Value</p>
-                    <p class="text-2xl font-bold text-green-500">$12,450.67</p>
-                </div>
-                <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center text-sm">
-                <span class="text-green-500">+2.5%</span>
-                <span class="text-gray-400 ml-2">vs yesterday</span>
-            </div>
-        </div>
-        
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-400">24h P&L</p>
-                    <p class="text-2xl font-bold text-green-500">+$234.12</p>
-                </div>
-                <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center text-sm">
-                <span class="text-green-500">+1.9%</span>
-                <span class="text-gray-400 ml-2">vs yesterday</span>
-            </div>
-        </div>
-        
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-400">Win Rate</p>
-                    <p class="text-2xl font-bold text-yellow-500">68.5%</p>
-                </div>
-                <div class="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center text-sm">
-                <span class="text-green-500">+2.1%</span>
-                <span class="text-gray-400 ml-2">vs last week</span>
-            </div>
-        </div>
-        
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-400">Active Positions</p>
-                    <p class="text-2xl font-bold text-purple-500">12</p>
-                </div>
-                <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center text-sm">
-                <span class="text-green-500">+3</span>
-                <span class="text-gray-400 ml-2">vs yesterday</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Portfolio Performance Chart -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h3 class="text-lg font-semibold mb-4">Portfolio Performance</h3>
-            <canvas id="portfolioChart" width="400" height="200"></canvas>
-        </div>
-        
-        <!-- Trading Activity Chart -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h3 class="text-lg font-semibold mb-4">Trading Activity</h3>
-            <canvas id="tradingChart" width="400" height="200"></canvas>
-        </div>
-    </div>
-    
-    <!-- Recent Activity & Quick Actions -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Recent Trades -->
-        <div class="lg:col-span-2 bg-gray-800 rounded-lg border border-gray-700">
-            <div class="p-6 border-b border-gray-700">
-                <h3 class="text-lg font-semibold">Recent Trades</h3>
-            </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium">SOL → BONK</p>
-                                <p class="text-sm text-gray-400">2 minutes ago</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium text-green-500">+$45.23</p>
-                            <p class="text-sm text-gray-400">+3.2%</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium">JUP → SOL</p>
-                                <p class="text-sm text-gray-400">15 minutes ago</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium text-red-500">-$12.45</p>
-                            <p class="text-sm text-gray-400">-1.8%</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium">RAY → SOL</p>
-                                <p class="text-sm text-gray-400">1 hour ago</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium text-green-500">+$78.90</p>
-                            <p class="text-sm text-gray-400">+5.4%</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-4 text-center">
-                    <a href="/positions" class="text-blue-500 hover:text-blue-400 text-sm">View All Trades →</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="bg-gray-800 rounded-lg border border-gray-700">
-            <div class="p-6 border-b border-gray-700">
-                <h3 class="text-lg font-semibold">Quick Actions</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                    New Trade
-                </button>
-                
-                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                    Start Sniper
-                </button>
-                
-                <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                    Risk Check
-                </button>
-                
-                <button class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                    Emergency Stop
-                </button>
-                
-                <div class="pt-4 border-t border-gray-700">
-                    <h4 class="text-sm font-medium text-gray-400 mb-2">System Status</h4>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex items-center justify-between">
-                            <span>Risk Engine</span>
-                            <span class="text-green-500">● Active</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>Sniper Bot</span>
-                            <span class="text-green-500">● Active</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>Jupiter API</span>
-                            <span class="text-green-500">● Connected</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>Solana RPC</span>
-                            <span class="text-green-500">● Connected</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Sniper Bot Alerts -->
-    <div class="bg-gray-800 rounded-lg border border-gray-700">
-        <div class="p-6 border-b border-gray-700">
-            <h3 class="text-lg font-semibold">Sniper Bot Alerts</h3>
-        </div>
-        <div class="p-6">
-            <div class="text-center text-gray-400 py-8">
-                <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                </svg>
-                <p class="text-lg font-medium">No new token alerts</p>
-                <p class="text-sm">Sniper bot is monitoring for new opportunities</p>
+<div class="hero-section text-center py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="display-4 fw-bold text-dark mb-4">
+                <i class="fas fa-chart-bar text-danger me-3"></i>
+                BG Survey Platform
+            </h1>
+            <p class="lead text-muted mb-4">
+                Корпоративная платформа для создания, проведения и анализа опросов компании BunterGroup
+            </p>
+            <div class="d-flex justify-content-center gap-3 mb-5">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-danger btn-lg">
+                        <i class="fas fa-tachometer-alt me-2"></i>Панель управления
+                    </a>
+                    {% if current_user.can_create_surveys %}
+                        <a href="{{ url_for('create_survey') }}" class="btn btn-outline-danger btn-lg">
+                            <i class="fas fa-plus me-2"></i>Создать опрос
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-danger btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Войти в систему
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
-<script>
-// Portfolio Performance Chart
-const portfolioCtx = document.getElementById('portfolioChart').getContext('2d');
-const portfolioChart = new Chart(portfolioCtx, {
-    type: 'line',
-    data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [{
-            label: 'Portfolio Value ($)',
-            data: [12000, 12150, 11980, 12200, 12350, 12450, 12450.67],
-            borderColor: '#10B981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: false,
-                grid: {
-                    color: '#374151'
-                },
-                ticks: {
-                    color: '#9CA3AF'
-                }
-            },
-            x: {
-                grid: {
-                    color: '#374151'
-                },
-                ticks: {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    }
-});
+<div class="features-section py-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-alt text-primary fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Безопасность</h5>
+                    <p class="card-text text-muted">
+                        Анонимные опросы с отслеживанием IP-адресов, авторизованные опросы и управление доступом
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-chart-line text-success fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Аналитика</h5>
+                    <p class="card-text text-muted">
+                        Детальный анализ результатов с графиками и статистикой для принятия обоснованных решений
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-users-cog text-info fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">Администрирование</h5>
+                    <p class="card-text text-muted">
+                        Полный контроль над пользователями, правами доступа и интеграция с LDAP
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-// Trading Activity Chart
-const tradingCtx = document.getElementById('tradingChart').getContext('2d');
-const tradingChart = new Chart(tradingCtx, {
-    type: 'bar',
-    data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [{
-            label: 'Trades',
-            data: [8, 12, 6, 15, 9, 11, 7],
-            backgroundColor: '#3B82F6',
-            borderColor: '#2563EB',
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: '#374151'
-                },
-                ticks: {
-                    color: '#9CA3AF'
-                }
-            },
-            x: {
-                grid: {
-                    color: '#374151'
-                },
-                ticks: {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    }
-});
+<div class="stats-section py-5 bg-light rounded">
+    <div class="row text-center">
+        <div class="col-md-3 mb-3">
+            <div class="stat-item">
+                <h3 class="text-danger fw-bold">
+                    {% if current_user.is_authenticated %}
+                        {{ surveys|length if surveys else 0 }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h3>
+                <p class="text-muted mb-0">Опросов</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-item">
+                <h3 class="text-danger fw-bold">
+                    {% if current_user.is_authenticated %}
+                        {{ users|length if users else 0 }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h3>
+                <p class="text-muted mb-0">Пользователей</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-item">
+                <h3 class="text-danger fw-bold">
+                    {% if current_user.is_authenticated %}
+                        {{ responses|length if responses else 0 }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h3>
+                <p class="text-muted mb-0">Ответов</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stat-item">
+                <h3 class="text-danger fw-bold">24/7</h3>
+                <p class="text-muted mb-0">Доступность</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-// Auto-refresh data every 30 seconds
-setInterval(() => {
-    // TODO: Fetch real-time data from API
-    console.log('Refreshing dashboard data...');
-}, 30000);
-</script>
+<div class="cta-section text-center py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h3 class="mb-4">Готовы начать?</h3>
+            <p class="text-muted mb-4">
+                Создавайте профессиональные опросы, собирайте данные и анализируйте результаты в реальном времени
+            </p>
+            {% if not current_user.is_authenticated %}
+                <a href="{{ url_for('login') }}" class="btn btn-danger btn-lg">
+                    <i class="fas fa-rocket me-2"></i>Начать работу
+                </a>
+            {% else %}
+                <a href="{{ url_for('create_survey') }}" class="btn btn-danger btn-lg">
+                    <i class="fas fa-plus me-2"></i>Создать первый опрос
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
