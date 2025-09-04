@@ -829,10 +829,12 @@ def survey_results(survey_id):
 def export_survey_excel(survey_id):
     """Экспорт результатов опроса в Excel"""
     try:
-        import xlsxwriter
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from io import BytesIO
         from flask import send_file
         from datetime import datetime
+        print(f"✅ openpyxl импортирован успешно")
         
         survey = Survey.query.get_or_404(survey_id)
         
@@ -840,84 +842,109 @@ def export_survey_excel(survey_id):
             flash('У вас нет доступа к результатам этого опроса', 'error')
             return redirect(url_for('dashboard'))
         
-        # Создаем Excel файл в памяти
-        output = BytesIO()
-        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        # Создаем Excel файл
+        wb = Workbook()
         
         # Стили
-        header_format = workbook.add_format({
-            'bold': True,
-            'font_size': 14,
-            'font_color': 'white',
-            'bg_color': '#DC3545',
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1
-        })
+        header_font = Font(bold=True, size=14, color='FFFFFF')
+        header_fill = PatternFill(start_color='DC3545', end_color='DC3545', fill_type='solid')
+        header_alignment = Alignment(horizontal='center', vertical='center')
         
-        subheader_format = workbook.add_format({
-            'bold': True,
-            'font_size': 12,
-            'bg_color': '#F8F9FA',
-            'border': 1
-        })
+        subheader_font = Font(bold=True, size=12)
+        subheader_fill = PatternFill(start_color='F8F9FA', end_color='F8F9FA', fill_type='solid')
         
-        data_format = workbook.add_format({
-            'border': 1,
-            'align': 'left'
-        })
+        data_font = Font(size=11)
+        data_alignment = Alignment(horizontal='left', vertical='center')
         
-        number_format = workbook.add_format({
-            'border': 1,
-            'align': 'center',
-            'num_format': '0'
-        })
+        number_alignment = Alignment(horizontal='center', vertical='center')
+        
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
         
         # ========== ЛИСТ 1: ОБЗОР ОПРОСА ==========
-        ws_overview = workbook.add_worksheet('Обзор опроса')
+        ws_overview = wb.active
+        ws_overview.title = 'Обзор опроса'
         
         # Заголовок
-        ws_overview.merge_range('A1:F1', f'ОТЧЕТ ПО ОПРОСУ: {survey.title}', header_format)
-        ws_overview.set_row(0, 30)
+        ws_overview.merge_cells('A1:F1')
+        ws_overview['A1'] = f'ОТЧЕТ ПО ОПРОСУ: {survey.title}'
+        ws_overview['A1'].font = header_font
+        ws_overview['A1'].fill = header_fill
+        ws_overview['A1'].alignment = header_alignment
+        ws_overview.row_dimensions[1].height = 30
         
         # Информация об опросе
-        row = 2
-        ws_overview.write(row, 0, 'Название:', subheader_format)
-        ws_overview.write(row, 1, survey.title, data_format)
+        row = 3
+        ws_overview[f'A{row}'] = 'Название:'
+        ws_overview[f'A{row}'].font = subheader_font
+        ws_overview[f'A{row}'].fill = subheader_fill
+        ws_overview[f'A{row}'].border = border
+        ws_overview[f'B{row}'] = survey.title
+        ws_overview[f'B{row}'].font = data_font
+        ws_overview[f'B{row}'].border = border
         row += 1
         
-        ws_overview.write(row, 0, 'Описание:', subheader_format)
-        ws_overview.write(row, 1, survey.description or 'Не указано', data_format)
+        ws_overview[f'A{row}'] = 'Описание:'
+        ws_overview[f'A{row}'].font = subheader_font
+        ws_overview[f'A{row}'].fill = subheader_fill
+        ws_overview[f'A{row}'].border = border
+        ws_overview[f'B{row}'] = survey.description or 'Не указано'
+        ws_overview[f'B{row}'].font = data_font
+        ws_overview[f'B{row}'].border = border
         row += 1
         
-        ws_overview.write(row, 0, 'Дата создания:', subheader_format)
-        ws_overview.write(row, 1, survey.created_at.strftime('%d.%m.%Y %H:%M'), data_format)
+        ws_overview[f'A{row}'] = 'Дата создания:'
+        ws_overview[f'A{row}'].font = subheader_font
+        ws_overview[f'A{row}'].fill = subheader_fill
+        ws_overview[f'A{row}'].border = border
+        ws_overview[f'B{row}'] = survey.created_at.strftime('%d.%m.%Y %H:%M')
+        ws_overview[f'B{row}'].font = data_font
+        ws_overview[f'B{row}'].border = border
         row += 1
         
-        ws_overview.write(row, 0, 'Количество ответов:', subheader_format)
-        ws_overview.write(row, 1, len(survey.responses), number_format)
+        ws_overview[f'A{row}'] = 'Количество ответов:'
+        ws_overview[f'A{row}'].font = subheader_font
+        ws_overview[f'A{row}'].fill = subheader_fill
+        ws_overview[f'A{row}'].border = border
+        ws_overview[f'B{row}'] = len(survey.responses)
+        ws_overview[f'B{row}'].font = data_font
+        ws_overview[f'B{row}'].alignment = number_alignment
+        ws_overview[f'B{row}'].border = border
         row += 1
         
-        ws_overview.write(row, 0, 'Количество вопросов:', subheader_format)
-        ws_overview.write(row, 1, len(survey.questions), number_format)
-        row += 1
+        ws_overview[f'A{row}'] = 'Количество вопросов:'
+        ws_overview[f'A{row}'].font = subheader_font
+        ws_overview[f'A{row}'].fill = subheader_fill
+        ws_overview[f'A{row}'].border = border
+        ws_overview[f'B{row}'] = len(survey.questions)
+        ws_overview[f'B{row}'].font = data_font
+        ws_overview[f'B{row}'].alignment = number_alignment
+        ws_overview[f'B{row}'].border = border
         
         # Устанавливаем ширину колонок
-        ws_overview.set_column('A:A', 20)
-        ws_overview.set_column('B:F', 15)
+        ws_overview.column_dimensions['A'].width = 20
+        ws_overview.column_dimensions['B'].width = 15
         
         # ========== ЛИСТ 2: ДЕТАЛЬНЫЕ РЕЗУЛЬТАТЫ ==========
-        ws_results = workbook.add_worksheet('Результаты')
+        ws_results = wb.create_sheet('Результаты')
         
         # Заголовки
         headers = ['№', 'Дата', 'Пользователь', 'IP-адрес', 'Время прохождения']
-        for i, header in enumerate(headers):
-            ws_results.write(0, i, header, subheader_format)
+        for i, header in enumerate(headers, 1):
+            cell = ws_results.cell(row=1, column=i, value=header)
+            cell.font = subheader_font
+            cell.fill = subheader_fill
+            cell.alignment = header_alignment
+            cell.border = border
         
         # Данные ответов
         responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
         for idx, response in enumerate(responses, 1):
-            row = idx
+            row = idx + 1
             
             # Определяем имя пользователя
             if survey.is_anonymous:
@@ -931,21 +958,32 @@ def export_survey_excel(survey_id):
             else:
                 user_name = response.respondent_name or 'Аноним'
             
-            ws_results.write(row, 0, idx, number_format)
-            ws_results.write(row, 1, response.created_at.strftime('%d.%m.%Y %H:%M'), data_format)
-            ws_results.write(row, 2, user_name, data_format)
-            ws_results.write(row, 3, response.ip_address or 'Неизвестно', data_format)
-            ws_results.write(row, 4, f"{response.completion_time or 0} сек.", data_format)
+            ws_results.cell(row=row, column=1, value=idx).font = data_font
+            ws_results.cell(row=row, column=1).alignment = number_alignment
+            ws_results.cell(row=row, column=1).border = border
+            
+            ws_results.cell(row=row, column=2, value=response.created_at.strftime('%d.%m.%Y %H:%M')).font = data_font
+            ws_results.cell(row=row, column=2).border = border
+            
+            ws_results.cell(row=row, column=3, value=user_name).font = data_font
+            ws_results.cell(row=row, column=3).border = border
+            
+            ws_results.cell(row=row, column=4, value=response.ip_address or 'Неизвестно').font = data_font
+            ws_results.cell(row=row, column=4).border = border
+            
+            ws_results.cell(row=row, column=5, value=f"{response.completion_time or 0} сек.").font = data_font
+            ws_results.cell(row=row, column=5).border = border
         
         # Устанавливаем ширину колонок
-        ws_results.set_column('A:A', 5)
-        ws_results.set_column('B:B', 15)
-        ws_results.set_column('C:C', 20)
-        ws_results.set_column('D:D', 15)
-        ws_results.set_column('E:E', 15)
+        ws_results.column_dimensions['A'].width = 5
+        ws_results.column_dimensions['B'].width = 15
+        ws_results.column_dimensions['C'].width = 20
+        ws_results.column_dimensions['D'].width = 15
+        ws_results.column_dimensions['E'].width = 15
         
-        # Закрываем workbook
-        workbook.close()
+        # Сохраняем файл в память
+        output = BytesIO()
+        wb.save(output)
         output.seek(0)
         
         # Отправляем файл
@@ -957,9 +995,15 @@ def export_survey_excel(survey_id):
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         
+    except ImportError as e:
+        print(f"❌ Ошибка импорта модуля: {e}")
+        flash('Модуль openpyxl не установлен. Обратитесь к администратору.', 'error')
+        return redirect(url_for('survey_results', survey_id=survey_id))
     except Exception as e:
         print(f"❌ Ошибка экспорта Excel: {e}")
-        flash('Ошибка при создании Excel отчета', 'error')
+        import traceback
+        traceback.print_exc()
+        flash(f'Ошибка при создании Excel отчета: {str(e)}', 'error')
         return redirect(url_for('survey_results', survey_id=survey_id))
 
 
