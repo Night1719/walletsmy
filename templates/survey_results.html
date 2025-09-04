@@ -350,10 +350,11 @@
                                 </td>
                                 <td>
                                     {% if response.user_id %}
-                                        {% if response.user %}
+                                        {% set user = response.user %}
+                                        {% if user %}
                                             <span class="badge bg-primary">
                                                 <i class="fas fa-user me-1"></i>
-                                                {{ response.user.username }}
+                                                {{ user.username }}
                                             </span>
                                         {% else %}
                                             <span class="badge bg-warning">

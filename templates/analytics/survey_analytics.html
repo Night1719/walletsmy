@@ -229,15 +229,18 @@
                                         <table class="table table-sm table-bordered">
                                             <thead>
                                                 <tr>
-                                                    <th>Ячейка</th>
+                                                    <th>Строка</th>
+                                                    <th>Столбец</th>
                                                     <th>Количество</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {% for cell, count in q_analytics.data.items() %}
+                                                {% set row, col = cell.split('|', 1) %}
                                                 <tr>
-                                                    <td>{{ cell }}</td>
-                                                    <td>{{ count }}</td>
+                                                    <td><strong>{{ row }}</strong></td>
+                                                    <td><em>{{ col }}</em></td>
+                                                    <td><span class="badge bg-primary">{{ count }}</span></td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>

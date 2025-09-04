@@ -1247,15 +1247,21 @@ def format_answer_for_excel(answer, question):
             if answer.value.startswith('['):
                 selected_options = json.loads(answer.value)
                 return '; '.join(selected_options)
-            elif answer.value == 'other' and answer.is_other:
-                # Ищем текст "другого варианта"
-                other_answer = Answer.query.filter_by(
+            elif answer.value == 'other':
+                # Ищем текст "другого варианта" в других ответах
+                other_answers = Answer.query.filter_by(
                     response_id=answer.response_id, 
-                    question_id=question.id,
-                    is_other=True
-                ).first()
-                if other_answer and other_answer.value != 'other':
-                    return f"Другой вариант: {other_answer.value}"
+                    question_id=question.id
+                ).all()
+                
+                other_text = None
+                for other_answer in other_answers:
+                    if other_answer.value and other_answer.value != 'other':
+                        other_text = other_answer.value
+                        break
+                
+                if other_text:
+                    return f"Другой вариант: {other_text}"
                 else:
                     return "Другой вариант"
         except:
@@ -1535,15 +1541,21 @@ def get_response_details(survey_id, response_id):
                     if answer.value.startswith('['):
                         selected_options = json.loads(answer.value)
                         answer_text = '; '.join(selected_options)
-                    elif answer.value == 'other' and answer.is_other:
-                        # Ищем текст "другого варианта"
-                        other_answer = Answer.query.filter_by(
+                    elif answer.value == 'other':
+                        # Ищем текст "другого варианта" в других ответах
+                        other_answers = Answer.query.filter_by(
                             response_id=response_id, 
-                            question_id=question.id,
-                            is_other=True
-                        ).first()
-                        if other_answer and other_answer.value != 'other':
-                            answer_text = f"<em>Другой вариант:</em> {other_answer.value}"
+                            question_id=question.id
+                        ).all()
+                        
+                        other_text = None
+                        for other_answer in other_answers:
+                            if other_answer.value and other_answer.value != 'other':
+                                other_text = other_answer.value
+                                break
+                        
+                        if other_text:
+                            answer_text = f"<em>Другой вариант:</em> {other_text}"
                         else:
                             answer_text = "Другой вариант"
                     else:
