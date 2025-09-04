@@ -1576,10 +1576,22 @@ def get_response_details(survey_id, response_id):
             'answer': answer_text
         })
     
+    # Определяем имя пользователя с учетом типа опроса
+    if survey.is_anonymous:
+        user_name = 'Аноним'
+    elif survey.require_name:
+        user_name = response.respondent_name or 'Не указано'
+    elif response.user_id and response.user:
+        user_name = response.user.username
+    elif response.user_id and not response.user:
+        user_name = 'Удален'
+    else:
+        user_name = response.respondent_name or 'Аноним'
+    
     return jsonify({
         'response_id': response.id,
         'created_at': response.created_at.isoformat(),
-        'user_name': response.user.username if response.user else (response.respondent_name or 'Аноним'),
+        'user_name': user_name,
         'ip_address': response.ip_address,
         'completion_time': response.completion_time,
         'details': details
@@ -1874,11 +1886,25 @@ def get_global_analytics():
     geo_labels = list(geo_analytics.get('ip_groups', {}).keys())
     geo_data = list(geo_analytics.get('ip_groups', {}).values())
     
+    # Дополнительная статистика
+    avg_responses_per_survey = total_responses / total_surveys if total_surveys > 0 else 0
+    
+    # Географическая статистика
+    unique_ips = geo_analytics.get('unique_ips', 0)
+    countries_count = len(geo_labels)  # Упрощенная статистика
+    cities_count = len(geo_labels)     # Упрощенная статистика
+    providers_count = len(geo_labels)  # Упрощенная статистика
+    
+    # Данные для графиков активности (упрощенные)
+    activity_labels = ['Опросы', 'Ответы', 'Пользователи']
+    activity_data = [total_surveys, total_responses, total_users]
+    
     return {
         'total_surveys': total_surveys,
         'active_surveys': active_surveys,
         'total_responses': total_responses,
         'total_users': total_users,
+        'avg_responses_per_survey': round(avg_responses_per_survey, 1),
         'user_stats': user_stats,
         'top_surveys': top_surveys_data,
         'top_users': top_users_data,
@@ -1890,7 +1916,13 @@ def get_global_analytics():
         'hourly_labels': hourly_labels,
         'hourly_values': hourly_values,
         'geo_labels': geo_labels,
-        'geo_data': geo_data
+        'geo_data': geo_data,
+        'unique_ips': unique_ips,
+        'countries_count': countries_count,
+        'cities_count': cities_count,
+        'providers_count': providers_count,
+        'activity_labels': activity_labels,
+        'activity_data': activity_data
     }
 
 def get_user_analytics(user_id):
