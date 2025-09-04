@@ -1395,6 +1395,24 @@ def my_activity():
     hourly_labels = [f"{hour:02d}:00" for hour in range(24)]
     hourly_values = [hourly_data.get(hour, 0) for hour in range(24)] if hourly_data else [0] * 24
     
+    # Подготавливаем данные для графиков
+    activity_labels = ['Опросы созданы', 'Ответы даны']
+    surveys_activity_data = [total_surveys_created, analytics_data['total_responses_given']]
+    responses_activity_data = [0, 0]  # Заглушка для графика ответов
+    
+    # Данные для графика типов опросов
+    survey_types_labels = ['Анонимные', 'С авторизацией', 'С вводом имени']
+    survey_types_data = [0, 0, 0]  # Заглушка для графика типов
+    
+    # Подсчитываем типы опросов пользователя
+    for survey in surveys_created:
+        if survey.get('is_anonymous'):
+            survey_types_data[0] += 1
+        elif survey.get('require_auth'):
+            survey_types_data[1] += 1
+        elif survey.get('require_name'):
+            survey_types_data[2] += 1
+    
     return render_template('analytics/user_analytics.html', 
                          user_stats=user_stats,
                          daily_labels=daily_labels,
@@ -1407,7 +1425,12 @@ def my_activity():
                          total_surveys_created=total_surveys_created,
                          total_responses_given=analytics_data['total_responses_given'],
                          activity_stats=analytics_data['activity_stats'],
-                         achievements=achievements)
+                         achievements=achievements,
+                         activity_labels=activity_labels,
+                         surveys_activity_data=surveys_activity_data,
+                         responses_activity_data=responses_activity_data,
+                         survey_types_labels=survey_types_labels,
+                         survey_types_data=survey_types_data)
 
 @app.route('/analytics/cross-analysis')
 @login_required

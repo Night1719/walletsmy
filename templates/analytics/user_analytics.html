@@ -119,7 +119,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for survey in user_surveys %}
+                            {% for survey in surveys_created %}
                             <tr>
                                 <td>
                                     <strong>{{ survey.title }}</strong>
@@ -133,14 +133,14 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info">{{ survey.responses|length }}</span>
+                                    <span class="badge bg-info">{{ survey.response_count }}</span>
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ survey.created_at.strftime('%d.%m.%Y') }}</small>
+                                    <small class="text-muted">{{ survey.created_at[:10] if survey.created_at else 'Неизвестно' }}</small>
                                 </td>
                                 <td>
-                                    {% if survey.responses %}
-                                        <small class="text-muted">{{ survey.responses[0].created_at.strftime('%d.%m.%Y') }}</small>
+                                    {% if survey.response_count > 0 %}
+                                        <small class="text-muted">Есть ответы</small>
                                     {% else %}
                                         <small class="text-muted">Нет ответов</small>
                                     {% endif %}
@@ -188,16 +188,16 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for response in user_responses %}
+                            {% for response in responses_given %}
                             <tr>
                                 <td>
-                                    <strong>{{ response.survey.title }}</strong>
+                                    <strong>{{ response.survey_title }}</strong>
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ response.survey.creator.username }}</small>
+                                    <small class="text-muted">Создатель опроса</small>
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ response.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                    <small class="text-muted">{{ response.created_at[:16] if response.created_at else 'Неизвестно' }}</small>
                                 </td>
                                 <td>
                                     {% if response.completion_time %}
@@ -207,8 +207,8 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('view_response_detail', survey_id=response.survey.id, response_id=response.id) }}" 
-                                       class="btn btn-outline-primary btn-sm" title="Просмотр ответа">
+                                    <a href="{{ url_for('survey_results', survey_id=response.survey_id) }}" 
+                                       class="btn btn-outline-primary btn-sm" title="Просмотр результатов">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
