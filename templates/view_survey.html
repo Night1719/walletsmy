@@ -183,12 +183,23 @@
                                         {% if question.options %}
                                             {% set options = question.options|from_json %}
                                             {% if options %}
-                                                <select class="form-select" name="question_{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                                                <select class="form-select" name="question_{{ question.id }}" id="dropdown_{{ question.id }}" {% if question.is_required %}required{% endif %}>
                                                     <option value="">Выберите вариант</option>
                                                     {% for option in options %}
                                                         <option value="{{ option }}">{{ option }}</option>
                                                     {% endfor %}
+                                                    {% if question.allow_other %}
+                                                        <option value="other">Другой вариант</option>
+                                                    {% endif %}
                                                 </select>
+                                                {% if question.allow_other %}
+                                                    <div class="mt-2" id="other_text_{{ question.id }}" style="display: none;">
+                                                        <input type="text" class="form-control other-text-input" 
+                                                               name="question_{{ question.id }}_other_text"
+                                                               placeholder="Укажите свой вариант" 
+                                                               data-question-id="{{ question.id }}">
+                                                    </div>
+                                                {% endif %}
                                             {% else %}
                                                 <p class="text-muted">Варианты ответов не настроены</p>
                                             {% endif %}
@@ -304,7 +315,7 @@
                                                             <td><strong>{{ row }}</strong></td>
                                                             {% for column in question.grid_columns|from_json %}
                                                                 <td class="text-center">
-                                                                    <input type="checkbox" name="question_{{ question.id }}" 
+                                                                    <input type="checkbox" name="question_{{ question.id }}[]" 
                                                                            value="{{ row }}|{{ column }}" 
                                                                            class="form-check-input">
                                                                 </td>
@@ -482,10 +493,33 @@ document.addEventListener('input', function(e) {
         const questionId = e.target.dataset.questionId;
         const otherRadio = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
         const otherCheckbox = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
-        const otherInput = otherRadio || otherCheckbox;
+        const otherSelect = document.querySelector(`select[name="question_${questionId}"]`);
         
-        if (otherInput && e.target.value.trim()) {
-            otherInput.checked = true;
+        if (otherRadio && e.target.value.trim()) {
+            otherRadio.checked = true;
+        } else if (otherCheckbox && e.target.value.trim()) {
+            otherCheckbox.checked = true;
+        } else if (otherSelect && e.target.value.trim()) {
+            otherSelect.value = 'other';
+        }
+    }
+});
+
+// Обработка выбора "другой вариант" в dropdown
+document.addEventListener('change', function(e) {
+    if (e.target.tagName === 'SELECT' && e.target.value === 'other') {
+        const questionId = e.target.name.replace('question_', '');
+        const otherTextDiv = document.getElementById(`other_text_${questionId}`);
+        if (otherTextDiv) {
+            otherTextDiv.style.display = 'block';
+            otherTextDiv.querySelector('input').focus();
+        }
+    } else if (e.target.tagName === 'SELECT' && e.target.value !== 'other') {
+        const questionId = e.target.name.replace('question_', '');
+        const otherTextDiv = document.getElementById(`other_text_${questionId}`);
+        if (otherTextDiv) {
+            otherTextDiv.style.display = 'none';
+            otherTextDiv.querySelector('input').value = '';
         }
     }
 });
@@ -495,11 +529,69 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Обрабатываем ответы из сеток перед отправкой
+            processGridAnswers();
+            
             if (!confirm('Вы уверены, что хотите отправить ответы? После отправки их нельзя будет изменить.')) {
                 e.preventDefault();
             }
         });
     }
 });
+
+// Функция для обработки ответов из сеток
+function processGridAnswers() {
+    // Обрабатываем checkbox_grid
+    document.querySelectorAll('input[type="checkbox"][name$="[]"]').forEach(checkbox => {
+        if (checkbox.checked && checkbox.value.includes('|')) {
+            const questionId = checkbox.name.replace('question_', '').replace('[]', '');
+            const existingInput = document.querySelector(`input[name="question_${questionId}"][type="hidden"]`);
+            
+            if (existingInput) {
+                // Добавляем к существующему массиву
+                try {
+                    const currentValues = JSON.parse(existingInput.value);
+                    if (!currentValues.includes(checkbox.value)) {
+                        currentValues.push(checkbox.value);
+                        existingInput.value = JSON.stringify(currentValues);
+                    }
+                } catch (e) {
+                    existingInput.value = JSON.stringify([checkbox.value]);
+                }
+            } else {
+                // Создаем новый скрытый input
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = `question_${questionId}`;
+                hiddenInput.value = JSON.stringify([checkbox.value]);
+                checkbox.parentNode.appendChild(hiddenInput);
+            }
+            
+            // Отключаем оригинальный checkbox
+            checkbox.disabled = true;
+        }
+    });
+    
+    // Обрабатываем grid (single choice)
+    document.querySelectorAll('input[type="radio"][name^="question_"]:not([name$="[]"])').forEach(radio => {
+        if (radio.checked && radio.value.includes('|')) {
+            const questionId = radio.name.replace('question_', '');
+            const existingInput = document.querySelector(`input[name="question_${questionId}"][type="hidden"]`);
+            
+            if (existingInput) {
+                existingInput.value = radio.value;
+            } else {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = radio.name;
+                hiddenInput.value = radio.value;
+                radio.parentNode.appendChild(hiddenInput);
+            }
+            
+            // Отключаем оригинальный radio
+            radio.disabled = true;
+        }
+    });
+}
 </script>
 {% endblock %}

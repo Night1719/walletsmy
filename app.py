@@ -686,16 +686,27 @@ def submit_survey(survey_id):
         answer_value = request.form.get(f'question_{question.id}')
         if answer_value:
             # Обрабатываем разные типы ответов
-            if question.type == 'checkbox':
-                # Для флажков ответ может быть списком
+            if question.type in ['multiple_choice', 'checkbox']:
+                # Для множественного выбора ответ может быть списком
                 if isinstance(answer_value, list):
                     answer_value = json.dumps(answer_value)
+            elif question.type in ['grid', 'checkbox_grid']:
+                # Для сеток ответ уже в JSON формате
+                if isinstance(answer_value, list):
+                    answer_value = json.dumps(answer_value)
+            elif question.type == 'dropdown' and answer_value == 'other':
+                # Для dropdown с "другим вариантом" ищем текст
+                other_text = request.form.get(f'question_{question.id}_other_text')
+                if other_text:
+                    answer_value = other_text
+                else:
+                    answer_value = 'other'
             
             answer = Answer(
                 question_id=question.id,
                 response_id=response.id,
                 value=answer_value,
-                is_other=request.form.get(f'question_{question.id}_other') == 'true'
+                is_other=request.form.get(f'question_{question.id}_other') == 'true' or answer_value == 'other'
             )
             db.session.add(answer)
     
@@ -816,11 +827,12 @@ def survey_results(survey_id):
 @app.route('/surveys/<int:survey_id>/export-excel')
 @login_required
 def export_survey_excel(survey_id):
-    """Улучшенный экспорт результатов опроса в Excel с диаграммами и графиками"""
+    """Экспорт результатов опроса в Excel"""
     try:
         import xlsxwriter
         from io import BytesIO
         from flask import send_file
+        from datetime import datetime
         
         survey = Survey.query.get_or_404(survey_id)
         
@@ -870,171 +882,67 @@ def export_survey_excel(survey_id):
         
         # Информация об опросе
         row = 2
-        info_data = [
-            ("Название опроса:", survey.title),
-            ("Описание:", survey.description or "Не указано"),
-            ("Создатель:", survey.creator.username),
-            ("Дата создания:", survey.created_at.strftime('%d.%m.%Y %H:%M')),
-            ("Тип опроса:", get_survey_type_name(survey)),
-            ("Всего ответов:", len(survey.responses)),
-            ("Всего вопросов:", len(survey.questions))
-        ]
+        ws_overview.write(row, 0, 'Название:', subheader_format)
+        ws_overview.write(row, 1, survey.title, data_format)
+        row += 1
         
-        for label, value in info_data:
-            ws_overview.write(f'A{row}', label, subheader_format)
-            ws_overview.write(f'B{row}', str(value), data_format)
-            row += 1
+        ws_overview.write(row, 0, 'Описание:', subheader_format)
+        ws_overview.write(row, 1, survey.description or 'Не указано', data_format)
+        row += 1
+        
+        ws_overview.write(row, 0, 'Дата создания:', subheader_format)
+        ws_overview.write(row, 1, survey.created_at.strftime('%d.%m.%Y %H:%M'), data_format)
+        row += 1
+        
+        ws_overview.write(row, 0, 'Количество ответов:', subheader_format)
+        ws_overview.write(row, 1, len(survey.responses), number_format)
+        row += 1
+        
+        ws_overview.write(row, 0, 'Количество вопросов:', subheader_format)
+        ws_overview.write(row, 1, len(survey.questions), number_format)
+        row += 1
+        
+        # Устанавливаем ширину колонок
+        ws_overview.set_column('A:A', 20)
+        ws_overview.set_column('B:F', 15)
         
         # ========== ЛИСТ 2: ДЕТАЛЬНЫЕ РЕЗУЛЬТАТЫ ==========
-        ws_results = workbook.add_worksheet('Детальные результаты')
+        ws_results = workbook.add_worksheet('Результаты')
         
         # Заголовки
-        ws_results.write('A1', 'Вопрос', subheader_format)
-        ws_results.write('B1', 'Тип', subheader_format)
-        ws_results.write('C1', 'Всего ответов', subheader_format)
-        ws_results.write('D1', 'Статистика', subheader_format)
-        ws_results.write('E1', 'Анализ', subheader_format)
-        
-        row = 1
-        for question in survey.questions:
-            ws_results.write(f'A{row}', question.text, data_format)
-            ws_results.write(f'B{row}', get_question_type_name(question.type), data_format)
-            ws_results.write(f'C{row}', len(question.answers), number_format)
-            ws_results.write(f'D{row}', get_question_statistics(question), data_format)
-            ws_results.write(f'E{row}', get_question_analysis(question), data_format)
-            row += 1
-        
-        # ========== ЛИСТ 3: ОТВЕТЫ РЕСПОНДЕНТОВ ==========
-        ws_responses = workbook.add_worksheet('Ответы респондентов')
-        
-        # Заголовки
-        col = 0
-        ws_responses.write(0, col, 'ID ответа', subheader_format)
-        col += 1
-        ws_responses.write(0, col, 'Дата ответа', subheader_format)
-        col += 1
-        ws_responses.write(0, col, 'IP адрес', subheader_format)
-        col += 1
-        
-        if survey.require_name:
-            ws_responses.write(0, col, 'Имя респондента', subheader_format)
-            col += 1
-        
-        for question in survey.questions:
-            ws_responses.write(0, col, f'Q{question.question_order + 1}: {question.text[:30]}...', subheader_format)
-            col += 1
+        headers = ['№', 'Дата', 'Пользователь', 'IP-адрес', 'Время прохождения']
+        for i, header in enumerate(headers):
+            ws_results.write(0, i, header, subheader_format)
         
         # Данные ответов
-        row = 1
-        for response in survey.responses:
-            col = 0
-            ws_responses.write(row, col, response.id, number_format)
-            col += 1
-            ws_responses.write(row, col, response.created_at.strftime('%d.%m.%Y %H:%M'), data_format)
-            col += 1
-            ws_responses.write(row, col, response.ip_address or 'Неизвестно', data_format)
-            col += 1
+        responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
+        for idx, response in enumerate(responses, 1):
+            row = idx
             
-            if survey.require_name:
-                ws_responses.write(row, col, response.respondent_name or 'Не указано', data_format)
-                col += 1
+            # Определяем имя пользователя
+            if survey.is_anonymous:
+                user_name = 'Аноним'
+            elif survey.require_name:
+                user_name = response.respondent_name or 'Не указано'
+            elif response.user_id and response.user:
+                user_name = response.user.username
+            elif response.user_id and not response.user:
+                user_name = 'Удален'
+            else:
+                user_name = response.respondent_name or 'Аноним'
             
-            for question in survey.questions:
-                answer = Answer.query.filter_by(response_id=response.id, question_id=question.id).first()
-                answer_text = format_answer_for_excel(answer, question) if answer else 'Нет ответа'
-                ws_responses.write(row, col, answer_text, data_format)
-                col += 1
-            
-            row += 1
+            ws_results.write(row, 0, idx, number_format)
+            ws_results.write(row, 1, response.created_at.strftime('%d.%m.%Y %H:%M'), data_format)
+            ws_results.write(row, 2, user_name, data_format)
+            ws_results.write(row, 3, response.ip_address or 'Неизвестно', data_format)
+            ws_results.write(row, 4, f"{response.completion_time or 0} сек.", data_format)
         
-        # ========== ЛИСТ 4: АНАЛИТИКА С ДИАГРАММАМИ ==========
-        ws_analytics = workbook.add_worksheet('Аналитика')
-        
-        # Заголовок
-        ws_analytics.merge_range('A1:F1', 'АНАЛИТИКА ОПРОСА', header_format)
-        ws_analytics.set_row(0, 30)
-        
-        # Создаем диаграммы для каждого вопроса
-        chart_row = 3
-        for question in survey.questions:
-            if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
-                # Диаграмма для вопросов с вариантами ответов
-                options = json.loads(question.options) if question.options else []
-                if options:
-                    # Подготавливаем данные для диаграммы
-                    option_counts = {option: 0 for option in options}
-                    for answer in question.answers:
-                        if answer.value in option_counts:
-                            option_counts[answer.value] += 1
-                    
-                    # Записываем данные
-                    ws_analytics.write(f'A{chart_row}', f'Вопрос: {question.text}', subheader_format)
-                    chart_row += 1
-                    
-                    data_row = chart_row
-                    for option, count in option_counts.items():
-                        ws_analytics.write(f'A{data_row}', option, data_format)
-                        ws_analytics.write(f'B{data_row}', count, number_format)
-                        data_row += 1
-                    
-                    # Создаем круговую диаграмму
-                    chart = workbook.add_chart({'type': 'pie'})
-                    chart.add_series({
-                        'name': 'Распределение ответов',
-                        'categories': [f'Аналитика', data_row - len(option_counts), 0, data_row - 1, 0],
-                        'values': [f'Аналитика', data_row - len(option_counts), 1, data_row - 1, 1],
-                    })
-                    chart.set_title({'name': f'Распределение ответов: {question.text[:30]}...'})
-                    chart.set_size({'width': 480, 'height': 300})
-                    ws_analytics.insert_chart(f'D{chart_row}', chart)
-                    
-                    chart_row = data_row + 2
-            
-            elif question.type in ['rating', 'scale']:
-                # Диаграмма для рейтинговых вопросов
-                ratings = [int(answer.value) for answer in question.answers if answer.value and answer.value.isdigit()]
-                if ratings:
-                    # Подготавливаем данные для диаграммы
-                    rating_counts = {}
-                    min_rating = question.rating_min or 1
-                    max_rating = question.rating_max or 10
-                    
-                    for rating in range(min_rating, max_rating + 1):
-                        rating_counts[rating] = ratings.count(rating)
-                    
-                    # Записываем данные
-                    ws_analytics.write(f'A{chart_row}', f'Вопрос: {question.text}', subheader_format)
-                    chart_row += 1
-                    
-                    data_row = chart_row
-                    for rating, count in rating_counts.items():
-                        ws_analytics.write(f'A{data_row}', f'Оценка {rating}', data_format)
-                        ws_analytics.write(f'B{data_row}', count, number_format)
-                        data_row += 1
-                    
-                    # Создаем столбчатую диаграмму
-                    chart = workbook.add_chart({'type': 'column'})
-                    chart.add_series({
-                        'name': 'Распределение оценок',
-                        'categories': [f'Аналитика', data_row - len(rating_counts), 0, data_row - 1, 0],
-                        'values': [f'Аналитика', data_row - len(rating_counts), 1, data_row - 1, 1],
-                    })
-                    chart.set_title({'name': f'Распределение оценок: {question.text[:30]}...'})
-                    chart.set_x_axis({'name': 'Оценка'})
-                    chart.set_y_axis({'name': 'Количество ответов'})
-                    chart.set_size({'width': 480, 'height': 300})
-                    ws_analytics.insert_chart(f'D{chart_row}', chart)
-                    
-                    chart_row = data_row + 2
-        
-        # Настройка ширины колонок
-        for worksheet in [ws_overview, ws_results, ws_responses, ws_analytics]:
-            worksheet.set_column('A:A', 30)
-            worksheet.set_column('B:B', 20)
-            worksheet.set_column('C:C', 15)
-            worksheet.set_column('D:D', 40)
-            worksheet.set_column('E:E', 30)
-            worksheet.set_column('F:F', 20)
+        # Устанавливаем ширину колонок
+        ws_results.set_column('A:A', 5)
+        ws_results.set_column('B:B', 15)
+        ws_results.set_column('C:C', 20)
+        ws_results.set_column('D:D', 15)
+        ws_results.set_column('E:E', 15)
         
         # Закрываем workbook
         workbook.close()
@@ -1548,10 +1456,25 @@ def get_response_details(survey_id, response_id):
         answer_text = "Нет ответа"
         if answer and answer.value:
             if question.type in ['grid', 'checkbox_grid']:
-                if '|' in answer.value:
-                    row, col = answer.value.split('|', 1)
-                    answer_text = f"<strong>{row}</strong> → <em>{col}</em>"
-                else:
+                try:
+                    if answer.value.startswith('['):
+                        # Для checkbox_grid - массив ответов
+                        selected_options = json.loads(answer.value)
+                        formatted_answers = []
+                        for option in selected_options:
+                            if '|' in option:
+                                row, col = option.split('|', 1)
+                                formatted_answers.append(f"<strong>{row}</strong> → <em>{col}</em>")
+                            else:
+                                formatted_answers.append(option)
+                        answer_text = '<br>'.join(formatted_answers)
+                    elif '|' in answer.value:
+                        # Для grid - один ответ
+                        row, col = answer.value.split('|', 1)
+                        answer_text = f"<strong>{row}</strong> → <em>{col}</em>"
+                    else:
+                        answer_text = answer.value
+                except:
                     answer_text = answer.value
             elif question.type in ['multiple_choice', 'single_choice']:
                 try:
