@@ -1481,7 +1481,12 @@ def my_activity():
                          daily_values=daily_values,
                          hourly_labels=hourly_labels,
                          hourly_values=hourly_values,
-                         **analytics_data,
+                         user=analytics_data['user'],
+                         surveys_created=analytics_data['surveys_created'],
+                         responses_given=analytics_data['responses_given'],
+                         total_surveys_created=analytics_data['total_surveys_created'],
+                         total_responses_given=analytics_data['total_responses_given'],
+                         activity_stats=analytics_data['activity_stats'],
                          achievements=achievements)
 
 @app.route('/analytics/cross-analysis')
@@ -1864,6 +1869,11 @@ def get_global_analytics():
         len([s for s in surveys if s.require_name])
     ]
     
+    # Географическая аналитика
+    geo_analytics = get_geo_analytics(all_responses)
+    geo_labels = list(geo_analytics.get('ip_groups', {}).keys())
+    geo_data = list(geo_analytics.get('ip_groups', {}).values())
+    
     return {
         'total_surveys': total_surveys,
         'active_surveys': active_surveys,
@@ -1878,7 +1888,9 @@ def get_global_analytics():
         'daily_labels': daily_labels,
         'daily_values': daily_values,
         'hourly_labels': hourly_labels,
-        'hourly_values': hourly_values
+        'hourly_values': hourly_values,
+        'geo_labels': geo_labels,
+        'geo_data': geo_data
     }
 
 def get_user_analytics(user_id):

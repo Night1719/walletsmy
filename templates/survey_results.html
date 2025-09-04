@@ -262,7 +262,12 @@
                                 <td>{{ loop.index }}</td>
                                 <td>{{ response.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
                                 <td>
-                                    {% if response.user_id %}
+                                    {% if survey.is_anonymous %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            Аноним
+                                        </span>
+                                    {% elif response.user_id %}
                                         {% set user = response.user %}
                                         {% if user %}
                                             <span class="badge bg-primary">{{ user.username }}</span>
@@ -349,7 +354,12 @@
                                     </small>
                                 </td>
                                 <td>
-                                    {% if response.user_id %}
+                                    {% if survey.is_anonymous %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            Аноним
+                                        </span>
+                                    {% elif response.user_id %}
                                         {% set user = response.user %}
                                         {% if user %}
                                             <span class="badge bg-primary">
