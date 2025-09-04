@@ -1434,8 +1434,14 @@ def user_analytics(user_id):
 def my_activity():
     """Персональная аналитика пользователя"""
     analytics_data = get_user_analytics(current_user.id)
-    user_surveys = Survey.query.filter_by(creator_id=current_user.id).all()
-    user_responses = SurveyResponse.query.filter_by(user_id=current_user.id).all()
+    
+    if not analytics_data:
+        flash('Ошибка загрузки данных', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Получаем данные для достижений из уже сериализованных данных
+    surveys_created = analytics_data['surveys_created']
+    total_surveys_created = analytics_data['total_surveys_created']
     
     # Достижения
     achievements = [
@@ -1444,29 +1450,29 @@ def my_activity():
             'description': 'Создайте свой первый опрос',
             'icon': 'star',
             'color': 'warning',
-            'unlocked': len(user_surveys) > 0
+            'unlocked': total_surveys_created > 0
         },
         {
             'title': 'Активный создатель',
             'description': 'Создайте 5 опросов',
             'icon': 'trophy',
             'color': 'success',
-            'unlocked': len(user_surveys) >= 5
+            'unlocked': total_surveys_created >= 5
         },
         {
             'title': 'Популярный опрос',
             'description': 'Получите 100 ответов на один опрос',
             'icon': 'fire',
             'color': 'danger',
-            'unlocked': any(len(survey.responses) >= 100 for survey in user_surveys)
+            'unlocked': any(survey['response_count'] >= 100 for survey in surveys_created)
         }
     ]
     
     # Добавляем дополнительные статистики
     user_stats = {
-        'surveys_created': analytics_data['total_surveys_created'],
+        'surveys_created': total_surveys_created,
         'responses_given': analytics_data['total_responses_given'],
-        'total_responses_received': sum(survey['response_count'] for survey in analytics_data['surveys_created']),
+        'total_responses_received': sum(survey['response_count'] for survey in surveys_created),
         'avg_completion_time': analytics_data['activity_stats'].get('avg_completion_time', 0) if analytics_data['activity_stats'] else 0
     }
     
@@ -1488,9 +1494,9 @@ def my_activity():
                          hourly_labels=hourly_labels,
                          hourly_values=hourly_values,
                          user=analytics_data['user'],
-                         surveys_created=analytics_data['surveys_created'],
+                         surveys_created=surveys_created,
                          responses_given=analytics_data['responses_given'],
-                         total_surveys_created=analytics_data['total_surveys_created'],
+                         total_surveys_created=total_surveys_created,
                          total_responses_given=analytics_data['total_responses_given'],
                          activity_stats=analytics_data['activity_stats'],
                          achievements=achievements)
