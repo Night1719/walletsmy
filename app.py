@@ -253,6 +253,12 @@ def logout():
     flash('Вы вышли из системы', 'info')
     return redirect(url_for('index'))
 
+@app.route('/user-guide')
+@login_required
+def user_guide():
+    """Страница руководства пользователя"""
+    return render_template('user_guide.html')
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
