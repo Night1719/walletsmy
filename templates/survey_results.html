@@ -267,6 +267,15 @@
                                             <i class="fas fa-user-secret me-1"></i>
                                             Аноним
                                         </span>
+                                    {% elif survey.require_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Не указано
+                                            {% endif %}
+                                        </span>
                                     {% elif response.user_id %}
                                         {% set user = response.user %}
                                         {% if user %}
@@ -358,6 +367,15 @@
                                         <span class="badge bg-secondary">
                                             <i class="fas fa-user-secret me-1"></i>
                                             Аноним
+                                        </span>
+                                    {% elif survey.require_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Не указано
+                                            {% endif %}
                                         </span>
                                     {% elif response.user_id %}
                                         {% set user = response.user %}
