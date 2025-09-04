@@ -1242,12 +1242,22 @@ def format_answer_for_excel(answer, question):
     if not answer or not answer.value:
         return "Нет ответа"
     
-    if question.type == 'checkbox':
+    if question.type in ['multiple_choice', 'single_choice']:
         try:
-            # Для флажков ответ может быть JSON массивом
             if answer.value.startswith('['):
                 selected_options = json.loads(answer.value)
                 return '; '.join(selected_options)
+            elif answer.value == 'other' and answer.is_other:
+                # Ищем текст "другого варианта"
+                other_answer = Answer.query.filter_by(
+                    response_id=answer.response_id, 
+                    question_id=question.id,
+                    is_other=True
+                ).first()
+                if other_answer and other_answer.value != 'other':
+                    return f"Другой вариант: {other_answer.value}"
+                else:
+                    return "Другой вариант"
         except:
             pass
     
@@ -1448,8 +1458,23 @@ def my_activity():
         'avg_completion_time': analytics_data['activity_stats'].get('avg_completion_time', 0) if analytics_data['activity_stats'] else 0
     }
     
+    # Добавляем данные для графиков
+    time_stats = analytics_data.get('activity_stats', {})
+    daily_data = time_stats.get('daily', {})
+    hourly_data = time_stats.get('hourly', {})
+    
+    daily_labels = sorted(daily_data.keys())[-30:] if daily_data else []
+    daily_values = [daily_data.get(label, 0) for label in daily_labels] if daily_data else []
+    
+    hourly_labels = [f"{hour:02d}:00" for hour in range(24)]
+    hourly_values = [hourly_data.get(hour, 0) for hour in range(24)] if hourly_data else [0] * 24
+    
     return render_template('analytics/user_analytics.html', 
                          user_stats=user_stats,
+                         daily_labels=daily_labels,
+                         daily_values=daily_values,
+                         hourly_labels=hourly_labels,
+                         hourly_values=hourly_values,
                          **analytics_data,
                          achievements=achievements)
 
@@ -1505,11 +1530,22 @@ def get_response_details(survey_id, response_id):
                     answer_text = f"<strong>{row}</strong> → <em>{col}</em>"
                 else:
                     answer_text = answer.value
-            elif question.type == 'multiple_choice':
+            elif question.type in ['multiple_choice', 'single_choice']:
                 try:
                     if answer.value.startswith('['):
                         selected_options = json.loads(answer.value)
                         answer_text = '; '.join(selected_options)
+                    elif answer.value == 'other' and answer.is_other:
+                        # Ищем текст "другого варианта"
+                        other_answer = Answer.query.filter_by(
+                            response_id=response_id, 
+                            question_id=question.id,
+                            is_other=True
+                        ).first()
+                        if other_answer and other_answer.value != 'other':
+                            answer_text = f"<em>Другой вариант:</em> {other_answer.value}"
+                        else:
+                            answer_text = "Другой вариант"
                     else:
                         answer_text = answer.value
                 except:
@@ -1762,15 +1798,59 @@ def get_global_analytics():
         })
     
     # Статистика по пользователям
+    unique_respondents = set()
+    for response in all_responses:
+        if response.user_id:
+            unique_respondents.add(response.user_id)
+        elif response.respondent_name:
+            unique_respondents.add(f"name_{response.respondent_name}")
+        else:
+            unique_respondents.add("anonymous")
+    
     user_stats = {
         'total': total_users,
         'admins': len([u for u in users if u.is_admin]),
         'survey_creators': len([u for u in users if u.can_create_surveys]),
-        'active_respondents': len(set(r.user_id for r in all_responses if r.user_id))
+        'active_respondents': len(unique_respondents)
     }
     
     # Временная статистика
     time_stats = get_time_analytics(all_responses)
+    
+    # Данные для графиков по времени
+    daily_data = time_stats.get('daily', {})
+    hourly_data = time_stats.get('hourly', {})
+    
+    # Подготавливаем данные для графиков
+    daily_labels = sorted(daily_data.keys())[-30:]  # Последние 30 дней
+    daily_values = [daily_data.get(label, 0) for label in daily_labels]
+    
+    hourly_labels = [f"{hour:02d}:00" for hour in range(24)]
+    hourly_values = [hourly_data.get(hour, 0) for hour in range(24)]
+    
+    # Топ пользователей
+    top_users_data = []
+    for user in users:
+        user_surveys = Survey.query.filter_by(creator_id=user.id).count()
+        user_responses = SurveyResponse.query.filter_by(user_id=user.id).count()
+        if user_surveys > 0 or user_responses > 0:
+            top_users_data.append({
+                'username': user.username,
+                'survey_count': user_surveys,
+                'total_responses': user_responses
+            })
+    
+    # Сортируем по количеству ответов
+    top_users_data.sort(key=lambda x: x['total_responses'], reverse=True)
+    top_users_data = top_users_data[:10]
+    
+    # Типы опросов
+    survey_types_labels = ['Анонимные', 'С авторизацией', 'С вводом имени']
+    survey_types_data = [
+        len([s for s in surveys if s.is_anonymous]),
+        len([s for s in surveys if s.require_auth]),
+        len([s for s in surveys if s.require_name])
+    ]
     
     return {
         'total_surveys': total_surveys,
@@ -1779,7 +1859,14 @@ def get_global_analytics():
         'total_users': total_users,
         'user_stats': user_stats,
         'top_surveys': top_surveys_data,
-        'time_stats': time_stats
+        'top_users': top_users_data,
+        'survey_types_labels': survey_types_labels,
+        'survey_types_data': survey_types_data,
+        'time_stats': time_stats,
+        'daily_labels': daily_labels,
+        'daily_values': daily_values,
+        'hourly_labels': hourly_labels,
+        'hourly_values': hourly_values
     }
 
 def get_user_analytics(user_id):

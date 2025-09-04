@@ -125,8 +125,9 @@
                                                         <label class="form-check-label" for="other_{{ question.id }}">
                                                             {{ question.other_text or 'Другой вариант' }}
                                                         </label>
-                                                        <input type="text" class="form-control mt-2" 
+                                                        <input type="text" class="form-control mt-2 other-text-input" 
                                                                name="other_answer_{{ question.id }}" 
+                                                               data-question-id="{{ question.id }}"
                                                                placeholder="Укажите свой вариант">
                                                     </div>
                                                 {% endif %}
@@ -163,8 +164,9 @@
                                                         <label class="form-check-label" for="other_{{ question.id }}">
                                                             {{ question.other_text or 'Другой вариант' }}
                                                         </label>
-                                                        <input type="text" class="form-control mt-2" 
+                                                        <input type="text" class="form-control mt-2 other-text-input" 
                                                                name="other_answer_{{ question.id }}" 
+                                                               data-question-id="{{ question.id }}"
                                                                placeholder="Укажите свой вариант">
                                                     </div>
                                                 {% endif %}
@@ -195,17 +197,17 @@
                                         {% endif %}
                                     </div>
                                     
-                                {% elif question.type == 'scale' or question.type == 'rating' %}
+                                {% elif question.type == 'rating' %}
                                     <div class="mb-3">
                                         <label class="form-label">Оцените от {{ question.rating_min or 1 }} до {{ question.rating_max or 10 }}:</label>
-                                        <div class="rating-container">
+                                        <div class="rating-container d-flex justify-content-center">
                                             {% for i in range(question.rating_min or 1, (question.rating_max or 10) + 1) %}
-                                                <div class="form-check form-check-inline">
+                                                <div class="form-check form-check-inline mx-1">
                                                     <input class="form-check-input" type="radio" 
                                                            name="question_{{ question.id }}" 
                                                            value="{{ i }}" 
                                                            id="rating_{{ question.id }}_{{ i }}" {% if question.is_required %}required{% endif %}>
-                                                    <label class="form-check-label" for="rating_{{ question.id }}_{{ i }}">
+                                                    <label class="form-check-label fw-bold text-primary" for="rating_{{ question.id }}_{{ i }}">
                                                         {{ i }}
                                                     </label>
                                                 </div>
@@ -214,7 +216,39 @@
                                         {% if question.rating_labels %}
                                             {% set labels = question.rating_labels|from_json %}
                                             {% if labels and labels|length >= 2 %}
-                                                <div class="d-flex justify-content-between mt-1">
+                                                <div class="d-flex justify-content-between mt-2">
+                                                    <small class="text-muted">{{ labels[0] or '' }}</small>
+                                                    <small class="text-muted">{{ labels[1] or '' }}</small>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'scale' %}
+                                    <div class="mb-3">
+                                        <label class="form-label">Выберите значение по шкале от {{ question.rating_min or 1 }} до {{ question.rating_max or 10 }}:</label>
+                                        <div class="scale-container">
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2 text-muted">{{ question.rating_min or 1 }}</span>
+                                                <div class="flex-grow-1 mx-3">
+                                                    <input type="range" class="form-range" 
+                                                           min="{{ question.rating_min or 1 }}" 
+                                                           max="{{ question.rating_max or 10 }}" 
+                                                           step="{{ question.rating_step or 1 }}"
+                                                           name="question_{{ question.id }}" 
+                                                           id="scale_{{ question.id }}" 
+                                                           oninput="updateScaleValue({{ question.id }}, this.value)" {% if question.is_required %}required{% endif %}>
+                                                </div>
+                                                <span class="ms-2 text-muted">{{ question.rating_max or 10 }}</span>
+                                            </div>
+                                            <div class="text-center mt-2">
+                                                <span class="badge bg-info fs-6" id="scale_value_{{ question.id }}">{{ question.rating_min or 1 }}</span>
+                                            </div>
+                                        </div>
+                                        {% if question.rating_labels %}
+                                            {% set labels = question.rating_labels|from_json %}
+                                            {% if labels and labels|length >= 2 %}
+                                                <div class="d-flex justify-content-between mt-2">
                                                     <small class="text-muted">{{ labels[0] or '' }}</small>
                                                     <small class="text-muted">{{ labels[1] or '' }}</small>
                                                 </div>
@@ -436,6 +470,25 @@ function copySurveyUrl() {
         console.error('Ошибка копирования:', err);
     }
 }
+
+// Функция для обновления значения шкалы
+window.updateScaleValue = function(questionId, value) {
+    document.getElementById('scale_value_' + questionId).textContent = value;
+};
+
+// Автоматический выбор "другой вариант" при вводе текста
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('other-text-input')) {
+        const questionId = e.target.dataset.questionId;
+        const otherRadio = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
+        const otherCheckbox = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
+        const otherInput = otherRadio || otherCheckbox;
+        
+        if (otherInput && e.target.value.trim()) {
+            otherInput.checked = true;
+        }
+    }
+});
 
 // Подтверждение отправки формы
 document.addEventListener('DOMContentLoaded', function() {
