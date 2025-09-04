@@ -329,12 +329,28 @@
                                     
                                 {% elif question.type == 'date' %}
                                     <div class="mb-3">
-                                        <input type="date" class="form-control" name="question_{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </span>
+                                            <input type="date" class="form-control" name="question_{{ question.id }}" 
+                                                   {% if question.is_required %}required{% endif %}
+                                                   style="min-height: 38px; font-size: 16px;">
+                                        </div>
+                                        <div class="form-text">Выберите дату</div>
                                     </div>
                                     
                                 {% elif question.type == 'time' %}
                                     <div class="mb-3">
-                                        <input type="time" class="form-control" name="question_{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-clock"></i>
+                                            </span>
+                                            <input type="time" class="form-control" name="question_{{ question.id }}" 
+                                                   {% if question.is_required %}required{% endif %}
+                                                   style="min-height: 38px; font-size: 16px;">
+                                        </div>
+                                        <div class="form-text">Выберите время</div>
                                     </div>
                                 {% endif %}
                             </div>

@@ -228,7 +228,22 @@ def survey_creation_required(f):
 # Маршруты
 @app.route('/')
 def index():
-    return render_template('index.html')
+    """Главная страница с общей статистикой"""
+    # Получаем общую статистику
+    total_surveys = Survey.query.count()
+    total_responses = Response.query.count()
+    total_users = User.query.count()
+    active_surveys = Survey.query.filter_by(is_active=True).count()
+    
+    # Получаем последние опросы для отображения
+    recent_surveys = Survey.query.order_by(Survey.created_at.desc()).limit(3).all()
+    
+    return render_template('index.html', 
+                         total_surveys=total_surveys,
+                         total_responses=total_responses, 
+                         total_users=total_users,
+                         active_surveys=active_surveys,
+                         recent_surveys=recent_surveys)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
