@@ -747,7 +747,8 @@ function saveSSLCertificate() {
         }
     })
     .catch(error => {
-        showNotification('Ошибка сети: ' + error, 'error');
+        console.error('Network error:', error);
+        showNotification('Ошибка сети: ' + (error.message || 'Неизвестная ошибка'), 'error');
     });
 }
 
@@ -838,7 +839,8 @@ function testLDAPConnection() {
         }
     })
     .catch(error => {
-        showNotification('Ошибка сети: ' + error, 'error');
+        console.error('Network error:', error);
+        showNotification('Ошибка сети: ' + (error.message || 'Неизвестная ошибка'), 'error');
     });
 }
 
@@ -863,7 +865,8 @@ function searchLDAPUsers() {
             }
         })
         .catch(error => {
-            showNotification('Ошибка сети: ' + error, 'error');
+            console.error('Network error:', error);
+        showNotification('Ошибка сети: ' + (error.message || 'Неизвестная ошибка'), 'error');
         });
 }
 
@@ -940,7 +943,8 @@ function importSelectedUsers() {
         }
     })
     .catch(error => {
-        showNotification('Ошибка сети: ' + error, 'error');
+        console.error('Network error:', error);
+        showNotification('Ошибка сети: ' + (error.message || 'Неизвестная ошибка'), 'error');
     });
 }
 

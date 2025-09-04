@@ -1536,15 +1536,29 @@ def view_response_detail(survey_id, response_id):
                          answers=answers)
 
 # LDAP маршруты
-@app.route('/admin/ldap/test')
+@app.route('/admin/ldap/test', methods=['POST'])
 @admin_required
 def test_ldap_connection():
     """Тестирование подключения к LDAP"""
     try:
-        from ldap_manager import ldap_manager
+        from ldap_manager import LDAPManager
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Данные не получены'})
+        
+        # Создаем временный LDAP менеджер с переданными параметрами
+        ldap_manager = LDAPManager()
+        ldap_manager.server_url = data.get('server', 'ldap://localhost:389')
+        ldap_manager.base_dn = data.get('base_dn', 'dc=example,dc=com')
+        ldap_manager.bind_dn = data.get('bind_dn', '')
+        ldap_manager.bind_password = data.get('password', '')
+        ldap_manager.user_search_base = data.get('base_dn', 'dc=example,dc=com')
+        
         result = ldap_manager.test_connection()
         return jsonify(result)
     except Exception as e:
+        print(f"❌ Ошибка тестирования LDAP: {e}")
         return jsonify({'success': False, 'error': f'Ошибка: {str(e)}'})
 
 @app.route('/admin/ldap/search')
@@ -1552,10 +1566,13 @@ def test_ldap_connection():
 def search_ldap_users():
     """Поиск пользователей в LDAP"""
     try:
-        from ldap_manager import ldap_manager
+        from ldap_manager import LDAPManager
+        
         query = request.args.get('q', '')
         max_results = int(request.args.get('max', 50))
         
+        # Используем настройки из переменных окружения
+        ldap_manager = LDAPManager()
         users = ldap_manager.search_users(query, max_results)
         return jsonify({'success': True, 'users': users})
     except Exception as e:
