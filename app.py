@@ -588,7 +588,38 @@ def edit_survey(survey_id):
         flash('Опрос обновлен успешно', 'success')
         return redirect(url_for('dashboard'))
     
-    return render_template('edit_survey.html', survey=survey)
+    # Подготавливаем данные для шаблона
+    survey_data = {
+        'id': survey.id,
+        'title': survey.title,
+        'description': survey.description,
+        'is_anonymous': survey.is_anonymous,
+        'require_auth': survey.require_auth,
+        'require_name': survey.require_name,
+        'is_active': survey.is_active,
+        'questions': []
+    }
+    
+    for question in survey.questions:
+        question_data = {
+            'id': question.id,
+            'text': question.text,
+            'type': question.type,
+            'options': json.loads(question.options) if question.options else [],
+            'is_required': question.is_required,
+            'allow_other': question.allow_other,
+            'other_text': question.other_text,
+            'rating_min': question.rating_min,
+            'rating_max': question.rating_max,
+            'rating_step': question.rating_step,
+            'rating_labels': json.loads(question.rating_labels) if question.rating_labels else [],
+            'grid_rows': json.loads(question.grid_rows) if question.grid_rows else [],
+            'grid_columns': json.loads(question.grid_columns) if question.grid_columns else [],
+            'question_order': question.question_order
+        }
+        survey_data['questions'].append(question_data)
+    
+    return render_template('edit_survey.html', survey=survey_data)
 
 @app.route('/surveys/<int:survey_id>/toggle-active', methods=['POST'])
 @login_required
@@ -1410,8 +1441,6 @@ def my_activity():
     
     return render_template('analytics/user_analytics.html', 
                          user_stats=analytics_data,
-                         user_surveys=user_surveys,
-                         user_responses=user_responses,
                          achievements=achievements)
 
 @app.route('/analytics/cross-analysis')
@@ -1425,9 +1454,18 @@ def cross_analysis():
     user_id = request.args.get('user_id', 'all')
     
     analytics_data = get_cross_analysis(period, survey_type, user_id)
-    users = User.query.all()
+    
+    # Конвертируем пользователей в словари
+    users_data = []
+    for user in User.query.all():
+        users_data.append({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        })
+    
     return render_template('analytics/cross_analysis.html', 
-                         users=users, period=period, survey_type=survey_type, 
+                         users=users_data, period=period, survey_type=survey_type, 
                          user_id=user_id, **analytics_data)
 
 @app.route('/api/analytics/survey/<int:survey_id>/chart-data')
@@ -1646,8 +1684,18 @@ def get_global_analytics():
     # Активные опросы (с ответами)
     active_surveys = len([s for s in surveys if len(s.responses) > 0])
     
-    # Топ опросы по количеству ответов
-    top_surveys = sorted(surveys, key=lambda x: len(x.responses), reverse=True)[:10]
+    # Топ опросы по количеству ответов (конвертируем в словари)
+    top_surveys_data = []
+    for survey in sorted(surveys, key=lambda x: len(x.responses), reverse=True)[:10]:
+        top_surveys_data.append({
+            'id': survey.id,
+            'title': survey.title,
+            'description': survey.description,
+            'creator': survey.creator.username if survey.creator else 'Неизвестно',
+            'response_count': len(survey.responses),
+            'created_at': survey.created_at.isoformat() if survey.created_at else None,
+            'is_active': survey.is_active
+        })
     
     # Статистика по пользователям
     user_stats = {
@@ -1665,7 +1713,7 @@ def get_global_analytics():
         'active_surveys': active_surveys,
         'total_responses': total_responses,
         'user_stats': user_stats,
-        'top_surveys': top_surveys,
+        'top_surveys': top_surveys_data,
         'time_stats': time_stats
     }
 
@@ -1688,21 +1736,61 @@ def get_user_analytics(user_id):
     # Активность по времени
     activity_stats = get_time_analytics(user_responses)
     
+    # Конвертируем опросы в словари
+    surveys_data = []
+    for survey in user_surveys:
+        surveys_data.append({
+            'id': survey.id,
+            'title': survey.title,
+            'description': survey.description,
+            'response_count': len(survey.responses),
+            'created_at': survey.created_at.isoformat() if survey.created_at else None,
+            'is_active': survey.is_active
+        })
+    
+    # Конвертируем ответы в словари
+    responses_data = []
+    for response in user_responses:
+        responses_data.append({
+            'id': response.id,
+            'survey_id': response.survey_id,
+            'survey_title': response.survey.title if response.survey else 'Неизвестный опрос',
+            'created_at': response.created_at.isoformat() if response.created_at else None,
+            'completion_time': response.completion_time
+        })
+    
     return {
-        'user': user,
-        'surveys_created': user_surveys,
-        'responses_given': user_responses,
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'is_admin': user.is_admin,
+            'can_create_surveys': user.can_create_surveys
+        },
+        'surveys_created': surveys_data,
+        'responses_given': responses_data,
         'total_surveys_created': total_surveys_created,
         'total_responses_given': total_responses_given,
         'activity_stats': activity_stats
     }
 
-def get_cross_analysis():
+def get_cross_analysis(period='month', survey_type='all', user_id='all'):
     """Кросс-анализ между опросами"""
-    surveys = Survey.query.all()
+    # Применяем фильтры
+    query = Survey.query
     
-    # Корреляции между опросами
-    correlations = []
+    if survey_type != 'all':
+        if survey_type == 'anonymous':
+            query = query.filter_by(is_anonymous=True)
+        elif survey_type == 'auth_required':
+            query = query.filter_by(require_auth=True)
+        elif survey_type == 'name_required':
+            query = query.filter_by(require_name=True)
+    
+    if user_id != 'all':
+        query = query.filter_by(creator_id=user_id)
+    
+    surveys = query.all()
     
     # Анализ популярности типов вопросов
     question_types = {}
@@ -1712,26 +1800,74 @@ def get_cross_analysis():
     
     # Анализ эффективности типов опросов
     survey_type_effectiveness = {
-        'anonymous': {'total': 0, 'responses': 0},
-        'auth_required': {'total': 0, 'responses': 0},
-        'name_required': {'total': 0, 'responses': 0}
+        'anonymous': {'total': 0, 'responses': 0, 'avg_responses': 0},
+        'auth_required': {'total': 0, 'responses': 0, 'avg_responses': 0},
+        'name_required': {'total': 0, 'responses': 0, 'avg_responses': 0}
     }
     
     for survey in surveys:
+        response_count = len(survey.responses)
         if survey.is_anonymous:
             survey_type_effectiveness['anonymous']['total'] += 1
-            survey_type_effectiveness['anonymous']['responses'] += len(survey.responses)
+            survey_type_effectiveness['anonymous']['responses'] += response_count
         if survey.require_auth:
             survey_type_effectiveness['auth_required']['total'] += 1
-            survey_type_effectiveness['auth_required']['responses'] += len(survey.responses)
+            survey_type_effectiveness['auth_required']['responses'] += response_count
         if survey.require_name:
             survey_type_effectiveness['name_required']['total'] += 1
-            survey_type_effectiveness['name_required']['responses'] += len(survey.responses)
+            survey_type_effectiveness['name_required']['responses'] += response_count
+    
+    # Вычисляем средние значения
+    for survey_type_key in survey_type_effectiveness:
+        if survey_type_effectiveness[survey_type_key]['total'] > 0:
+            survey_type_effectiveness[survey_type_key]['avg_responses'] = round(
+                survey_type_effectiveness[survey_type_key]['responses'] / 
+                survey_type_effectiveness[survey_type_key]['total'], 2
+            )
+    
+    # Анализ по периодам
+    period_stats = get_period_analysis(surveys, period)
     
     return {
         'question_types': question_types,
         'survey_type_effectiveness': survey_type_effectiveness,
-        'correlations': correlations
+        'period_stats': period_stats,
+        'total_surveys': len(surveys),
+        'filters': {
+            'period': period,
+            'survey_type': survey_type,
+            'user_id': user_id
+        }
+    }
+
+def get_period_analysis(surveys, period):
+    """Анализ активности по периодам"""
+    from datetime import datetime, timedelta
+    
+    now = datetime.now()
+    if period == 'week':
+        start_date = now - timedelta(days=7)
+    elif period == 'month':
+        start_date = now - timedelta(days=30)
+    elif period == 'quarter':
+        start_date = now - timedelta(days=90)
+    else:
+        start_date = now - timedelta(days=365)
+    
+    period_surveys = [s for s in surveys if s.created_at >= start_date]
+    period_responses = []
+    
+    for survey in period_surveys:
+        for response in survey.responses:
+            if response.created_at >= start_date:
+                period_responses.append(response)
+    
+    return {
+        'period': period,
+        'surveys_created': len(period_surveys),
+        'responses_given': len(period_responses),
+        'start_date': start_date.isoformat(),
+        'end_date': now.isoformat()
     }
 
 def get_survey_chart_data_internal(survey_id):
