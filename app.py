@@ -55,6 +55,7 @@ class Question(db.Model):
     other_text = db.Column(db.String(200))  # Текст для "Другой вариант"
     rating_min = db.Column(db.Integer, default=1)  # Минимальное значение рейтинга
     rating_max = db.Column(db.Integer, default=10)  # Максимальное значение рейтинга
+    rating_step = db.Column(db.Integer, default=1)  # Шаг рейтинга
     rating_labels = db.Column(db.Text)  # JSON для подписей рейтинга (например, ["Плохо", "Отлично"])
     grid_rows = db.Column(db.Text)  # JSON для строк сетки флажков
     grid_columns = db.Column(db.Text)  # JSON для столбцов сетки флажков
@@ -1393,7 +1394,7 @@ def survey_analytics(survey_id):
 def global_analytics():
     """Глобальная аналитика по всем опросам"""
     analytics_data = get_global_analytics()
-    return render_template('analytics/global_analytics.html', analytics=analytics_data)
+    return render_template('analytics/global_analytics.html', **analytics_data)
 
 @app.route('/analytics/user/<int:user_id>')
 @login_required
@@ -1440,7 +1441,7 @@ def my_activity():
     ]
     
     return render_template('analytics/user_analytics.html', 
-                         user_stats=analytics_data,
+                         **analytics_data,
                          achievements=achievements)
 
 @app.route('/analytics/cross-analysis')
@@ -1828,10 +1829,42 @@ def get_cross_analysis(period='month', survey_type='all', user_id='all'):
     # Анализ по периодам
     period_stats = get_period_analysis(surveys, period)
     
+    # Статистика по пользователям
+    all_users = User.query.all()
+    user_stats = {
+        'avg_surveys_per_user': round(len(surveys) / len(all_users), 2) if all_users else 0,
+        'avg_responses_per_user': 0,
+        'most_active_user': 'Неизвестно',
+        'avg_completion_time': 0
+    }
+    
+    # Вычисляем средние ответы на пользователя
+    total_responses = sum(len(survey.responses) for survey in surveys)
+    if all_users:
+        user_stats['avg_responses_per_user'] = round(total_responses / len(all_users), 2)
+    
+    # Находим самого активного пользователя
+    user_activity = {}
+    for user in all_users:
+        user_surveys = Survey.query.filter_by(creator_id=user.id).count()
+        user_responses = SurveyResponse.query.filter_by(user_id=user.id).count()
+        user_activity[user.username] = user_surveys + user_responses
+    
+    if user_activity:
+        most_active = max(user_activity, key=user_activity.get)
+        user_stats['most_active_user'] = most_active
+    
+    # Среднее время прохождения
+    all_responses = SurveyResponse.query.all()
+    completion_times = [r.completion_time for r in all_responses if r.completion_time]
+    if completion_times:
+        user_stats['avg_completion_time'] = round(sum(completion_times) / len(completion_times), 2)
+    
     return {
         'question_types': question_types,
         'survey_type_effectiveness': survey_type_effectiveness,
         'period_stats': period_stats,
+        'user_stats': user_stats,
         'total_surveys': len(surveys),
         'filters': {
             'period': period,

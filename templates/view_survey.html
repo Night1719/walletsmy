@@ -212,10 +212,13 @@
                                             {% endfor %}
                                         </div>
                                         {% if question.rating_labels %}
-                                            <div class="d-flex justify-content-between mt-1">
-                                                <small class="text-muted">{{ question.rating_labels[0] or '' }}</small>
-                                                <small class="text-muted">{{ question.rating_labels[1] or '' }}</small>
-                                            </div>
+                                            {% set labels = question.rating_labels|from_json %}
+                                            {% if labels and labels|length >= 2 %}
+                                                <div class="d-flex justify-content-between mt-1">
+                                                    <small class="text-muted">{{ labels[0] or '' }}</small>
+                                                    <small class="text-muted">{{ labels[1] or '' }}</small>
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                     
@@ -226,16 +229,16 @@
                                                 <thead>
                                                     <tr>
                                                         <th></th>
-                                                        {% for column in question.grid_columns %}
+                                                        {% for column in question.grid_columns|from_json %}
                                                             <th class="text-center">{{ column }}</th>
                                                         {% endfor %}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {% for row in question.grid_rows %}
+                                                    {% for row in question.grid_rows|from_json %}
                                                         <tr>
                                                             <td><strong>{{ row }}</strong></td>
-                                                            {% for column in question.grid_columns %}
+                                                            {% for column in question.grid_columns|from_json %}
                                                                 <td class="text-center">
                                                                     <input type="radio" name="question_{{ question.id }}_{{ loop.index0 }}" 
                                                                            value="{{ row }}|{{ column }}" 
@@ -256,16 +259,16 @@
                                                 <thead>
                                                     <tr>
                                                         <th></th>
-                                                        {% for column in question.grid_columns %}
+                                                        {% for column in question.grid_columns|from_json %}
                                                             <th class="text-center">{{ column }}</th>
                                                         {% endfor %}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {% for row in question.grid_rows %}
+                                                    {% for row in question.grid_rows|from_json %}
                                                         <tr>
                                                             <td><strong>{{ row }}</strong></td>
-                                                            {% for column in question.grid_columns %}
+                                                            {% for column in question.grid_columns|from_json %}
                                                                 <td class="text-center">
                                                                     <input type="checkbox" name="question_{{ question.id }}" 
                                                                            value="{{ row }}|{{ column }}" 
