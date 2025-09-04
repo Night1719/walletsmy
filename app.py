@@ -1440,7 +1440,16 @@ def my_activity():
         }
     ]
     
+    # Добавляем дополнительные статистики
+    user_stats = {
+        'surveys_created': analytics_data['total_surveys_created'],
+        'responses_given': analytics_data['total_responses_given'],
+        'total_responses_received': sum(survey['response_count'] for survey in analytics_data['surveys_created']),
+        'avg_completion_time': analytics_data['activity_stats'].get('avg_completion_time', 0) if analytics_data['activity_stats'] else 0
+    }
+    
     return render_template('analytics/user_analytics.html', 
+                         user_stats=user_stats,
                          **analytics_data,
                          achievements=achievements)
 
@@ -1468,6 +1477,60 @@ def cross_analysis():
     return render_template('analytics/cross_analysis.html', 
                          users=users_data, period=period, survey_type=survey_type, 
                          user_id=user_id, **analytics_data)
+
+@app.route('/api/survey/<int:survey_id>/response/<int:response_id>/details')
+@login_required
+def get_response_details(survey_id, response_id):
+    """API для получения деталей ответа на опрос"""
+    survey = Survey.query.get_or_404(survey_id)
+    
+    # Проверяем права доступа
+    if not current_user.is_admin and survey.creator_id != current_user.id:
+        return jsonify({'error': 'Нет доступа'}), 403
+    
+    response = SurveyResponse.query.get_or_404(response_id)
+    if response.survey_id != survey_id:
+        return jsonify({'error': 'Ответ не принадлежит этому опросу'}), 400
+    
+    # Собираем детали ответа
+    details = []
+    for question in survey.questions:
+        answer = Answer.query.filter_by(response_id=response_id, question_id=question.id).first()
+        
+        answer_text = "Нет ответа"
+        if answer and answer.value:
+            if question.type in ['grid', 'checkbox_grid']:
+                if '|' in answer.value:
+                    row, col = answer.value.split('|', 1)
+                    answer_text = f"<strong>{row}</strong> → <em>{col}</em>"
+                else:
+                    answer_text = answer.value
+            elif question.type == 'multiple_choice':
+                try:
+                    if answer.value.startswith('['):
+                        selected_options = json.loads(answer.value)
+                        answer_text = '; '.join(selected_options)
+                    else:
+                        answer_text = answer.value
+                except:
+                    answer_text = answer.value
+            else:
+                answer_text = answer.value
+        
+        details.append({
+            'question_text': question.text,
+            'question_type': question.type,
+            'answer': answer_text
+        })
+    
+    return jsonify({
+        'response_id': response.id,
+        'created_at': response.created_at.isoformat(),
+        'user_name': response.user.username if response.user else (response.respondent_name or 'Аноним'),
+        'ip_address': response.ip_address,
+        'completion_time': response.completion_time,
+        'details': details
+    })
 
 @app.route('/api/analytics/survey/<int:survey_id>/chart-data')
 @login_required
@@ -1713,6 +1776,7 @@ def get_global_analytics():
         'total_surveys': total_surveys,
         'active_surveys': active_surveys,
         'total_responses': total_responses,
+        'total_users': total_users,
         'user_stats': user_stats,
         'top_surveys': top_surveys_data,
         'time_stats': time_stats
@@ -1860,12 +1924,37 @@ def get_cross_analysis(period='month', survey_type='all', user_id='all'):
     if completion_times:
         user_stats['avg_completion_time'] = round(sum(completion_times) / len(completion_times), 2)
     
+    # Данные для графиков
+    comparison_labels = list(question_types.keys())
+    comparison_data = list(question_types.values())
+    
+    effectiveness_labels = ['Анонимные', 'С авторизацией', 'С вводом имени']
+    effectiveness_data = [
+        survey_type_effectiveness['anonymous']['avg_responses'],
+        survey_type_effectiveness['auth_required']['avg_responses'],
+        survey_type_effectiveness['name_required']['avg_responses']
+    ]
+    
+    time_labels = ['Неделя', 'Месяц', 'Квартал', 'Год']
+    time_data = [
+        get_period_analysis(surveys, 'week')['responses_given'],
+        get_period_analysis(surveys, 'month')['responses_given'],
+        get_period_analysis(surveys, 'quarter')['responses_given'],
+        get_period_analysis(surveys, 'year')['responses_given']
+    ]
+    
     return {
         'question_types': question_types,
         'survey_type_effectiveness': survey_type_effectiveness,
         'period_stats': period_stats,
         'user_stats': user_stats,
         'total_surveys': len(surveys),
+        'comparison_labels': comparison_labels,
+        'comparison_data': comparison_data,
+        'effectiveness_labels': effectiveness_labels,
+        'effectiveness_data': effectiveness_data,
+        'time_labels': time_labels,
+        'time_data': time_data,
         'filters': {
             'period': period,
             'survey_type': survey_type,

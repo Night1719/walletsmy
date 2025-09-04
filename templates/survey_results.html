@@ -268,10 +268,20 @@
                                             <span class="badge bg-primary">{{ user.username }}</span>
                                             <small class="text-muted d-block">{{ user.email }}</small>
                                         {% else %}
-                                            <span class="badge bg-secondary">Удален</span>
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-user-slash me-1"></i>
+                                                Удален
+                                            </span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="badge bg-warning">Анонимный</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Аноним
+                                            {% endif %}
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -340,14 +350,25 @@
                                 </td>
                                 <td>
                                     {% if response.user_id %}
-                                        <span class="badge bg-primary">
-                                            <i class="fas fa-user me-1"></i>
-                                            {{ response.user.username if response.user else 'Неизвестно' }}
-                                        </span>
+                                        {% if response.user %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ response.user.username }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-user-slash me-1"></i>
+                                                Удален
+                                            </span>
+                                        {% endif %}
                                     {% else %}
                                         <span class="badge bg-success">
                                             <i class="fas fa-user-secret me-1"></i>
-                                            Анонимно
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Аноним
+                                            {% endif %}
                                         </span>
                                     {% endif %}
                                 </td>
@@ -526,7 +547,6 @@ function createRatingChart(canvasId, data, title) {
 }
 
 function showResponseDetails(responseId) {
-    // Здесь можно добавить AJAX запрос для получения деталей ответа
     const modal = new bootstrap.Modal(document.getElementById('responseModal'));
     document.getElementById('responseModalBody').innerHTML = `
         <div class="text-center py-4">
@@ -538,15 +558,87 @@ function showResponseDetails(responseId) {
     `;
     modal.show();
     
-    // Имитация загрузки данных
-    setTimeout(() => {
-        document.getElementById('responseModalBody').innerHTML = `
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                Детальная информация об ответе будет доступна в следующих версиях
-            </div>
-        `;
-    }, 1000);
+    // Получаем детали ответа через API
+    fetch(`/api/survey/{{ survey.id }}/response/${responseId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('responseModalBody').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Ошибка: ${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Дата ответа:</strong><br>
+                        <span class="text-muted">${new Date(data.created_at).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Пользователь:</strong><br>
+                        <span class="badge bg-primary">${data.user_name}</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>IP-адрес:</strong><br>
+                        <code>${data.ip_address || 'Неизвестно'}</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Время прохождения:</strong><br>
+                        <span class="text-muted">${data.completion_time ? data.completion_time + ' сек.' : 'Не указано'}</span>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3">Ответы на вопросы:</h6>
+            `;
+            
+            data.details.forEach((detail, index) => {
+                html += `
+                    <div class="mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">${index + 1}. ${detail.question_text}</h6>
+                            <span class="badge bg-secondary">${getQuestionTypeName(detail.question_type)}</span>
+                        </div>
+                        <div class="answer-content">
+                            ${detail.answer}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('responseModalBody').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки деталей ответа:', error);
+            document.getElementById('responseModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Ошибка загрузки деталей ответа
+                </div>
+            `;
+        });
+}
+
+function getQuestionTypeName(type) {
+    const types = {
+        'text': 'Текст',
+        'text_paragraph': 'Абзац',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
+        'date': 'Дата',
+        'time': 'Время'
+    };
+    return types[type] || type;
 }
 
 
