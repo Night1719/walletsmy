@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}Руководство пользователя - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('index') }}" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Главная
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Руководство пользователя</li>
+            </ol>
+        </nav>
+        
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-book text-primary me-2"></i>
+            Руководство пользователя
+        </h2>
+        <p class="text-muted">Подробная инструкция по работе с платформой BG Survey Platform</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Содержание</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#getting-started" class="list-group-item list-group-item-action">
+                    <i class="fas fa-play-circle me-2"></i>Начало работы
+                </a>
+                <a href="#creating-surveys" class="list-group-item list-group-item-action">
+                    <i class="fas fa-plus-circle me-2"></i>Создание опросов
+                </a>
+                <a href="#question-types" class="list-group-item list-group-item-action">
+                    <i class="fas fa-question-circle me-2"></i>Типы вопросов
+                </a>
+                <a href="#survey-settings" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cog me-2"></i>Настройки опросов
+                </a>
+                <a href="#viewing-results" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-bar me-2"></i>Просмотр результатов
+                </a>
+                <a href="#analytics" class="list-group-item list-group-item-action">
+                    <i class="fas fa-analytics me-2"></i>Аналитика
+                </a>
+                <a href="#excel-reports" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-excel me-2"></i>Отчеты Excel
+                </a>
+                <a href="#tips-tricks" class="list-group-item list-group-item-action">
+                    <i class="fas fa-lightbulb me-2"></i>Советы и хитрости
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        <!-- Начало работы -->
+        <section id="getting-started" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0"><i class="fas fa-play-circle me-2"></i>Начало работы</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Добро пожаловать в BG Survey Platform!</h5>
+                    <p>Наша платформа позволяет создавать профессиональные опросы, собирать ответы и анализировать данные.</p>
+                    
+                    <h6 class="mt-4">Основные возможности:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Создание опросов с 11 типами вопросов</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Настройка различных типов доступа к опросам</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Детальная аналитика и статистика</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Экспорт данных в Excel с графиками</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Управление активностью опросов</li>
+                    </ul>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Совет:</strong> Начните с создания простого опроса, чтобы ознакомиться с интерфейсом.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Создание опросов -->
+        <section id="creating-surveys" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Создание опросов</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Пошаговая инструкция создания опроса:</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>1. Переход к созданию</h6>
+                            <p>На главной странице нажмите кнопку <span class="badge bg-primary">"Создать опрос"</span> или перейдите в панель управления.</p>
+                            
+                            <h6>2. Заполнение основной информации</h6>
+                            <ul>
+                                <li><strong>Название опроса</strong> - краткое и понятное описание</li>
+                                <li><strong>Описание</strong> - дополнительная информация для респондентов</li>
+                                <li><strong>Тип опроса</strong> - выберите подходящий тип доступа</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>3. Добавление вопросов</h6>
+                            <p>Нажмите <span class="badge bg-success">"Добавить вопрос"</span> и выберите тип вопроса из выпадающего списка.</p>
+                            
+                            <h6>4. Настройка вопросов</h6>
+                            <p>Для каждого вопроса настройте параметры в соответствии с его типом.</p>
+                            
+                            <h6>5. Сохранение</h6>
+                            <p>Нажмите <span class="badge bg-primary">"Создать опрос"</span> для завершения.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Важно:</strong> После создания опрос автоматически становится активным и доступным для прохождения.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Типы вопросов -->
+        <section id="question-types" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0"><i class="fas fa-question-circle me-2"></i>Типы вопросов</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-font me-2"></i>Текстовые вопросы</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Текст (строка)</strong> - для коротких ответов</li>
+                                <li><strong>Текст (абзац)</strong> - для развернутых ответов</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-list me-2"></i>Выбор из списка</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Один из списка</strong> - выбор одного варианта</li>
+                                <li><strong>Несколько из списка</strong> - выбор нескольких вариантов</li>
+                                <li><strong>Раскрывающийся список</strong> - компактный выбор</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-star me-2"></i>Оценки и рейтинги</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Шкала</strong> - числовая шкала с ползунком</li>
+                                <li><strong>Оценка</strong> - выбор из предустановленных вариантов</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-table me-2"></i>Табличные вопросы</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Сетка</strong> - выбор одного варианта в каждой строке</li>
+                                <li><strong>Сетка из флажков</strong> - выбор нескольких вариантов в каждой строке</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-calendar me-2"></i>Временные вопросы</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Дата</strong> - выбор даты</li>
+                                <li><strong>Время</strong> - выбор времени</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-plus me-2"></i>Дополнительные возможности</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Вариант "Другой"</strong> - для текстовых ответов</li>
+                                <li><strong>Настройка рейтингов</strong> - диапазон, шаг, подписи</li>
+                                <li><strong>Настройка сеток</strong> - названия строк и столбцов</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Настройки опросов -->
+        <section id="survey-settings" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0"><i class="fas fa-cog me-2"></i>Настройки опросов</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Типы доступа к опросам:</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user-secret me-2"></i>Анонимный</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>Любой может пройти опрос без регистрации. Все ответы отображаются как "Аноним".</p>
+                                    <small class="text-muted">Подходит для: массовых опросов, обратной связи</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user-check me-2"></i>С авторизацией</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>Требуется регистрация. Ответы привязываются к пользователю.</p>
+                                    <small class="text-muted">Подходит для: внутренних опросов, персонализированных данных</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user-edit me-2"></i>С вводом имени</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>Не требует регистрации, но просит указать имя в конце опроса.</p>
+                                    <small class="text-muted">Подходит для: полуанонимных опросов, сбора контактов</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4">Управление активностью:</h6>
+                    <ul>
+                        <li><strong>Активный опрос</strong> - доступен для прохождения</li>
+                        <li><strong>Неактивный опрос</strong> - временно недоступен</li>
+                        <li>Можно переключать статус в панели управления</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Просмотр результатов -->
+        <section id="viewing-results" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Просмотр результатов</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Как просматривать ответы на опросы:</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>1. Переход к результатам</h6>
+                            <p>В панели управления нажмите <span class="badge bg-info">"Результаты"</span> рядом с нужным опросом.</p>
+                            
+                            <h6>2. Общая статистика</h6>
+                            <ul>
+                                <li>Количество ответов</li>
+                                <li>Количество вопросов</li>
+                                <li>Среднее время прохождения</li>
+                                <li>IP-адреса респондентов</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>3. Детальный просмотр</h6>
+                            <p>Нажмите <span class="badge bg-primary">"Просмотр ответов"</span> для детального анализа.</p>
+                            
+                            <h6>4. Информация о респондентах</h6>
+                            <ul>
+                                <li>Имена пользователей (если доступно)</li>
+                                <li>Время прохождения опроса</li>
+                                <li>IP-адреса</li>
+                                <li>Детальные ответы на каждый вопрос</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Совет:</strong> Используйте кнопку "Просмотр ответов" для детального анализа каждого ответа.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Аналитика -->
+        <section id="analytics" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-analytics me-2"></i>Аналитика</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Типы аналитики в системе:</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-pie me-2"></i>Аналитика опроса</h6>
+                            <ul>
+                                <li>Статистика по каждому вопросу</li>
+                                <li>Графики распределения ответов</li>
+                                <li>Анализ текстовых ответов</li>
+                                <li>Статистика по сеткам и рейтингам</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-globe me-2"></i>Глобальная аналитика</h6>
+                            <ul>
+                                <li>Общая статистика по всем опросам</li>
+                                <li>Топ опросов по популярности</li>
+                                <li>Активность пользователей</li>
+                                <li>Временная статистика</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-user-chart me-2"></i>Моя активность</h6>
+                            <ul>
+                                <li>Статистика созданных опросов</li>
+                                <li>Количество полученных ответов</li>
+                                <li>Достижения и прогресс</li>
+                                <li>Персональная аналитика</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-exchange-alt me-2"></i>Кросс-анализ</h6>
+                            <ul>
+                                <li>Сравнение опросов</li>
+                                <li>Анализ по периодам</li>
+                                <li>Фильтрация по типам опросов</li>
+                                <li>Сравнение пользователей</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Отчеты Excel -->
+        <section id="excel-reports" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0"><i class="fas fa-file-excel me-2"></i>Отчеты Excel</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Создание и экспорт отчетов:</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>1. Создание отчета</h6>
+                            <p>В результатах опроса нажмите <span class="badge bg-success">"Экспорт в Excel"</span>.</p>
+                            
+                            <h6>2. Содержание отчета</h6>
+                            <ul>
+                                <li>Общая информация об опросе</li>
+                                <li>Статистика по каждому вопросу</li>
+                                <li>Детальные ответы респондентов</li>
+                                <li>Графики и диаграммы</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>3. Структура файла</h6>
+                            <ul>
+                                <li><strong>Обзор</strong> - общая статистика</li>
+                                <li><strong>Результаты</strong> - детальные ответы</li>
+                                <li><strong>Аналитика</strong> - графики и анализ</li>
+                                <li><strong>Ответы</strong> - индивидуальные ответы</li>
+                            </ul>
+                            
+                            <h6>4. Использование</h6>
+                            <p>Отчеты можно использовать для презентаций, дальнейшего анализа или архивирования.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Советы и хитрости -->
+        <section id="tips-tricks" class="mb-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Советы и хитрости</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-rocket me-2"></i>Создание эффективных опросов</h6>
+                            <ul>
+                                <li>Используйте понятные и короткие вопросы</li>
+                                <li>Группируйте похожие вопросы</li>
+                                <li>Добавляйте описание для сложных вопросов</li>
+                                <li>Тестируйте опрос перед публикацией</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-cogs me-2"></i>Настройка вопросов</h6>
+                            <ul>
+                                <li>Для рейтингов настройте подходящий диапазон</li>
+                                <li>В сетках используйте понятные названия строк и столбцов</li>
+                                <li>Добавляйте вариант "Другой" для открытых ответов</li>
+                                <li>Используйте обязательные вопросы для важных данных</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-line me-2"></i>Анализ результатов</h6>
+                            <ul>
+                                <li>Регулярно проверяйте статистику опросов</li>
+                                <li>Используйте фильтры для детального анализа</li>
+                                <li>Экспортируйте данные для внешнего анализа</li>
+                                <li>Сравнивайте результаты разных периодов</li>
+                            </ul>
+                            
+                            <h6><i class="fas fa-shield-alt me-2"></i>Безопасность и приватность</h6>
+                            <ul>
+                                <li>Выбирайте подходящий тип доступа для опроса</li>
+                                <li>Регулярно деактивируйте завершенные опросы</li>
+                                <li>Не собирайте личные данные без необходимости</li>
+                                <li>Соблюдайте политику конфиденциальности</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success mt-4">
+                        <i class="fas fa-trophy me-2"></i>
+                        <strong>Поздравляем!</strong> Теперь вы знаете все основные возможности платформы BG Survey Platform. 
+                        Начните создавать свои первые опросы и анализировать результаты!
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+// Плавная прокрутка к разделам
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// Подсветка активного раздела
+window.addEventListener('scroll', function() {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.list-group-item');
+    
+    let current = '';
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (scrollY >= (sectionTop - 200)) {
+            current = section.getAttribute('id');
+        }
+    });
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+            link.classList.add('active');
+        }
+    });
+});
+</script>
+
+<style>
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.alert {
+    border-left: 4px solid;
+}
+
+.alert-info {
+    border-left-color: #0dcaf0;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-success {
+    border-left-color: #198754;
+}
+</style>
+{% endblock %}

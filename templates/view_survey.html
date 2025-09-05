@@ -39,15 +39,17 @@
                             <span class="badge bg-success me-1">
                                 <i class="fas fa-user-secret me-1"></i>Анонимный
                             </span>
+                        {% elif survey.require_auth %}
+                            <span class="badge bg-warning me-1">
+                                <i class="fas fa-lock me-1"></i>Требует авторизации
+                            </span>
+                        {% elif survey.require_name %}
+                            <span class="badge bg-info me-1">
+                                <i class="fas fa-signature me-1"></i>Запрос имени
+                            </span>
                         {% else %}
                             <span class="badge bg-primary me-1">
-                                <i class="fas fa-user me-1"></i>Авторизованный
-                            </span>
-                        {% endif %}
-                        
-                        {% if survey.require_auth %}
-                            <span class="badge bg-warning">
-                                <i class="fas fa-lock me-1"></i>Требует вход
+                                <i class="fas fa-user me-1"></i>Обычный
                             </span>
                         {% endif %}
                     </div>
@@ -88,11 +90,17 @@
                                 
                                 {% if question.type == 'text' %}
                                     <div class="mb-3">
-                                        <textarea class="form-control" name="question_{{ question.id }}" rows="3" 
-                                                  placeholder="Введите ваш ответ..." required></textarea>
+                                        <input type="text" class="form-control" name="question_{{ question.id }}" 
+                                               placeholder="Введите ваш ответ..." {% if question.is_required %}required{% endif %}>
                                     </div>
                                     
-                                                                {% elif question.type == 'multiple_choice' %}
+                                {% elif question.type == 'text_paragraph' %}
+                                    <div class="mb-3">
+                                        <textarea class="form-control" name="question_{{ question.id }}" rows="3" 
+                                                  placeholder="Введите ваш ответ..." {% if question.is_required %}required{% endif %}></textarea>
+                                    </div>
+                                    
+                                {% elif question.type == 'single_choice' %}
                                     <div class="mb-3">
                                         {% if question.options %}
                                             {% set options = question.options|from_json %}
@@ -102,12 +110,96 @@
                                                         <input class="form-check-input" type="radio" 
                                                                name="question_{{ question.id }}" 
                                                                value="{{ option }}" 
-                                                               id="option_{{ question.id }}_{{ loop.index }}" required>
+                                                               id="option_{{ question.id }}_{{ loop.index }}" {% if question.is_required %}required{% endif %}>
                                                         <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
                                                             {{ option }}
                                                         </label>
                                                     </div>
                                                 {% endfor %}
+                                                {% if question.allow_other %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="other" 
+                                                               id="other_{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                                                        <label class="form-check-label" for="other_{{ question.id }}">
+                                                            {{ question.other_text or 'Другой вариант' }}
+                                                        </label>
+                                                        <input type="text" class="form-control mt-2 other-text-input" 
+                                                               name="other_answer_{{ question.id }}" 
+                                                               data-question-id="{{ question.id }}"
+                                                               placeholder="Укажите свой вариант">
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <p class="text-muted">Варианты ответов не настроены</p>
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted">Варианты ответов не настроены</p>
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'multiple_choice' %}
+                                    <div class="mb-3">
+                                        {% if question.options %}
+                                            {% set options = question.options|from_json %}
+                                            {% if options %}
+                                                {% for option in options %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="{{ option }}" 
+                                                               id="option_{{ question.id }}_{{ loop.index }}">
+                                                        <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
+                                                            {{ option }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                                {% if question.allow_other %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="other" 
+                                                               id="other_{{ question.id }}">
+                                                        <label class="form-check-label" for="other_{{ question.id }}">
+                                                            {{ question.other_text or 'Другой вариант' }}
+                                                        </label>
+                                                        <input type="text" class="form-control mt-2 other-text-input" 
+                                                               name="other_answer_{{ question.id }}" 
+                                                               data-question-id="{{ question.id }}"
+                                                               placeholder="Укажите свой вариант">
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <p class="text-muted">Варианты ответов не настроены</p>
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted">Варианты ответов не настроены</p>
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'dropdown' %}
+                                    <div class="mb-3">
+                                        {% if question.options %}
+                                            {% set options = question.options|from_json %}
+                                            {% if options %}
+                                                <select class="form-select" name="question_{{ question.id }}" id="dropdown_{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                                                    <option value="">Выберите вариант</option>
+                                                    {% for option in options %}
+                                                        <option value="{{ option }}">{{ option }}</option>
+                                                    {% endfor %}
+                                                    {% if question.allow_other %}
+                                                        <option value="other">Другой вариант</option>
+                                                    {% endif %}
+                                                </select>
+                                                {% if question.allow_other %}
+                                                    <div class="mt-2" id="other_text_{{ question.id }}" style="display: none;">
+                                                        <input type="text" class="form-control other-text-input" 
+                                                               name="question_{{ question.id }}_other_text"
+                                                               placeholder="Укажите свой вариант" 
+                                                               data-question-id="{{ question.id }}">
+                                                    </div>
+                                                {% endif %}
                                             {% else %}
                                                 <p class="text-muted">Варианты ответов не настроены</p>
                                             {% endif %}
@@ -118,24 +210,147 @@
                                     
                                 {% elif question.type == 'rating' %}
                                     <div class="mb-3">
-                                        <label class="form-label">Оцените от 1 до 10:</label>
-                                        <div class="rating-container">
-                                            {% for i in range(1, 11) %}
-                                                <div class="form-check form-check-inline">
+                                        <label class="form-label">Оцените от {{ question.rating_min or 1 }} до {{ question.rating_max or 10 }}:</label>
+                                        <div class="rating-container d-flex justify-content-center">
+                                            {% for i in range(question.rating_min or 1, (question.rating_max or 10) + 1) %}
+                                                <div class="form-check form-check-inline mx-1">
                                                     <input class="form-check-input" type="radio" 
                                                            name="question_{{ question.id }}" 
                                                            value="{{ i }}" 
-                                                           id="rating_{{ question.id }}_{{ i }}" required>
-                                                    <label class="form-check-label" for="rating_{{ question.id }}_{{ i }}">
+                                                           id="rating_{{ question.id }}_{{ i }}" {% if question.is_required %}required{% endif %}>
+                                                    <label class="form-check-label fw-bold text-primary" for="rating_{{ question.id }}_{{ i }}">
                                                         {{ i }}
                                                     </label>
                                                 </div>
                                             {% endfor %}
                                         </div>
-                                        <div class="d-flex justify-content-between mt-1">
-                                            <small class="text-muted">1 - Очень плохо</small>
-                                            <small class="text-muted">10 - Отлично</small>
+                                        {% if question.rating_labels %}
+                                            {% set labels = question.rating_labels|from_json %}
+                                            {% if labels and labels|length >= 2 %}
+                                                <div class="d-flex justify-content-between mt-2">
+                                                    <small class="text-muted">{{ labels[0] or '' }}</small>
+                                                    <small class="text-muted">{{ labels[1] or '' }}</small>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'scale' %}
+                                    <div class="mb-3">
+                                        <label class="form-label">Выберите значение по шкале от {{ question.rating_min or 1 }} до {{ question.rating_max or 10 }}:</label>
+                                        <div class="scale-container">
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2 text-muted">{{ question.rating_min or 1 }}</span>
+                                                <div class="flex-grow-1 mx-3">
+                                                    <input type="range" class="form-range" 
+                                                           min="{{ question.rating_min or 1 }}" 
+                                                           max="{{ question.rating_max or 10 }}" 
+                                                           step="{{ question.rating_step or 1 }}"
+                                                           name="question_{{ question.id }}" 
+                                                           id="scale_{{ question.id }}" 
+                                                           oninput="updateScaleValue({{ question.id }}, this.value)" {% if question.is_required %}required{% endif %}>
+                                                </div>
+                                                <span class="ms-2 text-muted">{{ question.rating_max or 10 }}</span>
+                                            </div>
+                                            <div class="text-center mt-2">
+                                                <span class="badge bg-info fs-6" id="scale_value_{{ question.id }}">{{ question.rating_min or 1 }}</span>
+                                            </div>
                                         </div>
+                                        {% if question.rating_labels %}
+                                            {% set labels = question.rating_labels|from_json %}
+                                            {% if labels and labels|length >= 2 %}
+                                                <div class="d-flex justify-content-between mt-2">
+                                                    <small class="text-muted">{{ labels[0] or '' }}</small>
+                                                    <small class="text-muted">{{ labels[1] or '' }}</small>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif question.type == 'grid' %}
+                                    <div class="mb-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        {% for column in question.grid_columns|from_json %}
+                                                            <th class="text-center">{{ column }}</th>
+                                                        {% endfor %}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in question.grid_rows|from_json %}
+                                                        <tr>
+                                                            <td><strong>{{ row }}</strong></td>
+                                                            {% for column in question.grid_columns|from_json %}
+                                                                <td class="text-center">
+                                                                    <input type="radio" name="question_{{ question.id }}_{{ loop.index0 }}" 
+                                                                           value="{{ row }}|{{ column }}" 
+                                                                           class="form-check-input" {% if question.is_required %}required{% endif %}>
+                                                                </td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                {% elif question.type == 'checkbox_grid' %}
+                                    <div class="mb-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        {% for column in question.grid_columns|from_json %}
+                                                            <th class="text-center">{{ column }}</th>
+                                                        {% endfor %}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in question.grid_rows|from_json %}
+                                                        <tr>
+                                                            <td><strong>{{ row }}</strong></td>
+                                                            {% for column in question.grid_columns|from_json %}
+                                                                <td class="text-center">
+                                                                    <input type="checkbox" name="question_{{ question.id }}[]" 
+                                                                           value="{{ row }}|{{ column }}" 
+                                                                           class="form-check-input">
+                                                                </td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                {% elif question.type == 'date' %}
+                                    <div class="mb-3">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </span>
+                                            <input type="date" class="form-control" name="question_{{ question.id }}" 
+                                                   {% if question.is_required %}required{% endif %}
+                                                   style="min-height: 38px; font-size: 16px;">
+                                        </div>
+                                        <div class="form-text">Выберите дату</div>
+                                    </div>
+                                    
+                                {% elif question.type == 'time' %}
+                                    <div class="mb-3">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-clock"></i>
+                                            </span>
+                                            <input type="time" class="form-control" name="question_{{ question.id }}" 
+                                                   {% if question.is_required %}required{% endif %}
+                                                   style="min-height: 38px; font-size: 16px;">
+                                        </div>
+                                        <div class="form-text">Выберите время</div>
                                     </div>
                                 {% endif %}
                             </div>
@@ -152,6 +367,18 @@
                                     {% endif %}
                                 </small>
                             </div>
+                            
+                            {% if survey.require_name %}
+                                <div class="mb-3">
+                                    <label for="respondent_name" class="form-label">
+                                        <i class="fas fa-signature me-2"></i>Ваше имя *
+                                    </label>
+                                    <input type="text" class="form-control" id="respondent_name" name="respondent_name" required>
+                                    <small class="form-text text-muted">
+                                        Пожалуйста, укажите ваше имя для завершения опроса
+                                    </small>
+                                </div>
+                            {% endif %}
                             
                             <button type="submit" class="btn btn-danger btn-lg">
                                 <i class="fas fa-paper-plane me-2"></i>Отправить ответы
@@ -271,16 +498,116 @@ function copySurveyUrl() {
     }
 }
 
+// Функция для обновления значения шкалы
+window.updateScaleValue = function(questionId, value) {
+    document.getElementById('scale_value_' + questionId).textContent = value;
+};
+
+// Автоматический выбор "другой вариант" при вводе текста
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('other-text-input')) {
+        const questionId = e.target.dataset.questionId;
+        const otherRadio = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
+        const otherCheckbox = document.querySelector(`input[value="other"][name="question_${questionId}"]`);
+        const otherSelect = document.querySelector(`select[name="question_${questionId}"]`);
+        
+        if (otherRadio && e.target.value.trim()) {
+            otherRadio.checked = true;
+        } else if (otherCheckbox && e.target.value.trim()) {
+            otherCheckbox.checked = true;
+        } else if (otherSelect && e.target.value.trim()) {
+            otherSelect.value = 'other';
+        }
+    }
+});
+
+// Обработка выбора "другой вариант" в dropdown
+document.addEventListener('change', function(e) {
+    if (e.target.tagName === 'SELECT' && e.target.value === 'other') {
+        const questionId = e.target.name.replace('question_', '');
+        const otherTextDiv = document.getElementById(`other_text_${questionId}`);
+        if (otherTextDiv) {
+            otherTextDiv.style.display = 'block';
+            otherTextDiv.querySelector('input').focus();
+        }
+    } else if (e.target.tagName === 'SELECT' && e.target.value !== 'other') {
+        const questionId = e.target.name.replace('question_', '');
+        const otherTextDiv = document.getElementById(`other_text_${questionId}`);
+        if (otherTextDiv) {
+            otherTextDiv.style.display = 'none';
+            otherTextDiv.querySelector('input').value = '';
+        }
+    }
+});
+
 // Подтверждение отправки формы
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Обрабатываем ответы из сеток перед отправкой
+            processGridAnswers();
+            
             if (!confirm('Вы уверены, что хотите отправить ответы? После отправки их нельзя будет изменить.')) {
                 e.preventDefault();
             }
         });
     }
 });
+
+// Функция для обработки ответов из сеток
+function processGridAnswers() {
+    // Обрабатываем checkbox_grid
+    document.querySelectorAll('input[type="checkbox"][name$="[]"]').forEach(checkbox => {
+        if (checkbox.checked && checkbox.value.includes('|')) {
+            const questionId = checkbox.name.replace('question_', '').replace('[]', '');
+            const existingInput = document.querySelector(`input[name="question_${questionId}"][type="hidden"]`);
+            
+            if (existingInput) {
+                // Добавляем к существующему массиву
+                try {
+                    const currentValues = JSON.parse(existingInput.value);
+                    if (!currentValues.includes(checkbox.value)) {
+                        currentValues.push(checkbox.value);
+                        existingInput.value = JSON.stringify(currentValues);
+                    }
+                } catch (e) {
+                    existingInput.value = JSON.stringify([checkbox.value]);
+                }
+            } else {
+                // Создаем новый скрытый input
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = `question_${questionId}`;
+                hiddenInput.value = JSON.stringify([checkbox.value]);
+                checkbox.parentNode.appendChild(hiddenInput);
+            }
+            
+            // Отключаем оригинальный checkbox
+            checkbox.disabled = true;
+        }
+    });
+    
+    // Обрабатываем grid (single choice)
+    document.querySelectorAll('input[type="radio"][name^="question_"]:not([name$="[]"])').forEach(radio => {
+        if (radio.checked && radio.value.includes('|')) {
+            const questionId = radio.name.replace('question_', '');
+            const existingInput = document.querySelector(`input[name="question_${questionId}"][type="hidden"]`);
+            
+            if (existingInput) {
+                existingInput.value = radio.value;
+            } else {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = radio.name;
+                hiddenInput.value = radio.value;
+                radio.parentNode.appendChild(hiddenInput);
+            }
+            
+            // Отключаем оригинальный radio
+            radio.disabled = true;
+        }
+    });
+}
 </script>
 {% endblock %}
