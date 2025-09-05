@@ -842,14 +842,12 @@ def survey_results(survey_id):
 @app.route('/surveys/<int:survey_id>/export-excel')
 @login_required
 def export_survey_excel(survey_id):
-    """Экспорт результатов опроса в Excel"""
+    """Экспорт результатов опроса в улучшенный Excel с аналитикой и графиками"""
     try:
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from enhanced_excel_export import create_enhanced_excel_report
         from io import BytesIO
         from flask import send_file
         from datetime import datetime
-        print(f"✅ openpyxl импортирован успешно")
         
         survey = Survey.query.get_or_404(survey_id)
         
@@ -857,423 +855,24 @@ def export_survey_excel(survey_id):
             flash('У вас нет доступа к результатам этого опроса', 'error')
             return redirect(url_for('dashboard'))
         
-        # Создаем Excel файл
-        wb = Workbook()
-        
-        # Стили
-        header_font = Font(bold=True, size=14, color='FFFFFF')
-        header_fill = PatternFill(start_color='DC3545', end_color='DC3545', fill_type='solid')
-        header_alignment = Alignment(horizontal='center', vertical='center')
-        
-        subheader_font = Font(bold=True, size=12)
-        subheader_fill = PatternFill(start_color='F8F9FA', end_color='F8F9FA', fill_type='solid')
-        
-        data_font = Font(size=11)
-        data_alignment = Alignment(horizontal='left', vertical='center')
-        
-        number_alignment = Alignment(horizontal='center', vertical='center')
-        
-        border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
-        
-        # ========== ЛИСТ 1: ОБЗОР ОПРОСА ==========
-        ws_overview = wb.active
-        ws_overview.title = 'Обзор опроса'
-        
-        # Заголовок
-        ws_overview.merge_cells('A1:F1')
-        ws_overview['A1'] = f'ОТЧЕТ ПО ОПРОСУ: {survey.title}'
-        ws_overview['A1'].font = header_font
-        ws_overview['A1'].fill = header_fill
-        ws_overview['A1'].alignment = header_alignment
-        ws_overview.row_dimensions[1].height = 30
-        
-        # Информация об опросе
-        row = 3
-        ws_overview[f'A{row}'] = 'Название:'
-        ws_overview[f'A{row}'].font = subheader_font
-        ws_overview[f'A{row}'].fill = subheader_fill
-        ws_overview[f'A{row}'].border = border
-        ws_overview[f'B{row}'] = survey.title
-        ws_overview[f'B{row}'].font = data_font
-        ws_overview[f'B{row}'].border = border
-        row += 1
-        
-        ws_overview[f'A{row}'] = 'Описание:'
-        ws_overview[f'A{row}'].font = subheader_font
-        ws_overview[f'A{row}'].fill = subheader_fill
-        ws_overview[f'A{row}'].border = border
-        ws_overview[f'B{row}'] = survey.description or 'Не указано'
-        ws_overview[f'B{row}'].font = data_font
-        ws_overview[f'B{row}'].border = border
-        row += 1
-        
-        ws_overview[f'A{row}'] = 'Дата создания:'
-        ws_overview[f'A{row}'].font = subheader_font
-        ws_overview[f'A{row}'].fill = subheader_fill
-        ws_overview[f'A{row}'].border = border
-        ws_overview[f'B{row}'] = survey.created_at.strftime('%d.%m.%Y %H:%M')
-        ws_overview[f'B{row}'].font = data_font
-        ws_overview[f'B{row}'].border = border
-        row += 1
-        
-        ws_overview[f'A{row}'] = 'Количество ответов:'
-        ws_overview[f'A{row}'].font = subheader_font
-        ws_overview[f'A{row}'].fill = subheader_fill
-        ws_overview[f'A{row}'].border = border
-        ws_overview[f'B{row}'] = len(survey.responses)
-        ws_overview[f'B{row}'].font = data_font
-        ws_overview[f'B{row}'].alignment = number_alignment
-        ws_overview[f'B{row}'].border = border
-        row += 1
-        
-        ws_overview[f'A{row}'] = 'Количество вопросов:'
-        ws_overview[f'A{row}'].font = subheader_font
-        ws_overview[f'A{row}'].fill = subheader_fill
-        ws_overview[f'A{row}'].border = border
-        ws_overview[f'B{row}'] = len(survey.questions)
-        ws_overview[f'B{row}'].font = data_font
-        ws_overview[f'B{row}'].alignment = number_alignment
-        ws_overview[f'B{row}'].border = border
-        
-        # Устанавливаем ширину колонок
-        ws_overview.column_dimensions['A'].width = 20
-        ws_overview.column_dimensions['B'].width = 15
-        
-        # ========== ЛИСТ 2: ОБЩИЙ ОТЧЕТ ==========
-        ws_summary = wb.create_sheet('Общий отчет')
-        
-        # Заголовок
-        ws_summary.merge_cells('A1:H1')
-        ws_summary['A1'] = 'ОБЩИЙ ОТЧЕТ ПО ОПРОСУ'
-        ws_summary['A1'].font = header_font
-        ws_summary['A1'].fill = header_fill
-        ws_summary['A1'].alignment = header_alignment
-        ws_summary.row_dimensions[1].height = 30
-        
-        # Статистика по вопросам
-        row = 3
-        ws_summary[f'A{row}'] = 'Вопрос'
-        ws_summary[f'A{row}'].font = subheader_font
-        ws_summary[f'A{row}'].fill = subheader_fill
-        ws_summary[f'A{row}'].border = border
-        
-        ws_summary[f'B{row}'] = 'Тип'
-        ws_summary[f'B{row}'].font = subheader_font
-        ws_summary[f'B{row}'].fill = subheader_fill
-        ws_summary[f'B{row}'].border = border
-        
-        ws_summary[f'C{row}'] = 'Всего ответов'
-        ws_summary[f'C{row}'].font = subheader_font
-        ws_summary[f'C{row}'].fill = subheader_fill
-        ws_summary[f'C{row}'].border = border
-        
-        ws_summary[f'D{row}'] = 'Статистика'
-        ws_summary[f'D{row}'].font = subheader_font
-        ws_summary[f'D{row}'].fill = subheader_fill
-        ws_summary[f'D{row}'].border = border
-        
-        ws_summary[f'E{row}'] = 'Популярный ответ'
-        ws_summary[f'E{row}'].font = subheader_font
-        ws_summary[f'E{row}'].fill = subheader_fill
-        ws_summary[f'E{row}'].border = border
-        
-        ws_summary[f'F{row}'] = 'Процент'
-        ws_summary[f'F{row}'].font = subheader_font
-        ws_summary[f'F{row}'].fill = subheader_fill
-        ws_summary[f'F{row}'].border = border
-        
-        ws_summary[f'G{row}'] = 'Анализ'
-        ws_summary[f'G{row}'].font = subheader_font
-        ws_summary[f'G{row}'].fill = subheader_fill
-        ws_summary[f'G{row}'].border = border
-        
-        ws_summary[f'H{row}'] = 'Рекомендации'
-        ws_summary[f'H{row}'].font = subheader_font
-        ws_summary[f'H{row}'].fill = subheader_fill
-        ws_summary[f'H{row}'].border = border
+        # Получаем ответы и аналитику
+        responses = survey.responses
+        question_analytics = {}
         
         # Анализируем каждый вопрос
         for question in survey.questions:
-            row += 1
-            
-            # Получаем ответы на вопрос
-            answers = Answer.query.filter_by(question_id=question.id).all()
-            answer_values = [answer.value for answer in answers if answer.value]
-            
-            # Название вопроса
-            ws_summary[f'A{row}'] = question.text[:50] + ('...' if len(question.text) > 50 else '')
-            ws_summary[f'A{row}'].font = data_font
-            ws_summary[f'A{row}'].border = border
-            
-            # Тип вопроса
-            type_names = {
-                'text': 'Текст (строка)',
-                'text_paragraph': 'Текст (абзац)',
-                'single_choice': 'Один из списка',
-                'multiple_choice': 'Несколько из списка',
-                'dropdown': 'Раскрывающийся список',
-                'scale': 'Шкала',
-                'rating': 'Оценка',
-                'grid': 'Сетка',
-                'checkbox_grid': 'Сетка из флажков',
-                'date': 'Дата',
-                'time': 'Время'
-            }
-            ws_summary[f'B{row}'] = type_names.get(question.type, question.type)
-            ws_summary[f'B{row}'].font = data_font
-            ws_summary[f'B{row}'].border = border
-            
-            # Количество ответов
-            ws_summary[f'C{row}'] = len(answer_values)
-            ws_summary[f'C{row}'].font = data_font
-            ws_summary[f'C{row}'].alignment = number_alignment
-            ws_summary[f'C{row}'].border = border
-            
-            # Статистика
-            if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
-                options = json.loads(question.options) if question.options else []
-                option_counts = {}
-                for option in options:
-                    option_counts[option] = 0
-                
-                for answer_value in answer_values:
-                    if answer_value in option_counts:
-                        option_counts[answer_value] += 1
-                    elif answer_value == 'other':
-                        option_counts['Другой вариант'] = option_counts.get('Другой вариант', 0) + 1
-                
-                if option_counts:
-                    max_option = max(option_counts.items(), key=lambda x: x[1])
-                    percentage = (max_option[1] / len(answer_values)) * 100 if answer_values else 0
-                    
-                    ws_summary[f'D{row}'] = f"Всего вариантов: {len([k for k, v in option_counts.items() if v > 0])}"
-                    ws_summary[f'E{row}'] = max_option[0]
-                    ws_summary[f'F{row}'] = f"{percentage:.1f}%"
-                else:
-                    ws_summary[f'D{row}'] = "Нет ответов"
-                    ws_summary[f'E{row}'] = "Нет данных"
-                    ws_summary[f'F{row}'] = "0%"
-                    
-            elif question.type in ['rating', 'scale']:
-                numeric_values = [int(v) for v in answer_values if v.isdigit()]
-                if numeric_values:
-                    avg_rating = sum(numeric_values) / len(numeric_values)
-                    min_rating = min(numeric_values)
-                    max_rating = max(numeric_values)
-                    
-                    ws_summary[f'D{row}'] = f"Среднее: {avg_rating:.1f}, Мин: {min_rating}, Макс: {max_rating}"
-                    ws_summary[f'E{row}'] = f"Средняя оценка: {avg_rating:.1f}"
-                    ws_summary[f'F{row}'] = f"Диапазон: {max_rating - min_rating}"
-                else:
-                    ws_summary[f'D{row}'] = "Нет числовых ответов"
-                    ws_summary[f'E{row}'] = "Нет данных"
-                    ws_summary[f'F{row}'] = "0%"
-                    
-            elif question.type in ['text', 'text_paragraph']:
-                if answer_values:
-                    avg_length = sum(len(v) for v in answer_values) / len(answer_values)
-                    ws_summary[f'D{row}'] = f"Средняя длина: {avg_length:.0f} символов"
-                    ws_summary[f'E{row}'] = f"Всего ответов: {len(answer_values)}"
-                    ws_summary[f'F{row}'] = f"100% заполнено"
-                else:
-                    ws_summary[f'D{row}'] = "Нет ответов"
-                    ws_summary[f'E{row}'] = "Нет данных"
-                    ws_summary[f'F{row}'] = "0%"
-                    
-            elif question.type in ['grid', 'checkbox_grid']:
-                grid_responses = 0
-                for answer_value in answer_values:
-                    if answer_value.startswith('['):
-                        try:
-                            grid_data = json.loads(answer_value)
-                            grid_responses += len(grid_data)
-                        except:
-                            pass
-                    elif '|' in answer_value:
-                        grid_responses += 1
-                
-                ws_summary[f'D{row}'] = f"Заполнено ячеек: {grid_responses}"
-                ws_summary[f'E{row}'] = f"Активность: {grid_responses / len(answer_values) * 100:.1f}%" if answer_values else "0%"
-                ws_summary[f'F{row}'] = f"Всего ответов: {len(answer_values)}"
-            
-            # Анализ
-            if len(answer_values) == 0:
-                ws_summary[f'G{row}'] = "Нет ответов"
-            elif len(answer_values) < 5:
-                ws_summary[f'G{row}'] = "Мало ответов"
-            elif len(answer_values) < 20:
-                ws_summary[f'G{row}'] = "Средняя активность"
-            else:
-                ws_summary[f'G{row}'] = "Высокая активность"
-            
-            # Рекомендации
-            if len(answer_values) == 0:
-                ws_summary[f'H{row}'] = "Пересмотреть формулировку вопроса"
-            elif len(answer_values) < 5:
-                ws_summary[f'H{row}'] = "Упростить вопрос или добавить варианты"
-            else:
-                ws_summary[f'H{row}'] = "Вопрос работает хорошо"
-            
-            # Применяем стили
-            for col in ['D', 'E', 'F', 'G', 'H']:
-                ws_summary[f'{col}{row}'].font = data_font
-                ws_summary[f'{col}{row}'].border = border
+            question_analytics[question.id] = analyze_question(question, responses)
         
-        # Устанавливаем ширину колонок
-        ws_summary.column_dimensions['A'].width = 30
-        ws_summary.column_dimensions['B'].width = 20
-        ws_summary.column_dimensions['C'].width = 15
-        ws_summary.column_dimensions['D'].width = 25
-        ws_summary.column_dimensions['E'].width = 20
-        ws_summary.column_dimensions['F'].width = 15
-        ws_summary.column_dimensions['G'].width = 20
-        ws_summary.column_dimensions['H'].width = 25
+        # Создаем улучшенный Excel отчет
+        wb = create_enhanced_excel_report(survey, responses, question_analytics)
         
-        # ========== ЛИСТ 3: ОТВЕТЫ ПОЛЬЗОВАТЕЛЕЙ ==========
-        ws_responses = wb.create_sheet('Ответы пользователей')
-        
-        # Заголовки
-        headers = ['№', 'Дата', 'Пользователь', 'IP-адрес', 'Время прохождения']
-        col = 1
-        for header in headers:
-            cell = ws_responses.cell(row=1, column=col, value=header)
-            cell.font = subheader_font
-            cell.fill = subheader_fill
-            cell.alignment = header_alignment
-            cell.border = border
-            col += 1
-        
-        # Добавляем колонки для каждого вопроса
-        for question in survey.questions:
-            cell = ws_responses.cell(row=1, column=col, value=f'Q{question.question_order + 1}: {question.text[:30]}...')
-            cell.font = subheader_font
-            cell.fill = subheader_fill
-            cell.alignment = header_alignment
-            cell.border = border
-            col += 1
-        
-        # Данные ответов
-        responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
-        for idx, response in enumerate(responses, 1):
-            row = idx + 1
-            col = 1
-            
-            # Определяем имя пользователя
-            if survey.is_anonymous:
-                user_name = 'Аноним'
-            elif survey.require_name:
-                user_name = response.respondent_name or 'Не указано'
-            elif response.user_id and response.user:
-                user_name = response.user.username
-            elif response.user_id and not response.user:
-                user_name = 'Удален'
-            else:
-                user_name = response.respondent_name or 'Аноним'
-            
-            # Основная информация
-            ws_responses.cell(row=row, column=col, value=idx).font = data_font
-            ws_responses.cell(row=row, column=col).alignment = number_alignment
-            ws_responses.cell(row=row, column=col).border = border
-            col += 1
-            
-            ws_responses.cell(row=row, column=col, value=response.created_at.strftime('%d.%m.%Y %H:%M')).font = data_font
-            ws_responses.cell(row=row, column=col).border = border
-            col += 1
-            
-            ws_responses.cell(row=row, column=col, value=user_name).font = data_font
-            ws_responses.cell(row=row, column=col).border = border
-            col += 1
-            
-            ws_responses.cell(row=row, column=col, value=response.ip_address or 'Неизвестно').font = data_font
-            ws_responses.cell(row=row, column=col).border = border
-            col += 1
-            
-            ws_responses.cell(row=row, column=col, value=f"{response.completion_time or 0} сек.").font = data_font
-            ws_responses.cell(row=row, column=col).border = border
-            col += 1
-            
-            # Ответы на вопросы
-            for question in survey.questions:
-                answer = Answer.query.filter_by(response_id=response.id, question_id=question.id).first()
-                answer_text = "Нет ответа"
-                
-                if answer and answer.value:
-                    if question.type in ['grid', 'checkbox_grid']:
-                        try:
-                            if answer.value.startswith('['):
-                                selected_options = json.loads(answer.value)
-                                formatted_answers = []
-                                for option in selected_options:
-                                    if '|' in option:
-                                        row_name, col_name = option.split('|', 1)
-                                        formatted_answers.append(f"{row_name} → {col_name}")
-                                    else:
-                                        formatted_answers.append(option)
-                                answer_text = '; '.join(formatted_answers)
-                            elif '|' in answer.value:
-                                row_name, col_name = answer.value.split('|', 1)
-                                answer_text = f"{row_name} → {col_name}"
-                            else:
-                                answer_text = answer.value
-                        except:
-                            answer_text = answer.value
-                    elif question.type in ['multiple_choice', 'single_choice']:
-                        try:
-                            if answer.value.startswith('['):
-                                selected_options = json.loads(answer.value)
-                                answer_text = '; '.join(selected_options)
-                            elif answer.value == 'other':
-                                # Ищем текст "другого варианта"
-                                other_answers = Answer.query.filter_by(
-                                    response_id=response.id, 
-                                    question_id=question.id
-                                ).all()
-                                
-                                other_text = None
-                                for other_answer in other_answers:
-                                    if other_answer.value and other_answer.value != 'other':
-                                        other_text = other_answer.value
-                                        break
-                                
-                                if other_text:
-                                    answer_text = f"Другой вариант: {other_text}"
-                                else:
-                                    answer_text = "Другой вариант"
-                            else:
-                                answer_text = answer.value
-                        except:
-                            answer_text = answer.value
-                    else:
-                        answer_text = answer.value
-                
-                ws_responses.cell(row=row, column=col, value=answer_text).font = data_font
-                ws_responses.cell(row=row, column=col).border = border
-                col += 1
-        
-        # Устанавливаем ширину колонок
-        ws_responses.column_dimensions['A'].width = 5
-        ws_responses.column_dimensions['B'].width = 15
-        ws_responses.column_dimensions['C'].width = 20
-        ws_responses.column_dimensions['D'].width = 15
-        ws_responses.column_dimensions['E'].width = 15
-        
-        # Устанавливаем ширину для колонок вопросов
-        for i in range(len(survey.questions)):
-            col_letter = chr(ord('F') + i)
-            ws_responses.column_dimensions[col_letter].width = 30
-        
-        # Сохраняем файл в память
+        # Сохраняем в BytesIO
         output = BytesIO()
         wb.save(output)
         output.seek(0)
         
         # Отправляем файл
-        filename = f"survey_{survey.id}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = f"survey_{survey_id}_enhanced_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         return send_file(
             output,
             as_attachment=True,
@@ -1969,96 +1568,284 @@ def get_survey_analytics(survey_id):
     }
 
 def analyze_question(question, responses):
-    """Анализ конкретного вопроса"""
+    """Расширенный анализ конкретного вопроса с полезными метриками"""
     answers = Answer.query.filter_by(question_id=question.id).all()
     
     analytics = {
         'question': question,
         'total_answers': len(answers),
         'response_rate': 0,
-        'data': {}
+        'data': {},
+        'insights': [],
+        'recommendations': [],
+        'statistics': {}
     }
     
     if question.type in ['single_choice', 'multiple_choice', 'dropdown']:
         options = json.loads(question.options) if question.options else []
         option_counts = {option: 0 for option in options}
+        other_count = 0
         
         for answer in answers:
             if answer.value in option_counts:
                 option_counts[answer.value] += 1
-            elif answer.is_other:
-                if 'Другие' not in option_counts:
-                    option_counts['Другие'] = 0
-                option_counts['Другие'] += 1
+            elif answer.is_other or answer.value == 'other':
+                other_count += 1
         
-        analytics['data'] = option_counts
+        if other_count > 0:
+            option_counts['Другие'] = other_count
+        
+        # Вычисляем проценты
+        total_responses = len(answers)
+        option_percentages = {k: (v / total_responses * 100) if total_responses > 0 else 0 
+                             for k, v in option_counts.items()}
+        
+        # Находим наиболее популярные варианты
+        sorted_options = sorted(option_counts.items(), key=lambda x: x[1], reverse=True)
+        most_popular = sorted_options[0] if sorted_options else ('Нет данных', 0)
+        
+        analytics['data'] = {
+            'counts': option_counts,
+            'percentages': option_percentages,
+            'most_popular': most_popular,
+            'distribution': sorted_options
+        }
+        
+        # Добавляем инсайты
+        if most_popular[1] > total_responses * 0.5:
+            analytics['insights'].append(f"Вариант '{most_popular[0]}' выбрали {most_popular[1]} человек ({option_percentages[most_popular[0]]:.1f}%)")
+        
+        if other_count > total_responses * 0.1:
+            analytics['insights'].append(f"Значительное количество 'других' ответов: {other_count} ({other_count/total_responses*100:.1f}%)")
+        
+        # Рекомендации
+        if len([x for x in option_counts.values() if x > 0]) < 3:
+            analytics['recommendations'].append("Рассмотрите добавление большего количества вариантов ответов")
+        
+        if other_count > total_responses * 0.2:
+            analytics['recommendations'].append("Частые 'другие' ответы указывают на необходимость пересмотра вариантов")
+        
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type == 'checkbox':
         options = json.loads(question.options) if question.options else []
         option_counts = {option: 0 for option in options}
+        other_count = 0
         
         for answer in answers:
-            selected_options = json.loads(answer.value) if answer.value.startswith('[') else [answer.value]
-            for option in selected_options:
-                if option in option_counts:
-                    option_counts[option] += 1
-                elif answer.is_other:
-                    if 'Другие' not in option_counts:
-                        option_counts['Другие'] = 0
-                    option_counts['Другие'] += 1
+            if answer.value and answer.value.startswith('['):
+                selected_options = json.loads(answer.value)
+                for option in selected_options:
+                    if option in option_counts:
+                        option_counts[option] += 1
+                    elif answer.is_other:
+                        other_count += 1
         
-        analytics['data'] = option_counts
+        if other_count > 0:
+            option_counts['Другие'] = other_count
+        
+        # Вычисляем проценты от общего количества ответов
+        total_responses = len(answers)
+        option_percentages = {k: (v / total_responses * 100) if total_responses > 0 else 0 
+                             for k, v in option_counts.items()}
+        
+        # Статистика по количеству выбранных вариантов
+        selections_per_response = []
+        for answer in answers:
+            if answer.value and answer.value.startswith('['):
+                selections = len(json.loads(answer.value))
+                selections_per_response.append(selections)
+        
+        avg_selections = sum(selections_per_response) / len(selections_per_response) if selections_per_response else 0
+        
+        analytics['data'] = {
+            'counts': option_counts,
+            'percentages': option_percentages,
+            'avg_selections_per_response': avg_selections,
+            'total_selections': sum(option_counts.values())
+        }
+        
+        analytics['insights'].append(f"В среднем выбирают {avg_selections:.1f} варианта из {len(options)}")
+        
+        if avg_selections > len(options) * 0.7:
+            analytics['recommendations'].append("Пользователи выбирают много вариантов - рассмотрите ограничение количества выборов")
+        
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['rating', 'scale']:
-        ratings = [int(answer.value) for answer in answers if answer.value.isdigit()]
+        ratings = [int(answer.value) for answer in answers if answer.value and answer.value.isdigit()]
         if ratings:
+            min_rating = question.rating_min or 1
+            max_rating = question.rating_max or 10
+            
+            avg_rating = sum(ratings) / len(ratings)
+            median_rating = sorted(ratings)[len(ratings) // 2]
+            
+            # Распределение по шкале
+            distribution = {str(i): ratings.count(i) for i in range(min_rating, max_rating + 1)}
+            
+            # Стандартное отклонение
+            variance = sum((x - avg_rating) ** 2 for x in ratings) / len(ratings)
+            std_deviation = variance ** 0.5
+            
+            # Коэффициент вариации
+            cv = (std_deviation / avg_rating) * 100 if avg_rating > 0 else 0
+            
             analytics['data'] = {
                 'min': min(ratings),
                 'max': max(ratings),
-                'avg': sum(ratings) / len(ratings),
-                'distribution': {str(i): ratings.count(i) for i in range(question.rating_min or 1, (question.rating_max or 10) + 1)}
+                'avg': round(avg_rating, 2),
+                'median': median_rating,
+                'std_deviation': round(std_deviation, 2),
+                'coefficient_of_variation': round(cv, 2),
+                'distribution': distribution,
+                'total_responses': len(ratings)
             }
+            
+            # Инсайты
+            if avg_rating > (min_rating + max_rating) * 0.7:
+                analytics['insights'].append(f"Высокая средняя оценка: {avg_rating:.1f} из {max_rating}")
+            elif avg_rating < (min_rating + max_rating) * 0.3:
+                analytics['insights'].append(f"Низкая средняя оценка: {avg_rating:.1f} из {max_rating}")
+            
+            if cv < 20:
+                analytics['insights'].append("Низкая вариативность ответов - мнения схожи")
+            elif cv > 50:
+                analytics['insights'].append("Высокая вариативность ответов - мнения сильно различаются")
+            
+            # Рекомендации
+            if std_deviation > (max_rating - min_rating) * 0.3:
+                analytics['recommendations'].append("Большой разброс оценок - рассмотрите уточняющие вопросы")
+            
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['text', 'text_paragraph']:
-        text_answers = [answer.value for answer in answers if answer.value]
-        avg_length = sum(len(text) for text in text_answers) / len(text_answers) if text_answers else 0
-        analytics['data'] = {
-            'total_texts': len(text_answers),
-            'avg_length': avg_length,
-            'answers': text_answers
-        }
+        text_answers = [answer.value for answer in answers if answer.value and answer.value.strip()]
+        
+        if text_answers:
+            lengths = [len(text) for text in text_answers]
+            avg_length = sum(lengths) / len(lengths)
+            median_length = sorted(lengths)[len(lengths) // 2]
+            max_length = max(lengths)
+            min_length = min(lengths)
+            
+            # Анализ ключевых слов (простейший)
+            all_words = []
+            for text in text_answers:
+                words = text.lower().split()
+                all_words.extend(words)
+            
+            word_freq = {}
+            for word in all_words:
+                if len(word) > 3:  # Игнорируем короткие слова
+                    word_freq[word] = word_freq.get(word, 0) + 1
+            
+            top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+            
+            analytics['data'] = {
+                'total_texts': len(text_answers),
+                'avg_length': round(avg_length, 1),
+                'median_length': median_length,
+                'max_length': max_length,
+                'min_length': min_length,
+                'top_words': top_words,
+                'sample_answers': text_answers[:3]  # Первые 3 ответа для примера
+            }
+            
+            # Инсайты
+            if avg_length < 20:
+                analytics['insights'].append("Короткие ответы - возможно, вопрос слишком простой")
+            elif avg_length > 200:
+                analytics['insights'].append("Длинные ответы - пользователи готовы делиться подробностями")
+            
+            if top_words:
+                analytics['insights'].append(f"Частые слова: {', '.join([w[0] for w in top_words[:5]])}")
+            
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['grid', 'checkbox_grid']:
         grid_data = {}
-        for answer in answers:
-            if '|' in answer.value:
-                row, col = answer.value.split('|', 1)
-                key = f"{row}|{col}"
-                if key in grid_data:
-                    grid_data[key] += 1
-                else:
-                    grid_data[key] = 1
+        row_totals = {}
+        col_totals = {}
         
-        analytics['data'] = grid_data
+        for answer in answers:
+            if answer.value:
+                if answer.value.startswith('['):
+                    # checkbox_grid - массив ответов
+                    selected_options = json.loads(answer.value)
+                    for option in selected_options:
+                        if '|' in option:
+                            row, col = option.split('|', 1)
+                            key = f"{row}|{col}"
+                            grid_data[key] = grid_data.get(key, 0) + 1
+                            row_totals[row] = row_totals.get(row, 0) + 1
+                            col_totals[col] = col_totals.get(col, 0) + 1
+                elif '|' in answer.value:
+                    # grid - один ответ
+                    row, col = answer.value.split('|', 1)
+                    key = f"{row}|{col}"
+                    grid_data[key] = grid_data.get(key, 0) + 1
+                    row_totals[row] = row_totals.get(row, 0) + 1
+                    col_totals[col] = col_totals.get(col, 0) + 1
+        
+        # Находим наиболее популярные комбинации
+        sorted_combinations = sorted(grid_data.items(), key=lambda x: x[1], reverse=True)
+        
+        analytics['data'] = {
+            'combinations': grid_data,
+            'row_totals': row_totals,
+            'col_totals': col_totals,
+            'most_popular': sorted_combinations[0] if sorted_combinations else ('Нет данных', 0),
+            'total_selections': sum(grid_data.values())
+        }
+        
+        if sorted_combinations:
+            most_popular = sorted_combinations[0]
+            analytics['insights'].append(f"Наиболее популярная комбинация: {most_popular[0]} ({most_popular[1]} раз)")
+        
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
     elif question.type in ['date', 'time']:
         date_time_answers = [answer.value for answer in answers if answer.value]
-        analytics['data'] = date_time_answers
-        analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
         
-    elif question.type == 'text':
-        text_answers = [answer.value for answer in answers]
-        analytics['data'] = {
-            'total_texts': len(text_answers),
-            'avg_length': sum(len(text) for text in text_answers) / len(text_answers) if text_answers else 0,
-            'sample_answers': text_answers[:5]  # Первые 5 ответов для примера
-        }
+        if date_time_answers:
+            # Анализ дат
+            if question.type == 'date':
+                try:
+                    dates = [datetime.strptime(d, '%Y-%m-%d').date() for d in date_time_answers]
+                    min_date = min(dates)
+                    max_date = max(dates)
+                    date_range = (max_date - min_date).days
+                    
+                    analytics['data'] = {
+                        'answers': date_time_answers,
+                        'min_date': min_date.isoformat(),
+                        'max_date': max_date.isoformat(),
+                        'date_range_days': date_range,
+                        'total_answers': len(date_time_answers)
+                    }
+                    
+                    if date_range > 365:
+                        analytics['insights'].append(f"Широкий диапазон дат: {date_range} дней")
+                    
+                except:
+                    analytics['data'] = {'answers': date_time_answers}
+            else:
+                # Анализ времени
+                analytics['data'] = {
+                    'answers': date_time_answers,
+                    'total_answers': len(date_time_answers)
+                }
+        
         analytics['response_rate'] = (len(answers) / len(responses)) * 100 if responses else 0
+    
+    # Общие статистики
+    analytics['statistics'] = {
+        'response_rate': analytics['response_rate'],
+        'total_responses': len(answers),
+        'completion_rate': (len(answers) / len(responses)) * 100 if responses else 0,
+        'is_required': question.is_required
+    }
     
     return analytics
 

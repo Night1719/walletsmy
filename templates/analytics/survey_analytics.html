@@ -115,6 +115,77 @@
 </div>
 {% endif %}
 
+<!-- Ключевые инсайты и рекомендации -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Ключевые инсайты
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set insights = [] %}
+                {% for q_analytics in analytics.question_analytics %}
+                    {% if q_analytics.insights %}
+                        {% for insight in q_analytics.insights %}
+                            {% set _ = insights.append(insight) %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if insights %}
+                    <ul class="list-unstyled mb-0">
+                        {% for insight in insights[:5] %}
+                        <li class="mb-2">
+                            <i class="fas fa-arrow-right text-info me-2"></i>
+                            {{ insight }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Инсайты будут доступны после получения большего количества ответов</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>
+                    Рекомендации
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set recommendations = [] %}
+                {% for q_analytics in analytics.question_analytics %}
+                    {% if q_analytics.recommendations %}
+                        {% for rec in q_analytics.recommendations %}
+                            {% set _ = recommendations.append(rec) %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if recommendations %}
+                    <ul class="list-unstyled mb-0">
+                        {% for rec in recommendations[:5] %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-warning me-2"></i>
+                            {{ rec }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Рекомендации будут доступны после анализа ответов</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Анализ по вопросам -->
 <div class="row">
     <div class="col">
