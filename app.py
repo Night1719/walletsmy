@@ -858,6 +858,71 @@ def survey_results(survey_id):
                         'error': 'Нет валидных ответов'
                     }
                     
+            elif question.type in ['grid', 'checkbox_grid']:
+                # Обработка сеток
+                try:
+                    grid_rows = json.loads(question.grid_rows) if question.grid_rows else []
+                    grid_columns = json.loads(question.grid_columns) if question.grid_columns else []
+                    
+                    if not grid_rows or not grid_columns:
+                        results[question.id] = {
+                            'type': 'grid',
+                            'text': question.text,
+                            'data': {},
+                            'error': 'Сетка не настроена (отсутствуют строки или столбцы)'
+                        }
+                    else:
+                        # Собираем данные по сетке
+                        grid_data = {}
+                        row_totals = {row: 0 for row in grid_rows}
+                        col_totals = {col: 0 for col in grid_columns}
+                        
+                        for answer in question.answers:
+                            if answer.value:
+                                if question.type == 'checkbox_grid' and answer.value.startswith('['):
+                                    # Для checkbox_grid - массив ответов
+                                    try:
+                                        selected_options = json.loads(answer.value)
+                                        for option in selected_options:
+                                            if '|' in option:
+                                                row, col = option.split('|', 1)
+                                                if row in grid_rows and col in grid_columns:
+                                                    key = f"{row}|{col}"
+                                                    grid_data[key] = grid_data.get(key, 0) + 1
+                                                    row_totals[row] += 1
+                                                    col_totals[col] += 1
+                                    except (json.JSONDecodeError, ValueError):
+                                        continue
+                                elif '|' in answer.value:
+                                    # Для grid - один ответ
+                                    row, col = answer.value.split('|', 1)
+                                    if row in grid_rows and col in grid_columns:
+                                        key = f"{row}|{col}"
+                                        grid_data[key] = grid_data.get(key, 0) + 1
+                                        row_totals[row] += 1
+                                        col_totals[col] += 1
+                        
+                        results[question.id] = {
+                            'type': 'grid',
+                            'text': question.text,
+                            'data': {
+                                'grid_data': grid_data,
+                                'row_totals': row_totals,
+                                'col_totals': col_totals,
+                                'rows': grid_rows,
+                                'columns': grid_columns
+                            }
+                        }
+                        
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"❌ Ошибка обработки сетки для вопроса {question.id}: {e}")
+                    results[question.id] = {
+                        'type': 'grid',
+                        'text': question.text,
+                        'data': {},
+                        'error': f'Ошибка обработки сетки: {str(e)}'
+                    }
+                    
             else:  # text
                 answers = []
                 for answer in question.answers:

@@ -186,6 +186,88 @@
                     </div>
                 {% endif %}
                                 
+                            {% elif result.type == 'grid' %}
+                                <!-- Сетка -->
+                                {% if result.error %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ result.error }}
+                                    </div>
+                                {% elif result.data and result.data.grid_data %}
+                                    <div class="grid-results">
+                                        <h6 class="mb-3">Результаты сетки:</h6>
+                                        
+                                        <!-- Таблица результатов -->
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th></th>
+                                                        {% for col in result.data.columns %}
+                                                            <th class="text-center">{{ col }}</th>
+                                                        {% endfor %}
+                                                        <th class="text-center"><strong>Итого</strong></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in result.data.rows %}
+                                                        <tr>
+                                                            <td class="fw-bold">{{ row }}</td>
+                                                            {% for col in result.data.columns %}
+                                                                {% set key = row + '|' + col %}
+                                                                <td class="text-center">
+                                                                    {{ result.data.grid_data.get(key, 0) }}
+                                                                </td>
+                                                            {% endfor %}
+                                                            <td class="text-center fw-bold">
+                                                                {{ result.data.row_totals.get(row, 0) }}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                    <tr class="table-light">
+                                                        <td class="fw-bold">Итого</td>
+                                                        {% for col in result.data.columns %}
+                                                            <td class="text-center fw-bold">
+                                                                {{ result.data.col_totals.get(col, 0) }}
+                                                            </td>
+                                                        {% endfor %}
+                                                        <td class="text-center fw-bold">
+                                                            {{ result.data.grid_data.values() | sum }}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <!-- Статистика по строкам -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Популярность строк:</h6>
+                                                {% for row, count in result.data.row_totals.items() %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="small">{{ row }}</span>
+                                                        <span class="badge bg-primary">{{ count }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Популярность столбцов:</h6>
+                                                {% for col, count in result.data.col_totals.items() %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="small">{{ col }}</span>
+                                                        <span class="badge bg-success">{{ count }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Нет данных для отображения
+                                    </div>
+                                {% endif %}
+                                
                             {% elif result.type == 'text' %}
                                 <!-- Текстовые ответы -->
                                 {% if result.answers %}
@@ -676,4 +758,51 @@ function printResults() {
     window.print();
 }
 </script>
+
+<style>
+/* Стили для сеток */
+.grid-results .table {
+    font-size: 0.9rem;
+}
+
+.grid-results .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border: 1px solid #dee2e6;
+}
+
+.grid-results .table td {
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.grid-results .table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.grid-results .table tbody tr:last-child {
+    background-color: #e9ecef;
+    font-weight: 600;
+}
+
+/* Темная тема для сеток */
+[data-bs-theme="dark"] .grid-results .table th {
+    background-color: #495057;
+    color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+[data-bs-theme="dark"] .grid-results .table td {
+    border-color: #6c757d;
+    color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .grid-results .table tbody tr:hover {
+    background-color: #495057;
+}
+
+[data-bs-theme="dark"] .grid-results .table tbody tr:last-child {
+    background-color: #6c757d;
+}
+</style>
 {% endblock %}
