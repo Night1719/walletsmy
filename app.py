@@ -231,7 +231,7 @@ def index():
     """Главная страница с общей статистикой"""
     # Получаем общую статистику
     total_surveys = Survey.query.count()
-    total_responses = Response.query.count()
+    total_responses = SurveyResponse.query.count()
     total_users = User.query.count()
     active_surveys = Survey.query.filter_by(is_active=True).count()
     
