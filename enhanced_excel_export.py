@@ -12,6 +12,16 @@ from io import BytesIO
 import json
 from datetime import datetime, timedelta
 
+# Импортируем модели базы данных
+try:
+    from app import Answer
+except ImportError:
+    # Если импорт не работает, создаем заглушку
+    class Answer:
+        @staticmethod
+        def query():
+            return None
+
 def create_enhanced_excel_report(survey, responses, question_analytics):
     """Создает улучшенный Excel отчет с графиками и аналитикой"""
     
@@ -292,7 +302,14 @@ def create_enhanced_excel_report(survey, responses, question_analytics):
         # Ответы на вопросы
         col = 6
         for question in survey.questions:
-            answer = Answer.query.filter_by(response_id=response.id, question_id=question.id).first()
+            # Ищем ответ через relationship
+            answer = None
+            if hasattr(response, 'answers'):
+                for ans in response.answers:
+                    if ans.question_id == question.id:
+                        answer = ans
+                        break
+            
             if answer and answer.value:
                 answer_text = format_answer_for_excel(answer, question)
                 ws_responses.cell(row=row, column=col, value=answer_text)
@@ -335,7 +352,8 @@ def calculate_completion_rate(survey, responses):
     completed_responses = 0
     
     for response in responses:
-        answered_questions = Answer.query.filter_by(response_id=response.id).count()
+        # Подсчитываем количество ответов через relationship
+        answered_questions = len(response.answers) if hasattr(response, 'answers') else 0
         if answered_questions >= total_questions * 0.8:  # 80% вопросов отвечено
             completed_responses += 1
     
