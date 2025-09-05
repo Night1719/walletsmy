@@ -7,17 +7,32 @@ import os
 from datetime import datetime
 import json
 from functools import wraps
+import secrets
+
+# Импортируем настройки безопасности
+from security_config import SecurityConfig
+from security_middleware import SecurityMiddleware, require_security_headers, admin_only, rate_limit
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///surveys.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Применяем конфигурацию безопасности
+security_config = SecurityConfig.get_security_config()
+app.config.update(security_config)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Инициализируем middleware безопасности
+security_middleware = SecurityMiddleware(app)
+
+# Настройки для продакшена
+if not app.debug:
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Модели базы данных
 class User(UserMixin, db.Model):
@@ -246,17 +261,35 @@ def index():
                          recent_surveys=recent_surveys)
 
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit('5 per minute')
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
+        # Валидация входных данных
+        username = SecurityConfig.validate_input(request.form.get('username'), 'username', 50)
         password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Некорректные данные', 'error')
+            return render_template('login.html')
+        
+        # Проверяем длину пароля
+        if len(password) < 6 or len(password) > 128:
+            flash('Неверное имя пользователя или пароль', 'error')
+            return render_template('login.html')
+        
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password_hash, password):
-            login_user(user)
+            login_user(user, remember=True)
             flash('Успешный вход!', 'success')
+            
+            # Логируем успешный вход
+            security_middleware.log_security_event('LOGIN_SUCCESS', f"User: {username}")
+            
             return redirect(url_for('dashboard'))
         else:
+            # Логируем неудачную попытку входа
+            security_middleware.log_security_event('LOGIN_FAILED', f"Username: {username}")
             flash('Неверное имя пользователя или пароль', 'error')
     
     return render_template('login.html')
@@ -286,6 +319,7 @@ def dashboard():
 
 @app.route('/admin')
 @admin_required
+@require_security_headers
 def admin_panel():
     users = User.query.all()
     surveys = Survey.query.all()
@@ -509,10 +543,17 @@ def upload_ssl_text():
 @app.route('/surveys/create', methods=['GET', 'POST'])
 @login_required
 @survey_creation_required
+@rate_limit('10 per hour')
 def create_survey():
     if request.method == 'POST':
-        title = request.form.get('title')
-        description = request.form.get('description')
+        # Валидация входных данных
+        title = SecurityConfig.validate_input(request.form.get('title'), 'text', 200)
+        description = SecurityConfig.validate_input(request.form.get('description'), 'text', 1000)
+        
+        if not title:
+            flash('Название опроса обязательно', 'error')
+            return render_template('create_survey.html')
+        
         is_anonymous = 'is_anonymous' in request.form
         require_auth = 'require_auth' in request.form
         require_name = 'require_name' in request.form
