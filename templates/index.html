@@ -8,11 +8,11 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto">
-                <h1 class="display-4 fw-bold text-dark dark:text-light mb-4">
+                <h1 class="display-4 fw-bold text-dark mb-4 hero-title">
                     <i class="fas fa-chart-bar text-danger me-3"></i>
                     BG Survey Platform
                 </h1>
-                <p class="lead text-muted dark:text-light mb-4">
+                <p class="lead text-muted mb-4 hero-description">
                     Корпоративная платформа для создания, проведения и анализа опросов компании BunterGroup
                 </p>
                 <div class="d-flex justify-content-center gap-3 mb-5">
@@ -99,8 +99,8 @@
     <div class="container">
         <div class="row">
             <div class="col-12 text-center mb-5">
-                <h2 class="fw-bold text-dark dark:text-light mb-3">Возможности платформы</h2>
-                <p class="text-muted dark:text-light lead">Все необходимое для создания профессиональных опросов</p>
+                <h2 class="fw-bold text-dark mb-3 features-title">Возможности платформы</h2>
+                <p class="text-muted lead features-description">Все необходимое для создания профессиональных опросов</p>
             </div>
         </div>
         
@@ -171,8 +171,8 @@
     <div class="container">
         <div class="row">
             <div class="col-12 text-center mb-4">
-                <h3 class="fw-bold text-dark dark:text-light">Последние опросы</h3>
-                <p class="text-muted dark:text-light">Недавно созданные опросы в системе</p>
+                <h3 class="fw-bold text-dark recent-title">Последние опросы</h3>
+                <p class="text-muted recent-description">Недавно созданные опросы в системе</p>
             </div>
         </div>
         
@@ -211,8 +211,8 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto">
-                <h3 class="fw-bold text-dark dark:text-light mb-4">Готовы начать?</h3>
-                <p class="text-muted dark:text-light mb-4 lead">
+                <h3 class="fw-bold text-dark mb-4 cta-title">Готовы начать?</h3>
+                <p class="text-muted mb-4 lead cta-description">
                     Создавайте профессиональные опросы, собирайте данные и анализируйте результаты в реальном времени
                 </p>
                 {% if not current_user.is_authenticated %}
@@ -257,36 +257,63 @@
     background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
 }
 
-[data-bs-theme="dark"] .hero-section h1 {
+[data-bs-theme="dark"] .hero-title {
     color: #f7fafc !important;
 }
 
-[data-bs-theme="dark"] .hero-section p {
+[data-bs-theme="dark"] .hero-description {
     color: #e2e8f0 !important;
 }
 
-[data-bs-theme="dark"] .features-section h2 {
+[data-bs-theme="dark"] .features-title {
     color: #f7fafc !important;
 }
 
-[data-bs-theme="dark"] .features-section .lead {
+[data-bs-theme="dark"] .features-description {
     color: #e2e8f0 !important;
 }
 
-[data-bs-theme="dark"] .recent-surveys h3 {
+[data-bs-theme="dark"] .recent-title {
     color: #f7fafc !important;
 }
 
-[data-bs-theme="dark"] .recent-surveys p {
+[data-bs-theme="dark"] .recent-description {
     color: #e2e8f0 !important;
 }
 
-[data-bs-theme="dark"] .cta-section h3 {
+[data-bs-theme="dark"] .cta-title {
     color: #f7fafc !important;
 }
 
-[data-bs-theme="dark"] .cta-section .lead {
+[data-bs-theme="dark"] .cta-description {
     color: #e2e8f0 !important;
+}
+
+/* Дополнительная поддержка темной темы */
+[data-bs-theme="dark"] .hero-section .text-dark {
+    color: #f7fafc !important;
+}
+
+[data-bs-theme="dark"] .hero-section .text-muted {
+    color: #e2e8f0 !important;
+}
+
+/* Универсальные правила для темной темы */
+[data-bs-theme="dark"] .text-dark {
+    color: #f7fafc !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .lead {
+    color: #e2e8f0 !important;
+}
+
+[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2, [data-bs-theme="dark"] h3, 
+[data-bs-theme="dark"] h4, [data-bs-theme="dark"] h5, [data-bs-theme="dark"] h6 {
+    color: #f7fafc !important;
 }
 
 .stats-section .card {
