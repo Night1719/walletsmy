@@ -8,12 +8,13 @@ from keyboards import (
     instructions_otp_keyboard,
     main_menu_after_auth_keyboard
 )
+from aiogram.types import WebAppInfo
 from storage import get_session
 from states import InstructionsStates
 from config import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, 
     SMTP_USE_TLS, SMTP_USE_SSL, CORP_EMAIL_DOMAIN, 
-    INSTRUCTIONS_OTP_EXPIRE_MINUTES
+    INSTRUCTIONS_OTP_EXPIRE_MINUTES, MINIAPP_URL
 )
 from api_client import get_user_by_phone, get_user_by_email
 from file_server import get_instruction_files, save_temp_file, cleanup_temp_file, get_instruction_info
@@ -257,56 +258,48 @@ async def instructions_email_type(message: types.Message, state: FSMContext):
 
 
 async def _send_instruction_files(message: types.Message, instruction_type: str):
-    """Send instruction files to user with validation"""
-    await message.answer("📥 Загружаю и проверяю инструкции...")
-    
+    """Send instruction files via Mini App"""
     # Get instruction info
     info = get_instruction_info(instruction_type)
     if not info["available"]:
         await message.answer("❌ Инструкции временно недоступны. Попробуйте позже.")
         return
     
-    # Download and validate files
+    # Get available formats
     files = get_instruction_files(instruction_type)
-    sent_files = 0
-    validation_errors = []
+    available_formats = [fmt for fmt, content in files.items() if content is not None]
     
-    for format_type, content in files.items():
-        if content is None:
-            validation_errors.append(f"{format_type.upper()}: файл недоступен или не прошел проверку")
-            continue
-        
-        try:
-            # Save to temporary file
-            temp_path = save_temp_file(content, format_type)
-            if not temp_path:
-                validation_errors.append(f"{format_type.upper()}: ошибка создания временного файла")
-                continue
-            
-            # Send file
-            file_obj = FSInputFile(temp_path, filename=f"instruction.{format_type}")
-            await message.answer_document(file_obj, caption=f"📄 Инструкция ({format_type.upper()})")
-            
-            # Clean up
-            cleanup_temp_file(temp_path)
-            sent_files += 1
-            
-        except Exception as e:
-            logger.error(f"Error sending {instruction_type} {format_type}: {e}")
-            validation_errors.append(f"{format_type.upper()}: ошибка отправки файла")
-            continue
+    if not available_formats:
+        await message.answer("❌ Инструкции временно недоступны. Попробуйте позже.")
+        return
     
-    # Send results
-    if sent_files == 0:
-        error_msg = "❌ Не удалось загрузить файлы инструкций."
-        if validation_errors:
-            error_msg += f"\n\nПричины:\n" + "\n".join(f"• {error}" for error in validation_errors)
-        await message.answer(error_msg)
-    else:
-        success_msg = f"✅ Отправлено {sent_files} файл(ов) инструкций."
-        if validation_errors:
-            success_msg += f"\n\n⚠️ Некоторые файлы недоступны:\n" + "\n".join(f"• {error}" for error in validation_errors)
-        await message.answer(success_msg)
+    # Create Mini App button
+    web_app_info = WebAppInfo(url=MINIAPP_URL)
+    
+    # Create keyboard with Mini App button
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📚 Открыть инструкции", web_app=web_app_info)
+    
+    # Format message based on instruction type
+    type_names = {
+        "1c_ar2": "1С AR2",
+        "1c_dm": "1С DM", 
+        "email_iphone": "iPhone",
+        "email_android": "Android",
+        "email_outlook": "Outlook"
+    }
+    
+    type_name = type_names.get(instruction_type, instruction_type)
+    formats_text = ", ".join([fmt.upper() for fmt in available_formats])
+    
+    message_text = (
+        f"📚 Инструкции: {type_name}\n\n"
+        f"📄 Доступные форматы: {formats_text}\n\n"
+        f"✅ Нажмите кнопку ниже для просмотра инструкций в удобном интерфейсе"
+    )
+    
+    await message.answer(message_text, reply_markup=kb.as_markup())
 
 
 @router.message(InstructionsStates.choosing_1c_type, F.text == "⬅️ Назад")

@@ -79,6 +79,11 @@ FILE_SERVER_USE_AUTH = os.getenv("FILE_SERVER_USE_AUTH", "false").lower() == "tr
 # === Instructions OTP ===
 INSTRUCTIONS_OTP_EXPIRE_MINUTES = int(os.getenv("INSTRUCTIONS_OTP_EXPIRE_MINUTES", "5"))
 
+# === Telegram Mini App ===
+MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com/miniapp")
+MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token
+MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "https://your-domain.com/webhook")
+
 # === File Restrictions ===
 # Allowed file extensions for instructions
 ALLOWED_FILE_EXTENSIONS = os.getenv("ALLOWED_FILE_EXTENSIONS", "pdf,docx,doc,txt").split(",")
@@ -88,11 +93,3 @@ FORBIDDEN_FILE_EXTENSIONS = os.getenv("FORBIDDEN_FILE_EXTENSIONS", "png,jpg,jpeg
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
 # Enable content validation (check for screenshots in files)
 ENABLE_CONTENT_VALIDATION = os.getenv("ENABLE_CONTENT_VALIDATION", "true").lower() == "true"
-
-# === File Upload Restrictions ===
-# Block all file uploads from users (except in specific contexts)
-BLOCK_FILE_UPLOADS = os.getenv("BLOCK_FILE_UPLOADS", "true").lower() == "true"
-# Allow file uploads only in these contexts (comma-separated)
-ALLOWED_UPLOAD_CONTEXTS = os.getenv("ALLOWED_UPLOAD_CONTEXTS", "").split(",")
-# Specific file types that are always blocked
-BLOCKED_UPLOAD_TYPES = os.getenv("BLOCKED_UPLOAD_TYPES", "photo,document,sticker,video,voice,video_note,animation").split(",")

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Инструкции - Helpdesk Bot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: var(--tg-theme-hint-color, #999999);
+            font-size: 14px;
+        }
+        
+        .instruction-section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .file-card {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--tg-theme-button-color, #2481cc);
+        }
+        
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .file-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .file-format {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            text-transform: uppercase;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ff4444;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .back-button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="back-button" onclick="goBack()">← Назад</button>
+        
+        <div class="header">
+            <h1>📚 Инструкции</h1>
+            <p>Выберите нужную инструкцию для просмотра</p>
+        </div>
+        
+        <div id="content">
+            <div class="loading">Загрузка инструкций...</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Set theme colors
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f8f9fa');
+        
+        // Instruction types and their display names
+        const instructionTypes = {
+            '1c_ar2': { name: '1С AR2', icon: '🔧' },
+            '1c_dm': { name: '1С DM', icon: '🔧' },
+            'email_iphone': { name: 'iPhone', icon: '📱' },
+            'email_android': { name: 'Android', icon: '🤖' },
+            'email_outlook': { name: 'Outlook', icon: '💻' }
+        };
+        
+        // Load instruction files
+        async function loadInstructions() {
+            try {
+                const content = document.getElementById('content');
+                let html = '';
+                
+                for (const [type, info] of Object.entries(instructionTypes)) {
+                    const response = await fetch(`/api/instructions/${type}`);
+                    const data = await response.json();
+                    
+                    if (data.available_files && data.available_files.length > 0) {
+                        html += `
+                            <div class="instruction-section">
+                                <div class="section-title">${info.icon} ${info.name}</div>
+                                <div class="file-grid">
+                                    ${data.available_files.map(file => `
+                                        <div class="file-card" onclick="openFile('${type}', '${file.format}')">
+                                            <div class="file-icon">${file.format === 'pdf' ? '📄' : '📝'}</div>
+                                            <div class="file-name">${file.format.toUpperCase()}</div>
+                                            <div class="file-format">${file.format}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                if (html === '') {
+                    html = '<div class="error">Инструкции временно недоступны</div>';
+                }
+                
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading instructions:', error);
+                document.getElementById('content').innerHTML = '<div class="error">Ошибка загрузки инструкций</div>';
+            }
+        }
+        
+        // Open file in viewer
+        function openFile(instructionType, fileFormat) {
+            const initData = tg.initData;
+            const url = `/viewer/${instructionType}/${fileFormat}?tgWebAppData=${encodeURIComponent(initData)}`;
+            window.open(url, '_blank');
+        }
+        
+        // Go back to bot
+        function goBack() {
+            tg.close();
+        }
+        
+        // Load instructions on page load
+        document.addEventListener('DOMContentLoaded', loadInstructions);
+    </script>
+</body>
+</html>
