@@ -53,6 +53,17 @@ async def employee_directory_prompt(message: types.Message, state: FSMContext):
     await message.answer("Введите фамилию или имя сотрудника для поиска:\n(или нажмите 🏠 Главное меню)")
 
 
+@router.message(F.text == "📚 Инструкции")
+async def instructions_prompt(message: types.Message, state: FSMContext):
+    session = get_session(message.from_user.id)
+    if not session:
+        await message.answer("Сначала авторизуйтесь: /start")
+        return
+    # Redirect to instructions handler
+    from handlers.instructions import instructions_start
+    await instructions_start(message, state)
+
+
 @router.message(F.text == "🏠 Главное меню")
 async def back_to_root_from_helpdesk(message: types.Message, state: FSMContext):
     session = get_session(message.from_user.id)

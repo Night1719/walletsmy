@@ -69,3 +69,12 @@ SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
 
 CORP_EMAIL_DOMAIN = os.getenv("CORP_EMAIL_DOMAIN", "")  # например bunter.ru
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "10"))
+
+# === File Server ===
+FILE_SERVER_BASE_URL = os.getenv("FILE_SERVER_BASE_URL", "")
+FILE_SERVER_USER = os.getenv("FILE_SERVER_USER", "")
+FILE_SERVER_PASS = os.getenv("FILE_SERVER_PASS", "")
+FILE_SERVER_USE_AUTH = os.getenv("FILE_SERVER_USE_AUTH", "false").lower() == "true"
+
+# === Instructions OTP ===
+INSTRUCTIONS_OTP_EXPIRE_MINUTES = int(os.getenv("INSTRUCTIONS_OTP_EXPIRE_MINUTES", "5"))

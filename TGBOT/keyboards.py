@@ -29,6 +29,7 @@ def main_menu_after_auth_keyboard():
     kb = ReplyKeyboardBuilder()
     kb.row(KeyboardButton(text="🛠 Helpdesk"))
     kb.row(KeyboardButton(text="👤 Справочник сотрудников"))
+    kb.row(KeyboardButton(text="📚 Инструкции"))
     return kb.as_markup(resize_keyboard=True)
 
 
@@ -112,3 +113,36 @@ def reply_to_task_inline(task_id: int):
     kb.button(text="💬 Ответить", callback_data=f"task:comment:{task_id}")
     kb.adjust(1)
     return kb.as_markup()
+
+
+def instructions_main_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="1️⃣ 1С"))
+    kb.row(KeyboardButton(text="📧 Почта"))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)
+
+
+def instructions_1c_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="AR2"))
+    kb.row(KeyboardButton(text="DM"))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)
+
+
+def instructions_email_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="📱 iPhone"))
+    kb.row(KeyboardButton(text="🤖 Android"))
+    kb.row(KeyboardButton(text="💻 Outlook"))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)
+
+
+def instructions_otp_keyboard():
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="📱 Отправить телефон", request_contact=True))
+    kb.row(KeyboardButton(text="✍️ Ввести вручную"))
+    kb.row(KeyboardButton(text="⬅️ Назад"))
+    return kb.as_markup(resize_keyboard=True)

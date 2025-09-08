@@ -31,3 +31,11 @@ class RegistrationStates(StatesGroup):
     awaiting_phone = State()
     awaiting_email = State()
     confirming = State()
+
+
+class InstructionsStates(StatesGroup):
+    awaiting_otp_phone = State()
+    awaiting_otp_code = State()
+    main_menu = State()
+    choosing_1c_type = State()
+    choosing_email_type = State()

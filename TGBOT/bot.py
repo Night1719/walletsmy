@@ -13,6 +13,7 @@ from handlers import my_tasks as my_tasks_handlers
 from handlers import approval as approval_handlers
 from handlers import create_task as create_task_handlers
 from handlers import settings as settings_handlers
+from handlers import instructions as instructions_handlers
 from background import background_worker
 from metrics import start_metrics_server
 
@@ -53,6 +54,7 @@ async def main_async():
     dp.include_router(approval_handlers.router)
     dp.include_router(create_task_handlers.router)
     dp.include_router(settings_handlers.router)
+    dp.include_router(instructions_handlers.router)
 
     await on_startup(bot, dp)
     await dp.start_polling(bot)
