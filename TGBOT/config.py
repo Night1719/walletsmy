@@ -78,3 +78,13 @@ FILE_SERVER_USE_AUTH = os.getenv("FILE_SERVER_USE_AUTH", "false").lower() == "tr
 
 # === Instructions OTP ===
 INSTRUCTIONS_OTP_EXPIRE_MINUTES = int(os.getenv("INSTRUCTIONS_OTP_EXPIRE_MINUTES", "5"))
+
+# === File Restrictions ===
+# Allowed file extensions for instructions
+ALLOWED_FILE_EXTENSIONS = os.getenv("ALLOWED_FILE_EXTENSIONS", "pdf,docx,doc,txt").split(",")
+# Forbidden file extensions (screenshots, images, etc.)
+FORBIDDEN_FILE_EXTENSIONS = os.getenv("FORBIDDEN_FILE_EXTENSIONS", "png,jpg,jpeg,gif,bmp,tiff,webp,ico,svg,psd,ai,sketch").split(",")
+# Maximum file size in MB
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
+# Enable content validation (check for screenshots in files)
+ENABLE_CONTENT_VALIDATION = os.getenv("ENABLE_CONTENT_VALIDATION", "true").lower() == "true"

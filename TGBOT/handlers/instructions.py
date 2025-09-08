@@ -257,8 +257,8 @@ async def instructions_email_type(message: types.Message, state: FSMContext):
 
 
 async def _send_instruction_files(message: types.Message, instruction_type: str):
-    """Send instruction files to user"""
-    await message.answer("📥 Загружаю инструкции...")
+    """Send instruction files to user with validation"""
+    await message.answer("📥 Загружаю и проверяю инструкции...")
     
     # Get instruction info
     info = get_instruction_info(instruction_type)
@@ -266,18 +266,21 @@ async def _send_instruction_files(message: types.Message, instruction_type: str)
         await message.answer("❌ Инструкции временно недоступны. Попробуйте позже.")
         return
     
-    # Download files
+    # Download and validate files
     files = get_instruction_files(instruction_type)
     sent_files = 0
+    validation_errors = []
     
     for format_type, content in files.items():
         if content is None:
+            validation_errors.append(f"{format_type.upper()}: файл недоступен или не прошел проверку")
             continue
         
         try:
             # Save to temporary file
             temp_path = save_temp_file(content, format_type)
             if not temp_path:
+                validation_errors.append(f"{format_type.upper()}: ошибка создания временного файла")
                 continue
             
             # Send file
@@ -290,12 +293,20 @@ async def _send_instruction_files(message: types.Message, instruction_type: str)
             
         except Exception as e:
             logger.error(f"Error sending {instruction_type} {format_type}: {e}")
+            validation_errors.append(f"{format_type.upper()}: ошибка отправки файла")
             continue
     
+    # Send results
     if sent_files == 0:
-        await message.answer("❌ Не удалось загрузить файлы инструкций.")
+        error_msg = "❌ Не удалось загрузить файлы инструкций."
+        if validation_errors:
+            error_msg += f"\n\nПричины:\n" + "\n".join(f"• {error}" for error in validation_errors)
+        await message.answer(error_msg)
     else:
-        await message.answer(f"✅ Отправлено {sent_files} файл(ов) инструкций.")
+        success_msg = f"✅ Отправлено {sent_files} файл(ов) инструкций."
+        if validation_errors:
+            success_msg += f"\n\n⚠️ Некоторые файлы недоступны:\n" + "\n".join(f"• {error}" for error in validation_errors)
+        await message.answer(success_msg)
 
 
 @router.message(InstructionsStates.choosing_1c_type, F.text == "⬅️ Назад")
