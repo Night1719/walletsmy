@@ -80,10 +80,11 @@ FILE_SERVER_USE_AUTH = os.getenv("FILE_SERVER_USE_AUTH", "false").lower() == "tr
 INSTRUCTIONS_OTP_EXPIRE_MINUTES = int(os.getenv("INSTRUCTIONS_OTP_EXPIRE_MINUTES", "5"))
 
 # === Telegram Mini App ===
-MINIAPP_URL = os.getenv("MINIAPP_URL", "http://localhost:5000/miniapp")
+MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com/miniapp")
 MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token
-MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "http://localhost:5000/webhook")
-MINIAPP_MODE = os.getenv("MINIAPP_MODE", "local")  # local or remote
+MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "https://your-domain.com")
+MINIAPP_MODE = os.getenv("MINIAPP_MODE", "remote")  # local or remote
+LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))  # Secure link expiry time
 
 # === File Restrictions ===
 # Allowed file extensions for instructions

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: helpdesk_bot_prod
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - INTRASERVICE_BASE_URL=${INTRASERVICE_BASE_URL}
+      - INTRASERVICE_USER=${INTRASERVICE_USER}
+      - INTRASERVICE_PASS=${INTRASERVICE_PASS}
+      - API_USER_ID=${API_USER_ID}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - CORP_EMAIL_DOMAIN=${CORP_EMAIL_DOMAIN}
+      - FILE_SERVER_BASE_URL=${FILE_SERVER_BASE_URL}
+      - FILE_SERVER_USER=${FILE_SERVER_USER}
+      - FILE_SERVER_PASS=${FILE_SERVER_PASS}
+      - MINIAPP_URL=${MINIAPP_URL}
+      - MINIAPP_WEBHOOK_URL=${MINIAPP_WEBHOOK_URL}
+      - MINIAPP_MODE=remote
+      - LINK_EXPIRY_MINUTES=${LINK_EXPIRY_MINUTES}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: unless-stopped
+
+  miniapp:
+    build: ./miniapp
+    container_name: helpdesk_miniapp_prod
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - FILE_SERVER_BASE_URL=${FILE_SERVER_BASE_URL}
+      - FILE_SERVER_USER=${FILE_SERVER_USER}
+      - FILE_SERVER_PASS=${FILE_SERVER_PASS}
+      - MINIAPP_URL=${MINIAPP_URL}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - MINIAPP_HOST=0.0.0.0
+      - MINIAPP_PORT=5000
+      - MINIAPP_DEBUG=false
+      - LINK_EXPIRY_MINUTES=${LINK_EXPIRY_MINUTES}
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    depends_on:
+      - bot
+
+  nginx:
+    image: nginx:alpine
+    container_name: helpdesk_nginx_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    restart: unless-stopped
+    depends_on:
+      - miniapp

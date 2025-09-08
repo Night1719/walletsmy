@@ -9,12 +9,13 @@ from keyboards import (
     main_menu_after_auth_keyboard
 )
 from aiogram.types import WebAppInfo
+import requests
 from storage import get_session
 from states import InstructionsStates
 from config import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, 
     SMTP_USE_TLS, SMTP_USE_SSL, CORP_EMAIL_DOMAIN, 
-    INSTRUCTIONS_OTP_EXPIRE_MINUTES, MINIAPP_URL
+    INSTRUCTIONS_OTP_EXPIRE_MINUTES, MINIAPP_URL, MINIAPP_WEBHOOK_URL
 )
 from api_client import get_user_by_phone, get_user_by_email
 from file_server import get_instruction_files, save_temp_file, cleanup_temp_file, get_instruction_info
@@ -258,7 +259,7 @@ async def instructions_email_type(message: types.Message, state: FSMContext):
 
 
 async def _send_instruction_files(message: types.Message, instruction_type: str):
-    """Send instruction files via Mini App"""
+    """Send instruction files via secure Mini App links"""
     # Get instruction info
     info = get_instruction_info(instruction_type)
     if not info["available"]:
@@ -273,14 +274,6 @@ async def _send_instruction_files(message: types.Message, instruction_type: str)
         await message.answer("❌ Инструкции временно недоступны. Попробуйте позже.")
         return
     
-    # Create Mini App button
-    web_app_info = WebAppInfo(url=MINIAPP_URL)
-    
-    # Create keyboard with Mini App button
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
-    kb = InlineKeyboardBuilder()
-    kb.button(text="📚 Открыть инструкции", web_app=web_app_info)
-    
     # Format message based on instruction type
     type_names = {
         "1c_ar2": "1С AR2",
@@ -293,14 +286,91 @@ async def _send_instruction_files(message: types.Message, instruction_type: str)
     type_name = type_names.get(instruction_type, instruction_type)
     formats_text = ", ".join([fmt.upper() for fmt in available_formats])
     
+    # Create keyboard with format buttons
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    
+    for fmt in available_formats:
+        kb.button(
+            text=f"📄 {fmt.upper()}", 
+            callback_data=f"secure_link:{instruction_type}:{fmt}"
+        )
+    
+    kb.adjust(1)  # One button per row
+    
     message_text = (
         f"📚 Инструкции: {type_name}\n\n"
         f"📄 Доступные форматы: {formats_text}\n\n"
-        f"✅ Нажмите кнопку ниже для просмотра инструкций в удобном интерфейсе"
+        f"🔒 Выберите формат для безопасного просмотра (ссылка действительна 40 минут)"
     )
     
     await message.answer(message_text, reply_markup=kb.as_markup())
 
+
+@router.callback_query(F.data.startswith("secure_link:"))
+async def create_secure_link(callback: types.CallbackQuery):
+    """Create secure link for instruction file"""
+    try:
+        # Parse callback data
+        _, instruction_type, file_format = callback.data.split(":", 2)
+        
+        # Get user ID
+        user_id = callback.from_user.id
+        
+        # Create secure link via API
+        api_url = f"{MINIAPP_WEBHOOK_URL.rstrip('/')}/api/secure/create-link"
+        
+        response = requests.post(api_url, json={
+            "instruction_type": instruction_type,
+            "file_format": file_format,
+            "user_id": user_id
+        }, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            secure_url = data["secure_url"]
+            expires_in = data["expires_in_minutes"]
+            
+            # Create Mini App button
+            web_app_info = WebAppInfo(url=secure_url)
+            
+            # Format message
+            type_names = {
+                "1c_ar2": "1С AR2",
+                "1c_dm": "1С DM", 
+                "email_iphone": "iPhone",
+                "email_android": "Android",
+                "email_outlook": "Outlook"
+            }
+            
+            type_name = type_names.get(instruction_type, instruction_type)
+            
+            message_text = (
+                f"🔒 Безопасная ссылка создана\n\n"
+                f"📚 Инструкция: {type_name} ({file_format.upper()})\n"
+                f"⏰ Действительна: {expires_in} минут\n\n"
+                f"✅ Нажмите кнопку для просмотра"
+            )
+            
+            # Create keyboard with Mini App button
+            from aiogram.utils.keyboard import InlineKeyboardBuilder
+            kb = InlineKeyboardBuilder()
+            kb.button(text="📚 Открыть инструкцию", web_app=web_app_info)
+            
+            await callback.message.edit_text(
+                message_text, 
+                reply_markup=kb.as_markup()
+            )
+            
+        else:
+            error_data = response.json() if response.content else {"error": "Unknown error"}
+            await callback.answer(f"❌ Ошибка создания ссылки: {error_data.get('error', 'Unknown error')}", show_alert=True)
+            
+    except Exception as e:
+        logger.error(f"Error creating secure link: {e}")
+        await callback.answer("❌ Ошибка создания безопасной ссылки", show_alert=True)
+    
+    await callback.answer()
 
 @router.message(InstructionsStates.choosing_1c_type, F.text == "⬅️ Назад")
 @router.message(InstructionsStates.choosing_email_type, F.text == "⬅️ Назад")
