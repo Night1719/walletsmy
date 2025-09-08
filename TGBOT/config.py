@@ -88,3 +88,11 @@ FORBIDDEN_FILE_EXTENSIONS = os.getenv("FORBIDDEN_FILE_EXTENSIONS", "png,jpg,jpeg
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
 # Enable content validation (check for screenshots in files)
 ENABLE_CONTENT_VALIDATION = os.getenv("ENABLE_CONTENT_VALIDATION", "true").lower() == "true"
+
+# === File Upload Restrictions ===
+# Block all file uploads from users (except in specific contexts)
+BLOCK_FILE_UPLOADS = os.getenv("BLOCK_FILE_UPLOADS", "true").lower() == "true"
+# Allow file uploads only in these contexts (comma-separated)
+ALLOWED_UPLOAD_CONTEXTS = os.getenv("ALLOWED_UPLOAD_CONTEXTS", "").split(",")
+# Specific file types that are always blocked
+BLOCKED_UPLOAD_TYPES = os.getenv("BLOCKED_UPLOAD_TYPES", "photo,document,sticker,video,voice,video_note,animation").split(",")
