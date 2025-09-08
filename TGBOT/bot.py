@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 
 from config import TELEGRAM_BOT_TOKEN, LOG_DIR, LOG_FILE, METRICS_PORT
+from instruction_manager import init_instruction_manager
 from handlers import start as start_handlers
 from handlers import main_menu as main_menu_handlers
 from handlers import my_tasks as my_tasks_handlers
@@ -14,6 +15,7 @@ from handlers import approval as approval_handlers
 from handlers import create_task as create_task_handlers
 from handlers import settings as settings_handlers
 from handlers import instructions as instructions_handlers
+from handlers import admin as admin_handlers
 from background import background_worker
 from metrics import start_metrics_server
 
@@ -32,6 +34,12 @@ def setup_logging():
 
 async def on_startup(bot: Bot, dp: Dispatcher):
     dp.loop = asyncio.get_event_loop()
+    
+    # Initialize instruction manager
+    from config import INSTRUCTIONS_DIR, INSTRUCTIONS_CONFIG_FILE
+    init_instruction_manager(INSTRUCTIONS_DIR, INSTRUCTIONS_CONFIG_FILE)
+    print(f"Instruction manager initialized with directory: {INSTRUCTIONS_DIR}")
+    
     dp.loop.create_task(background_worker(bot))
     start_metrics_server(METRICS_PORT)
 
@@ -55,6 +63,7 @@ async def main_async():
     dp.include_router(create_task_handlers.router)
     dp.include_router(settings_handlers.router)
     dp.include_router(instructions_handlers.router)
+    dp.include_router(admin_handlers.router)
 
     await on_startup(bot, dp)
     await dp.start_polling(bot)

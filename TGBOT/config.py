@@ -79,6 +79,11 @@ FILE_SERVER_USE_AUTH = os.getenv("FILE_SERVER_USE_AUTH", "false").lower() == "tr
 # === Instructions OTP ===
 INSTRUCTIONS_OTP_EXPIRE_MINUTES = int(os.getenv("INSTRUCTIONS_OTP_EXPIRE_MINUTES", "5"))
 
+# === Admin Configuration ===
+ADMIN_USER_IDS = [int(x) for x in os.getenv("ADMIN_USER_IDS", "").split(",") if x.strip()]
+INSTRUCTIONS_DIR = os.getenv("INSTRUCTIONS_DIR", "instructions")
+INSTRUCTIONS_CONFIG_FILE = os.getenv("INSTRUCTIONS_CONFIG_FILE", "instructions_config.json")
+
 # === Telegram Mini App ===
 MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com/miniapp")
 MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token

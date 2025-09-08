@@ -19,6 +19,7 @@ from config import (
 )
 from api_client import get_user_by_phone, get_user_by_email
 from file_server import get_instruction_files, save_temp_file, cleanup_temp_file, get_instruction_info
+from instruction_manager import get_instruction_manager
 import smtplib
 from email.message import EmailMessage
 import random
@@ -233,6 +234,163 @@ async def instructions_email(message: types.Message, state: FSMContext):
     await state.set_state(InstructionsStates.choosing_email_type)
     await message.answer("Выберите тип инструкции по почте:", reply_markup=instructions_email_keyboard())
 
+@router.message(InstructionsStates.main_menu)
+async def instructions_dynamic_categories(message: types.Message, state: FSMContext):
+    """Show dynamic instruction categories"""
+    try:
+        manager = get_instruction_manager()
+        categories = manager.get_categories()
+        
+        # Create dynamic keyboard
+        from aiogram.utils.keyboard import InlineKeyboardBuilder
+        kb = InlineKeyboardBuilder()
+        
+        for cat_id, category in categories.items():
+            instructions_count = len(category["instructions"])
+            kb.button(
+                text=f"{category['icon']} {category['name']} ({instructions_count})",
+                callback_data=f"category_{cat_id}"
+            )
+        
+        kb.adjust(1)
+        
+        await message.answer(
+            "📚 <b>Выберите категорию инструкций:</b>",
+            reply_markup=kb.as_markup(),
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing dynamic categories: {e}")
+        await message.answer("❌ Ошибка загрузки инструкций. Попробуйте позже.")
+
+
+@router.callback_query(F.data.startswith("category_"))
+async def instructions_dynamic_category(callback: types.CallbackQuery):
+    """Handle dynamic category selection"""
+    try:
+        category_id = callback.data.replace("category_", "")
+        manager = get_instruction_manager()
+        category = manager.get_category(category_id)
+        
+        if not category:
+            await callback.answer("❌ Категория не найдена", show_alert=True)
+            return
+        
+        instructions = manager.get_instructions(category_id)
+        
+        # Create dynamic keyboard for instructions
+        from aiogram.utils.keyboard import InlineKeyboardBuilder
+        kb = InlineKeyboardBuilder()
+        
+        for inst_id, instruction in instructions.items():
+            available_files = manager.get_available_files(category_id, inst_id)
+            files_text = f"({len([f for f in available_files if f['exists']])} файлов)"
+            kb.button(
+                text=f"📝 {instruction['name']} {files_text}",
+                callback_data=f"instruction_{category_id}_{inst_id}"
+            )
+        
+        kb.button(text="⬅️ Назад", callback_data="back_to_categories")
+        kb.adjust(1)
+        
+        text = f"📚 <b>{category['icon']} {category['name']}</b>\n\n"
+        text += f"📄 Описание: {category['description']}\n\n"
+        text += f"📝 Инструкций: {len(instructions)}\n\n"
+        text += "Выберите инструкцию:"
+        
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.as_markup(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logger.error(f"Error handling dynamic category: {e}")
+        await callback.answer("❌ Ошибка загрузки категории", show_alert=True)
+
+@router.callback_query(F.data.startswith("instruction_"))
+async def instructions_dynamic_instruction(callback: types.CallbackQuery):
+    """Handle dynamic instruction selection"""
+    try:
+        parts = callback.data.replace("instruction_", "").split("_", 1)
+        category_id = parts[0]
+        instruction_id = parts[1]
+        
+        manager = get_instruction_manager()
+        instruction = manager.get_instruction(category_id, instruction_id)
+        
+        if not instruction:
+            await callback.answer("❌ Инструкция не найдена", show_alert=True)
+            return
+        
+        available_files = manager.get_available_files(category_id, instruction_id)
+        existing_files = [f for f in available_files if f['exists']]
+        
+        if not existing_files:
+            await callback.answer("❌ Файлы инструкции недоступны", show_alert=True)
+            return
+        
+        # Create keyboard for file formats
+        from aiogram.utils.keyboard import InlineKeyboardBuilder
+        kb = InlineKeyboardBuilder()
+        
+        for file_info in existing_files:
+            kb.button(
+                text=f"📄 {file_info['format'].upper()}",
+                callback_data=f"secure_link:{category_id}_{instruction_id}:{file_info['format']}"
+            )
+        
+        kb.button(text="⬅️ Назад", callback_data=f"category_{category_id}")
+        kb.adjust(1)
+        
+        text = f"📝 <b>{instruction['name']}</b>\n\n"
+        text += f"📄 Описание: {instruction['description']}\n\n"
+        text += f"📁 Доступные форматы: {', '.join([f['format'].upper() for f in existing_files])}\n\n"
+        text += "🔒 Выберите формат для безопасного просмотра (ссылка действительна 40 минут):"
+        
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.as_markup(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logger.error(f"Error handling dynamic instruction: {e}")
+        await callback.answer("❌ Ошибка загрузки инструкции", show_alert=True)
+
+@router.callback_query(F.data == "back_to_categories")
+async def instructions_back_to_categories(callback: types.CallbackQuery):
+    """Back to categories list"""
+    try:
+        manager = get_instruction_manager()
+        categories = manager.get_categories()
+        
+        # Create dynamic keyboard
+        from aiogram.utils.keyboard import InlineKeyboardBuilder
+        kb = InlineKeyboardBuilder()
+        
+        for cat_id, category in categories.items():
+            instructions_count = len(category["instructions"])
+            kb.button(
+                text=f"{category['icon']} {category['name']} ({instructions_count})",
+                callback_data=f"category_{cat_id}"
+            )
+        
+        kb.adjust(1)
+        
+        await callback.message.edit_text(
+            "📚 <b>Выберите категорию инструкций:</b>",
+            reply_markup=kb.as_markup(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logger.error(f"Error going back to categories: {e}")
+        await callback.answer("❌ Ошибка загрузки категорий", show_alert=True)
 
 @router.message(InstructionsStates.choosing_1c_type, F.text.in_({"AR2", "DM"}))
 async def instructions_1c_type(message: types.Message, state: FSMContext):
@@ -312,7 +470,18 @@ async def create_secure_link(callback: types.CallbackQuery):
     """Create secure link for instruction file"""
     try:
         # Parse callback data
-        _, instruction_type, file_format = callback.data.split(":", 2)
+        _, instruction_data, file_format = callback.data.split(":", 2)
+        
+        # Handle both old format (instruction_type) and new format (category_instruction)
+        if "_" in instruction_data and not instruction_data.startswith("1c_") and not instruction_data.startswith("email_"):
+            # New format: category_instruction
+            parts = instruction_data.split("_", 1)
+            category_id = parts[0]
+            instruction_id = parts[1]
+            instruction_type = f"{category_id}_{instruction_id}"
+        else:
+            # Old format: instruction_type
+            instruction_type = instruction_data
         
         # Get user ID
         user_id = callback.from_user.id

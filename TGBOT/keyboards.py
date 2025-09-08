@@ -30,6 +30,7 @@ def main_menu_after_auth_keyboard():
     kb.row(KeyboardButton(text="🛠 Helpdesk"))
     kb.row(KeyboardButton(text="👤 Справочник сотрудников"))
     kb.row(KeyboardButton(text="📚 Инструкции"))
+    kb.row(KeyboardButton(text="🔧 Админ панель"))
     return kb.as_markup(resize_keyboard=True)
 
 
@@ -146,3 +147,91 @@ def instructions_otp_keyboard():
     kb.row(KeyboardButton(text="✍️ Ввести вручную"))
     kb.row(KeyboardButton(text="⬅️ Назад"))
     return kb.as_markup(resize_keyboard=True)
+
+
+# === Admin Keyboards ===
+
+def admin_keyboard():
+    """Admin panel main keyboard"""
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📁 Управление категориями", callback_data="admin_categories")
+    kb.button(text="📝 Управление инструкциями", callback_data="admin_instructions")
+    kb.button(text="📊 Статистика", callback_data="admin_stats")
+    kb.button(text="⚙️ Настройки", callback_data="admin_settings")
+    kb.button(text="⬅️ Назад", callback_data="admin_back")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_categories_keyboard():
+    """Categories management keyboard"""
+    kb = InlineKeyboardBuilder()
+    
+    # Add existing categories
+    try:
+        from instruction_manager import get_instruction_manager
+        manager = get_instruction_manager()
+        categories = manager.get_categories()
+        
+        for cat_id, category in categories.items():
+            kb.button(
+                text=f"{category['icon']} {category['name']}",
+                callback_data=f"admin_category_{cat_id}"
+            )
+    except:
+        pass
+    
+    kb.button(text="➕ Добавить категорию", callback_data="admin_add_category")
+    kb.button(text="⬅️ Назад", callback_data="admin_back")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_instructions_keyboard(category_id: str):
+    """Instructions management keyboard for specific category"""
+    kb = InlineKeyboardBuilder()
+    
+    # Add existing instructions
+    try:
+        from instruction_manager import get_instruction_manager
+        manager = get_instruction_manager()
+        instructions = manager.get_instructions(category_id)
+        
+        for inst_id, instruction in instructions.items():
+            files_count = len(instruction["files"])
+            kb.button(
+                text=f"📝 {instruction['name']} ({files_count} файлов)",
+                callback_data=f"admin_instruction_{category_id}_{inst_id}"
+            )
+    except:
+        pass
+    
+    kb.button(text="➕ Добавить инструкцию", callback_data=f"admin_add_instruction_{category_id}")
+    kb.button(text="📤 Загрузить файл", callback_data=f"admin_upload_file_{category_id}")
+    kb.button(text="⬅️ Назад", callback_data="admin_categories")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_instruction_keyboard(category_id: str, instruction_id: str):
+    """Single instruction management keyboard"""
+    kb = InlineKeyboardBuilder()
+    
+    kb.button(text="📤 Загрузить файл", callback_data=f"admin_upload_file_{category_id}_{instruction_id}")
+    kb.button(text="✏️ Редактировать", callback_data=f"admin_edit_instruction_{category_id}_{instruction_id}")
+    kb.button(text="🗑️ Удалить", callback_data=f"admin_delete_instruction_{category_id}_{instruction_id}")
+    kb.button(text="⬅️ Назад", callback_data=f"admin_category_{category_id}")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_file_format_keyboard(category_id: str, instruction_id: str):
+    """File format selection keyboard"""
+    kb = InlineKeyboardBuilder()
+    
+    kb.button(text="📄 PDF", callback_data=f"format_pdf_{category_id}_{instruction_id}")
+    kb.button(text="📝 DOCX", callback_data=f"format_docx_{category_id}_{instruction_id}")
+    kb.button(text="📄 DOC", callback_data=f"format_doc_{category_id}_{instruction_id}")
+    kb.button(text="⬅️ Назад", callback_data=f"admin_instruction_{category_id}_{instruction_id}")
+    kb.adjust(1)
+    return kb.as_markup()
