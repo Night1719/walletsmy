@@ -17,6 +17,10 @@ import hashlib
 import hmac
 import time
 import json
+from config_local import (
+    is_local_mode, get_local_file_path, check_local_files, 
+    get_available_local_files, LOCAL_MINIAPP_URL
+)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
@@ -36,22 +40,32 @@ def _get_auth_headers():
     return headers
 
 def _download_file(file_path: str) -> bytes:
-    """Download file from file server"""
-    if not FILE_SERVER_BASE_URL:
-        raise Exception("FILE_SERVER_BASE_URL not configured")
-    
-    url = f"{FILE_SERVER_BASE_URL.rstrip('/')}/{file_path.lstrip('/')}"
-    headers = _get_auth_headers()
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-        if response.status_code == 200:
-            return response.content
-        else:
-            raise Exception(f"Failed to download file: {response.status_code}")
-    except Exception as e:
-        logger.error(f"Error downloading file {file_path}: {e}")
-        raise
+    """Download file from file server or local storage"""
+    if is_local_mode():
+        # Use local files
+        local_path = get_local_file_path(file_path.split('/')[-2], file_path.split('/')[-1].split('.')[0])
+        if not local_path.exists():
+            raise Exception(f"Local file not found: {local_path}")
+        
+        with open(local_path, 'rb') as f:
+            return f.read()
+    else:
+        # Use file server
+        if not FILE_SERVER_BASE_URL:
+            raise Exception("FILE_SERVER_BASE_URL not configured")
+        
+        url = f"{FILE_SERVER_BASE_URL.rstrip('/')}/{file_path.lstrip('/')}"
+        headers = _get_auth_headers()
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                return response.content
+            else:
+                raise Exception(f"Failed to download file: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error downloading file {file_path}: {e}")
+            raise
 
 def _validate_telegram_data(init_data: str, bot_token: str) -> bool:
     """Validate Telegram Mini App init data"""
@@ -132,22 +146,27 @@ def get_instruction_files(instruction_type):
     if instruction_type not in INSTRUCTION_FILES:
         return jsonify({"error": "Invalid instruction type"}), 400
     
-    available_files = []
-    file_paths = INSTRUCTION_FILES[instruction_type]
-    
-    for format_type, file_path in file_paths.items():
-        try:
-            # Check if file exists by trying to download it
-            content = _download_file(file_path)
-            if content:
-                available_files.append({
-                    "format": format_type,
-                    "path": file_path,
-                    "size": len(content)
-                })
-        except Exception as e:
-            logger.warning(f"File {file_path} not available: {e}")
-            continue
+    if is_local_mode():
+        # Use local files
+        available_files = get_available_local_files(instruction_type)
+    else:
+        # Use file server
+        available_files = []
+        file_paths = INSTRUCTION_FILES[instruction_type]
+        
+        for format_type, file_path in file_paths.items():
+            try:
+                # Check if file exists by trying to download it
+                content = _download_file(file_path)
+                if content:
+                    available_files.append({
+                        "format": format_type,
+                        "path": file_path,
+                        "size": len(content)
+                    })
+            except Exception as e:
+                logger.warning(f"File {file_path} not available: {e}")
+                continue
     
     return jsonify({
         "instruction_type": instruction_type,
