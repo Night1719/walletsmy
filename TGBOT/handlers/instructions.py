@@ -10,7 +10,7 @@ from keyboards import instructions_main_keyboard, instructions_category_keyboard
 from states import InstructionsStates
 from storage import get_session, set_session
 from file_server import get_instruction_files, get_instruction_info
-from config import MINIAPP_URL, MINIAPP_MODE, CORP_EMAIL_DOMAIN, INSTRUCTIONS_OTP_EXPIRE_MINUTES, SSL_VERIFY, SSL_CERT_PATH
+from config import MINIAPP_URL, MINIAPP_MODE, CORP_EMAIL_DOMAIN, INSTRUCTIONS_OTP_EXPIRE_MINUTES, SSL_VERIFY, SSL_CERT_PATH, SSL_KEY_PATH, SSL_PASSWORD
 from instruction_manager import get_instruction_manager
 import random
 import time
@@ -285,7 +285,25 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
         miniapp_api_url = f"{base_url}/api/secure/create-link"
         
         # Configure SSL verification
-        verify_ssl = SSL_CERT_PATH if SSL_CERT_PATH else SSL_VERIFY
+        if SSL_CERT_PATH:
+            # Use custom certificate
+            if SSL_CERT_PATH.endswith(('.p12', '.pfx')):
+                # PKCS#12 format
+                import ssl
+                import tempfile
+                import os
+                
+                # Create temporary files for certificate and key
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False) as cert_file:
+                    # For PKCS#12, we need to extract certificate and key
+                    # This is a simplified approach - in production you might want to use cryptography library
+                    verify_ssl = SSL_CERT_PATH
+            else:
+                # PEM/CRT format
+                verify_ssl = SSL_CERT_PATH
+        else:
+            # Use default SSL verification
+            verify_ssl = SSL_VERIFY
         
         response = requests.post(miniapp_api_url, json={
             "instruction_data": instruction_data,

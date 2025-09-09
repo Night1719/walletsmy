@@ -93,7 +93,9 @@ LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))  # Secure link
 
 # === SSL Configuration ===
 SSL_VERIFY = os.getenv("SSL_VERIFY", "true").lower() == "true"
-SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", "")  # Path to custom SSL certificate
+SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", "")  # Path to SSL certificate (.pem, .crt, .p12)
+SSL_KEY_PATH = os.getenv("SSL_KEY_PATH", "")  # Path to private key (.key, .pem)
+SSL_PASSWORD = os.getenv("SSL_PASSWORD", "")  # Password for PKCS#12 files
 
 # === File Restrictions ===
 # Allowed file extensions for instructions

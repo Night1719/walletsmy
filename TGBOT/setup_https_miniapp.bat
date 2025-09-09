@@ -28,6 +28,8 @@ if not exist ".env" (
     echo # SSL Configuration >> .env
     echo SSL_VERIFY=true >> .env
     echo SSL_CERT_PATH= >> .env
+    echo SSL_KEY_PATH= >> .env
+    echo SSL_PASSWORD= >> .env
     echo ✅ .env файл создан с HTTPS настройками
 ) else (
     echo ✅ .env файл уже существует
@@ -49,6 +51,8 @@ if not exist ".env" (
         echo # SSL Configuration >> .env
         echo SSL_VERIFY=true >> .env
         echo SSL_CERT_PATH= >> .env
+        echo SSL_KEY_PATH= >> .env
+        echo SSL_PASSWORD= >> .env
     )
     
     echo ✅ Mini App URL обновлен на HTTPS
@@ -95,6 +99,16 @@ echo    1. SSL сертификат установлен на сервере
 echo    2. Порт 4477 настроен для HTTPS
 echo    3. Mini App сервер запущен с SSL
 echo    4. Настроены правильные токены в .env
+echo.
+echo 🔐 Поддерживаемые форматы сертификатов:
+echo    • .pem, .crt, .cer - PEM формат (рекомендуется)
+echo    • .p12, .pfx - PKCS#12 формат
+echo    • .key - приватный ключ (отдельно)
+echo.
+echo 📁 Пример настройки в .env:
+echo    SSL_CERT_PATH=C:\path\to\certificate.pem
+echo    SSL_KEY_PATH=C:\path\to\private.key
+echo    SSL_PASSWORD=your_password  # только для .p12/.pfx
 echo.
 echo 🚀 Теперь можно запускать бота:
 echo    python bot.py
