@@ -248,3 +248,45 @@ def admin_file_format_keyboard(category_id: str = None, instruction_id: str = No
     
     kb.adjust(2)
     return kb.as_markup()
+
+
+def instructions_category_keyboard(category_id: str):
+    """Instructions category keyboard"""
+    kb = InlineKeyboardBuilder()
+    
+    manager = get_instruction_manager()
+    instructions = manager.get_instructions_by_category(category_id)
+    category = manager.get_category(category_id)
+    
+    if instructions:
+        for instruction in instructions:
+            kb.button(
+                text=f"📄 {instruction['name']}",
+                callback_data=f"instruction_{category_id}_{instruction['id']}"
+            )
+    else:
+        kb.button(text="❌ Инструкции не найдены", callback_data="no_instructions")
+    
+    kb.button(text="⬅️ Назад", callback_data="back_to_categories")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def instruction_keyboard(category_id: str, instruction_id: str):
+    """Individual instruction keyboard"""
+    kb = InlineKeyboardBuilder()
+    
+    manager = get_instruction_manager()
+    instruction = manager.get_instruction(category_id, instruction_id)
+    
+    if instruction:
+        # Show available formats
+        for format_type in instruction.get('formats', []):
+            kb.button(
+                text=f"📄 {format_type.upper()}",
+                callback_data=f"create_secure_link_{category_id}_{instruction_id}_{format_type}"
+            )
+    
+    kb.button(text="⬅️ Назад", callback_data=f"category_{category_id}")
+    kb.adjust(1)
+    return kb.as_markup()
