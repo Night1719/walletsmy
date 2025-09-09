@@ -96,6 +96,8 @@ SSL_VERIFY = os.getenv("SSL_VERIFY", "true").lower() == "true"
 SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", "")  # Path to SSL certificate (.pem, .crt, .p12)
 SSL_KEY_PATH = os.getenv("SSL_KEY_PATH", "")  # Path to private key (.key, .pem)
 SSL_PASSWORD = os.getenv("SSL_PASSWORD", "")  # Password for PKCS#12 files
+SSL_VERIFY_HOSTNAME = os.getenv("SSL_VERIFY_HOSTNAME", "true").lower() == "true"  # Verify hostname
+SSL_VERIFY_CERT = os.getenv("SSL_VERIFY_CERT", "true").lower() == "true"  # Verify certificate
 
 # === File Restrictions ===
 # Allowed file extensions for instructions
