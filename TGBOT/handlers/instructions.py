@@ -10,7 +10,7 @@ from keyboards import instructions_main_keyboard, instructions_category_keyboard
 from states import InstructionsStates
 from storage import get_session, set_session
 from file_server import get_instruction_files, get_instruction_info
-from config import MINIAPP_URL, MINIAPP_MODE, CORP_EMAIL_DOMAIN, INSTRUCTIONS_OTP_EXPIRE_MINUTES
+from config import MINIAPP_URL, MINIAPP_MODE, CORP_EMAIL_DOMAIN, INSTRUCTIONS_OTP_EXPIRE_MINUTES, SSL_VERIFY, SSL_CERT_PATH
 from instruction_manager import get_instruction_manager
 import random
 import time
@@ -280,15 +280,18 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
         # Prepare data for Mini App API
         instruction_data = f"{category_id}_{instruction_id}"
         
-        # Use HTTP instead of HTTPS for external server
-        base_url = MINIAPP_URL.replace('/miniapp', '').replace('https://', 'http://')
+        # Use HTTPS for external server with SSL certificate
+        base_url = MINIAPP_URL.replace('/miniapp', '')
         miniapp_api_url = f"{base_url}/api/secure/create-link"
+        
+        # Configure SSL verification
+        verify_ssl = SSL_CERT_PATH if SSL_CERT_PATH else SSL_VERIFY
         
         response = requests.post(miniapp_api_url, json={
             "instruction_data": instruction_data,
             "file_format": file_format,
             "user_id": callback.from_user.id
-        }, timeout=10)
+        }, timeout=10, verify=verify_ssl)
         
         if response.status_code == 200:
             data = response.json()
@@ -318,10 +321,13 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
     
     except requests.exceptions.SSLError as e:
         logger.error(f"SSL Error: {e}")
-        await callback.answer("❌ Ошибка SSL соединения. Проверьте настройки сервера.")
+        await callback.answer("❌ Ошибка SSL сертификата. Проверьте настройки сервера и сертификат.")
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Connection Error: {e}")
-        await callback.answer("❌ Ошибка подключения к серверу. Сервер недоступен.")
+        await callback.answer("❌ Ошибка подключения к серверу. Сервер недоступен или порт заблокирован.")
+    except requests.exceptions.Timeout as e:
+        logger.error(f"Timeout Error: {e}")
+        await callback.answer("❌ Таймаут соединения. Сервер не отвечает.")
     except Exception as e:
         logger.error(f"Error creating secure link: {e}")
         await callback.answer("❌ Ошибка создания ссылки")
