@@ -178,19 +178,21 @@ def admin_categories_keyboard():
     """Categories management keyboard"""
     kb = InlineKeyboardBuilder()
     
-    # Add existing categories
     try:
         from instruction_manager import get_instruction_manager
         manager = get_instruction_manager()
         categories = manager.get_categories()
         
-        for cat_id, category in categories.items():
-            kb.button(
-                text=f"{category['icon']} {category['name']}",
-                callback_data=f"admin_category_{cat_id}"
-            )
-    except:
-        pass
+        if categories:
+            for cat_id, category in categories.items():
+                kb.button(
+                    text=f"{category['icon']} {category['name']}",
+                    callback_data=f"admin_category_{cat_id}"
+                )
+        else:
+            kb.button(text="❌ Категории не найдены", callback_data="no_categories")
+    except Exception:
+        kb.button(text="❌ Ошибка загрузки категорий", callback_data="no_categories")
     
     kb.button(text="➕ Добавить категорию", callback_data="admin_add_category")
     kb.button(text="⬅️ Назад", callback_data="admin_back")

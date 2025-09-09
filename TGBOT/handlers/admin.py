@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Admin states
 class AdminStates(StatesGroup):
     waiting_for_category_name = State()
+    waiting_for_category_title = State()
     waiting_for_category_icon = State()
     waiting_for_instruction_name = State()
     waiting_for_instruction_description = State()
@@ -111,9 +112,9 @@ async def admin_add_category_name(message: types.Message, state: FSMContext):
         "✅ ID категории принят\n\n"
         "Теперь введите название категории:"
     )
-    await state.set_state(AdminStates.waiting_for_category_icon)
+    await state.set_state(AdminStates.waiting_for_category_title)
 
-@router.message(AdminStates.waiting_for_category_icon)
+@router.message(AdminStates.waiting_for_category_title)
 async def admin_add_category_icon(message: types.Message, state: FSMContext):
     """Process category name and ask for icon"""
     category_name = message.text.strip()
@@ -173,13 +174,34 @@ async def admin_category_actions(callback: types.CallbackQuery):
         await callback.answer("❌ У вас нет прав администратора")
         return
     
-    action = callback.data.replace("admin_category_", "")
+    category_id = callback.data.replace("admin_category_", "")
     
-    if action == "back":
-        await admin_categories(callback)
+    manager = get_instruction_manager()
+    category = manager.get_category(category_id)
+    if not category:
+        await callback.answer("❌ Категория не найдена")
+        return
+    
+    # Build text
+    instructions = manager.get_instructions_by_category(category_id)
+    text = (
+        f"📁 <b>{category['icon']} {category['name']}</b>\n\n"
+        f"Инструкций: {len(instructions)}\n"
+    )
+    if instructions:
+        for inst in instructions:
+            text += f"• {inst['name']}\n"
     else:
-        # Handle other category actions
-        await callback.answer("Функция в разработке")
+        text += "Инструкции отсутствуют\n"
+    
+    # Build keyboard for this category
+    kb = InlineKeyboardBuilder()
+    kb.button(text="➕ Добавить инструкцию", callback_data=f"admin_add_instruction_{category_id}")
+    kb.button(text="⬅️ Назад", callback_data="admin_instructions")
+    kb.adjust(1)
+    
+    await callback.message.edit_text(text, reply_markup=kb.as_markup(), parse_mode="HTML")
+    await callback.answer()
 
 @router.callback_query(F.data == "admin_instructions")
 async def admin_instructions(callback: types.CallbackQuery):
