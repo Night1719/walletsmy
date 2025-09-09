@@ -25,7 +25,6 @@ class AdminStates(StatesGroup):
     waiting_for_instruction_name = State()
     waiting_for_instruction_description = State()
     waiting_for_file_upload = State()
-    waiting_for_file_format = State()
 
 def is_admin(user_id: int) -> bool:
     """Check if user is admin"""
@@ -293,32 +292,13 @@ async def admin_add_instruction_description(message: types.Message, state: FSMCo
     
     await state.update_data(description=description)
     
-    # Ask for file format
+    # Ask for file upload directly
     await message.answer(
         "✅ Описание инструкции принято\n\n"
-        "Выберите формат файла:",
-        reply_markup=admin_file_format_keyboard()
-    )
-    await state.set_state(AdminStates.waiting_for_file_format)
-
-@router.callback_query(F.data.startswith("admin_file_format_"))
-async def admin_file_format_selected(callback: types.CallbackQuery, state: FSMContext):
-    """Process file format selection"""
-    if not is_admin(callback.from_user.id):
-        await callback.answer("❌ У вас нет прав администратора")
-        return
-    
-    file_format = callback.data.replace("admin_file_format_", "")
-    await state.update_data(file_format=file_format)
-    
-    await callback.message.edit_text(
-        f"📎 <b>Загрузка файла</b>\n\n"
-        f"Формат: <code>{file_format}</code>\n\n"
-        f"Отправьте файл в формате {file_format.upper()}:",
-        parse_mode="HTML"
+        "Отправьте файл инструкции (PDF, DOCX, DOC, TXT, MP4, AVI, MOV):"
     )
     await state.set_state(AdminStates.waiting_for_file_upload)
-    await callback.answer()
+
 
 @router.message(AdminStates.waiting_for_file_upload, F.document)
 async def admin_file_uploaded(message: types.Message, state: FSMContext):
@@ -336,17 +316,21 @@ async def admin_file_uploaded(message: types.Message, state: FSMContext):
     category_id = data.get('category_id')
     instruction_name = data.get('instruction_name')
     description = data.get('description')
-    file_format = data.get('file_format')
     
-    if not all([category_id, instruction_name, description, file_format]):
+    if not all([category_id, instruction_name, description]):
         await message.answer("❌ Ошибка: данные не найдены. Начните заново.")
         await state.clear()
         return
     
+    # Auto-detect file format from extension
+    file_extension = file_name.split('.')[-1].lower() if '.' in file_name else ''
+    
     # Validate file format
-    if not file_name.lower().endswith(f'.{file_format.lower()}'):
+    allowed_extensions = ['pdf', 'docx', 'doc', 'txt', 'rtf', 'odt', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv']
+    if file_extension not in allowed_extensions:
         await message.answer(
-            f"❌ Неверный формат файла. Ожидается {file_format.upper()}, получен {file_name.split('.')[-1].upper()}\n"
+            f"❌ Неподдерживаемый формат файла: {file_extension.upper()}\n"
+            f"Поддерживаемые форматы: {', '.join(allowed_extensions).upper()}\n"
             f"Попробуйте еще раз:"
         )
         return
@@ -354,7 +338,8 @@ async def admin_file_uploaded(message: types.Message, state: FSMContext):
     # Download file
     try:
         file = await message.bot.get_file(file_id)
-        file_path = f"instructions/{category_id}/{instruction_name}.{file_format}"
+        instruction_id = instruction_name.lower().replace(' ', '_').replace('-', '_')
+        file_path = f"instructions/{category_id}/{instruction_id}/{file_name}"
         
         # Create directory if not exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -362,15 +347,16 @@ async def admin_file_uploaded(message: types.Message, state: FSMContext):
         # Download file
         await message.bot.download_file(file.file_path, file_path)
         
-        # Add instruction to manager
+        # Add instruction to manager with files dict
         manager = get_instruction_manager()
+        files_dict = {file_extension: file_path}
+        
         success = manager.add_instruction(
             category_id=category_id,
-            instruction_id=instruction_name.lower().replace(' ', '_'),
+            instruction_id=instruction_id,
             name=instruction_name,
             description=description,
-            file_format=file_format,
-            file_path=file_path
+            files=files_dict
         )
         
         if success:
@@ -378,7 +364,7 @@ async def admin_file_uploaded(message: types.Message, state: FSMContext):
                 f"✅ <b>Инструкция создана!</b>\n\n"
                 f"Категория: {category_id}\n"
                 f"Название: {instruction_name}\n"
-                f"Формат: {file_format.upper()}\n"
+                f"Формат: {file_extension.upper()}\n"
                 f"Файл: {file_name}",
                 parse_mode="HTML"
             )

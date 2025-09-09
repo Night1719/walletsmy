@@ -152,18 +152,27 @@ class InstructionManager:
         instructions = self.get_instructions(category_id)
         result = []
         for inst_id, inst_data in instructions.items():
+            # Add formats list from files dict
+            files = inst_data.get("files", {})
+            formats = list(files.keys())
+            
             result.append({
                 "id": inst_id,
                 "name": inst_data.get("name", ""),
                 "description": inst_data.get("description", ""),
-                "formats": inst_data.get("formats", [])
+                "formats": formats
             })
         return result
     
     def get_instruction(self, category_id: str, instruction_id: str) -> Optional[Dict]:
         """Get specific instruction"""
         instructions = self.get_instructions(category_id)
-        return instructions.get(instruction_id)
+        instruction = instructions.get(instruction_id)
+        if instruction:
+            # Add formats list from files dict
+            files = instruction.get("files", {})
+            instruction["formats"] = list(files.keys())
+        return instruction
     
     def add_category(self, category_id: str, name: str, icon: str, description: str = "") -> bool:
         """Add new category"""
