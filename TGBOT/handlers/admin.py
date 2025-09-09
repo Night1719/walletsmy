@@ -6,6 +6,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import FSInputFile
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from keyboards import admin_keyboard, admin_categories_keyboard, admin_instructions_keyboard, admin_file_format_keyboard
 from instruction_manager import get_instruction_manager
 from config import ADMIN_USER_IDS

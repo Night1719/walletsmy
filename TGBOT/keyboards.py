@@ -198,28 +198,47 @@ def admin_categories_keyboard():
     return kb.as_markup()
 
 
-def admin_instructions_keyboard(category_id: str):
+def admin_instructions_keyboard(category_id: str = None):
     """Instructions management keyboard for specific category"""
     kb = InlineKeyboardBuilder()
     
-    # Add existing instructions
-    try:
-        from instruction_manager import get_instruction_manager
-        manager = get_instruction_manager()
-        instructions = manager.get_instructions(category_id)
+    if category_id:
+        # Add existing instructions for specific category
+        try:
+            from instruction_manager import get_instruction_manager
+            manager = get_instruction_manager()
+            instructions = manager.get_instructions(category_id)
+            
+            for inst_id, instruction in instructions.items():
+                files_count = len(instruction["files"])
+                kb.button(
+                    text=f"📝 {instruction['name']} ({files_count} файлов)",
+                    callback_data=f"admin_instruction_{category_id}_{inst_id}"
+                )
+        except:
+            pass
         
-        for inst_id, instruction in instructions.items():
-            files_count = len(instruction["files"])
-            kb.button(
-                text=f"📝 {instruction['name']} ({files_count} файлов)",
-                callback_data=f"admin_instruction_{category_id}_{inst_id}"
-            )
-    except:
-        pass
+        kb.button(text="➕ Добавить инструкцию", callback_data=f"admin_add_instruction_{category_id}")
+        kb.button(text="📤 Загрузить файл", callback_data=f"admin_upload_file_{category_id}")
+        kb.button(text="⬅️ Назад", callback_data="admin_categories")
+    else:
+        # Show all categories for instruction management
+        try:
+            from instruction_manager import get_instruction_manager
+            manager = get_instruction_manager()
+            categories = manager.get_categories()
+            
+            for cat_id, category in categories.items():
+                kb.button(
+                    text=f"📁 {category['name']}",
+                    callback_data=f"admin_category_{cat_id}"
+                )
+        except:
+            pass
+        
+        kb.button(text="➕ Добавить категорию", callback_data="admin_add_category")
+        kb.button(text="⬅️ Назад", callback_data="admin_back")
     
-    kb.button(text="➕ Добавить инструкцию", callback_data=f"admin_add_instruction_{category_id}")
-    kb.button(text="📤 Загрузить файл", callback_data=f"admin_upload_file_{category_id}")
-    kb.button(text="⬅️ Назад", callback_data="admin_categories")
     kb.adjust(1)
     return kb.as_markup()
 
