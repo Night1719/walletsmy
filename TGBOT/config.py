@@ -100,3 +100,5 @@ FORBIDDEN_FILE_EXTENSIONS = os.getenv("FORBIDDEN_FILE_EXTENSIONS", "png,jpg,jpeg
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
 # Enable content validation (check for screenshots in files)
 ENABLE_CONTENT_VALIDATION = os.getenv("ENABLE_CONTENT_VALIDATION", "true").lower() == "true"
+# Keywords that indicate screenshot files
+SCREENSHOT_KEYWORDS = os.getenv("SCREENSHOT_KEYWORDS", "screenshot,screen,shot,скриншот,скрин,снимок").split(",")
