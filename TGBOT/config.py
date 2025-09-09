@@ -85,20 +85,22 @@ INSTRUCTIONS_DIR = os.getenv("INSTRUCTIONS_DIR", "instructions")
 INSTRUCTIONS_CONFIG_FILE = os.getenv("INSTRUCTIONS_CONFIG_FILE", "instructions_config.json")
 
 # === Telegram Mini App ===
-MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com:4477/miniapp")
+MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com/miniapp")
 MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token
-MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "https://your-domain.com:4477")
+MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "https://your-domain.com")
 MINIAPP_MODE = os.getenv("MINIAPP_MODE", "remote")  # local or remote
 LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))  # Secure link expiry time
 
 # === File Restrictions ===
 # Allowed file extensions for instructions
-ALLOWED_FILE_EXTENSIONS = os.getenv("ALLOWED_FILE_EXTENSIONS", "pdf,docx,doc,txt").split(",")
+ALLOWED_FILE_EXTENSIONS = os.getenv("ALLOWED_FILE_EXTENSIONS", "pdf,docx,doc,txt,mp4,avi,mov,wmv,flv,webm,mkv").split(",")
 # Forbidden file extensions (screenshots, images, etc.)
 FORBIDDEN_FILE_EXTENSIONS = os.getenv("FORBIDDEN_FILE_EXTENSIONS", "png,jpg,jpeg,gif,bmp,tiff,webp,ico,svg,psd,ai,sketch").split(",")
 # Maximum file size in MB
-MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))  # Увеличено для видео
 # Enable content validation (check for screenshots in files)
 ENABLE_CONTENT_VALIDATION = os.getenv("ENABLE_CONTENT_VALIDATION", "true").lower() == "true"
 # Keywords that indicate screenshot files
 SCREENSHOT_KEYWORDS = os.getenv("SCREENSHOT_KEYWORDS", "screenshot,screen,shot,скриншот,скрин,снимок").split(",")
+# Video file extensions
+VIDEO_FILE_EXTENSIONS = os.getenv("VIDEO_FILE_EXTENSIONS", "mp4,avi,mov,wmv,flv,webm,mkv").split(",")

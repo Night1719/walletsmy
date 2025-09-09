@@ -241,6 +241,9 @@ def admin_file_format_keyboard(category_id: str = None, instruction_id: str = No
         kb.button(text="📝 DOCX", callback_data="admin_file_format_docx")
         kb.button(text="📄 DOC", callback_data="admin_file_format_doc")
         kb.button(text="📄 TXT", callback_data="admin_file_format_txt")
+        kb.button(text="🎥 MP4", callback_data="admin_file_format_mp4")
+        kb.button(text="🎥 AVI", callback_data="admin_file_format_avi")
+        kb.button(text="🎥 MOV", callback_data="admin_file_format_mov")
         kb.button(text="❌ Отмена", callback_data="admin_categories")
     
     kb.adjust(2)

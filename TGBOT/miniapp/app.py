@@ -11,7 +11,7 @@ import tempfile
 import requests
 from config import (
     FILE_SERVER_BASE_URL, FILE_SERVER_USER, FILE_SERVER_PASS, FILE_SERVER_USE_AUTH,
-    ALLOWED_FILE_EXTENSIONS, MAX_FILE_SIZE_MB
+    ALLOWED_FILE_EXTENSIONS, MAX_FILE_SIZE_MB, VIDEO_FILE_EXTENSIONS
 )
 import base64
 import hashlib
@@ -74,6 +74,24 @@ def _download_file(file_path: str) -> bytes:
         except Exception as e:
             logger.error(f"Error downloading file {file_path}: {e}")
             raise
+
+def _get_file_type(file_path):
+    """Determine file type based on extension"""
+    if not file_path:
+        return "unknown"
+    
+    file_ext = os.path.splitext(file_path)[1].lower().lstrip('.')
+    
+    if file_ext in ['pdf']:
+        return "pdf"
+    elif file_ext in ['docx', 'doc']:
+        return "document"
+    elif file_ext in VIDEO_FILE_EXTENSIONS:
+        return "video"
+    elif file_ext in ['txt']:
+        return "text"
+    else:
+        return "unknown"
 
 def _validate_telegram_data(init_data: str, bot_token: str) -> bool:
     """Validate Telegram Mini App init data"""
@@ -268,17 +286,31 @@ def convert_secure_file(token):
         # Get file content
         file_path = INSTRUCTION_FILES[instruction_type][file_format]
         content = _download_file(file_path)
+        file_type = _get_file_type(file_path)
         
-        if file_format == 'pdf':
+        if file_type == 'pdf':
             return jsonify({
                 "type": "pdf",
                 "content": base64.b64encode(content).decode(),
                 "filename": f"instruction_{instruction_type}.pdf"
             })
-        elif file_format in ['docx', 'doc']:
+        elif file_type == 'document':
             return jsonify({
                 "type": "docx",
                 "content": base64.b64encode(content).decode(),
+                "filename": f"instruction_{instruction_type}.{file_format}"
+            })
+        elif file_type == 'video':
+            return jsonify({
+                "type": "video",
+                "content": base64.b64encode(content).decode(),
+                "filename": f"instruction_{instruction_type}.{file_format}",
+                "video_format": file_format
+            })
+        elif file_type == 'text':
+            return jsonify({
+                "type": "text",
+                "content": content.decode('utf-8', errors='ignore'),
                 "filename": f"instruction_{instruction_type}.{file_format}"
             })
         else:
