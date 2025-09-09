@@ -2,16 +2,19 @@ from aiogram.types import KeyboardButton, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from typing import Dict
 from config import ALLOWED_SERVICES
+from instruction_manager import get_instruction_manager
 
 
 def phone_request_keyboard():
+    """Phone request keyboard"""
     kb = ReplyKeyboardBuilder()
-    kb.add(KeyboardButton(text="📱 Отправить телефон", request_contact=True))
-    kb.add(KeyboardButton(text="✍️ Ввести вручную"))
+    kb.row(KeyboardButton(text="📱 Отправить телефон", request_contact=True))
+    kb.row(KeyboardButton(text="✍️ Ввести вручную"))
     return kb.as_markup(resize_keyboard=True)
 
 
 def main_menu_keyboard():
+    """Main menu keyboard for non-authenticated users"""
     kb = ReplyKeyboardBuilder()
     kb.row(
         KeyboardButton(text="📋 Мои заявки"),
