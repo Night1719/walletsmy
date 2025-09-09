@@ -85,10 +85,10 @@ INSTRUCTIONS_DIR = os.getenv("INSTRUCTIONS_DIR", "instructions")
 INSTRUCTIONS_CONFIG_FILE = os.getenv("INSTRUCTIONS_CONFIG_FILE", "instructions_config.json")
 
 # === Telegram Mini App ===
-MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-domain.com:4477/miniapp")
+MINIAPP_URL = os.getenv("MINIAPP_URL", "http://localhost:4477/miniapp")
 MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token
-MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "https://your-domain.com:4477")
-MINIAPP_MODE = os.getenv("MINIAPP_MODE", "remote")  # local or remote
+MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "http://localhost:4477")
+MINIAPP_MODE = os.getenv("MINIAPP_MODE", "local")  # local or remote
 LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))  # Secure link expiry time
 
 # === File Restrictions ===
