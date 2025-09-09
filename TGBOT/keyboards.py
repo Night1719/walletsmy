@@ -120,11 +120,23 @@ def reply_to_task_inline(task_id: int):
 
 
 def instructions_main_keyboard():
-    kb = ReplyKeyboardBuilder()
-    kb.row(KeyboardButton(text="1️⃣ 1С"))
-    kb.row(KeyboardButton(text="📧 Почта"))
-    kb.row(KeyboardButton(text="⬅️ Назад"))
-    return kb.as_markup(resize_keyboard=True)
+    """Dynamic inline keyboard of categories for Instructions section"""
+    kb = InlineKeyboardBuilder()
+    try:
+        manager = get_instruction_manager()
+        categories = manager.get_all_categories()
+        if categories:
+            for cat in categories:
+                kb.button(
+                    text=f"{cat['icon']} {cat['name']}",
+                    callback_data=f"category_{cat['id']}"
+                )
+        else:
+            kb.button(text="❌ Категории не найдены", callback_data="no_categories")
+    except Exception:
+        kb.button(text="❌ Ошибка загрузки", callback_data="no_categories")
+    kb.adjust(1)
+    return kb.as_markup()
 
 
 def instructions_1c_keyboard():

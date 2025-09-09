@@ -197,6 +197,7 @@ async def admin_category_actions(callback: types.CallbackQuery):
     # Build keyboard for this category
     kb = InlineKeyboardBuilder()
     kb.button(text="➕ Добавить инструкцию", callback_data=f"admin_add_instruction_{category_id}")
+    kb.button(text="✏️ Редактировать / 🗑 Удалить", callback_data=f"admin_manage_instructions_{category_id}")
     kb.button(text="⬅️ Назад", callback_data="admin_instructions")
     kb.adjust(1)
     
@@ -409,9 +410,84 @@ async def admin_instruction_actions(callback: types.CallbackQuery):
     
     if action == "back":
         await admin_instructions(callback)
+        return
+    
+    # Expected formats:
+    # admin_instruction_<categoryId>_<instructionId>
+    parts = action.split("_")
+    if len(parts) < 2:
+        await callback.answer("❌ Некорректные данные")
+        return
+    category_id = parts[0]
+    instruction_id = "_".join(parts[1:])
+    
+    manager = get_instruction_manager()
+    instruction = manager.get_instruction(category_id, instruction_id)
+    if not instruction:
+        await callback.answer("❌ Инструкция не найдена")
+        return
+    
+    # Build manage keyboard for instruction
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✏️ Редактировать название", callback_data=f"admin_edit_instruction_name_{category_id}_{instruction_id}")
+    kb.button(text="🗑 Удалить", callback_data=f"admin_delete_instruction_{category_id}_{instruction_id}")
+    kb.button(text="⬅️ Назад", callback_data=f"admin_category_{category_id}")
+    kb.adjust(1)
+    
+    await callback.message.edit_text(
+        f"📝 <b>{instruction['name']}</b>\n\nВыберите действие:",
+        reply_markup=kb.as_markup(),
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_manage_instructions_"))
+async def admin_manage_instructions(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет прав администратора")
+        return
+    category_id = callback.data.replace("admin_manage_instructions_", "")
+    manager = get_instruction_manager()
+    instructions = manager.get_instructions_by_category(category_id)
+    kb = InlineKeyboardBuilder()
+    if instructions:
+        for inst in instructions:
+            kb.button(text=f"📝 {inst['name']}", callback_data=f"admin_instruction_{category_id}_{inst['id']}")
     else:
-        # Handle other instruction actions
-        await callback.answer("Функция в разработке")
+        kb.button(text="❌ Инструкции не найдены", callback_data=f"admin_category_{category_id}")
+    kb.button(text="⬅️ Назад", callback_data=f"admin_category_{category_id}")
+    kb.adjust(1)
+    await callback.message.edit_text("Выберите инструкцию:", reply_markup=kb.as_markup())
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_delete_instruction_"))
+async def admin_delete_instruction(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет прав администратора")
+        return
+    ids = callback.data.replace("admin_delete_instruction_", "")
+    category_id, instruction_id = ids.split("_", 1)
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Да, удалить", callback_data=f"admin_delete_instruction_confirm_{category_id}_{instruction_id}")
+    kb.button(text="❌ Отмена", callback_data=f"admin_instruction_{category_id}_{instruction_id}")
+    kb.adjust(1)
+    await callback.message.edit_text("Удалить эту инструкцию?", reply_markup=kb.as_markup())
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_delete_instruction_confirm_"))
+async def admin_delete_instruction_confirm(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет прав администратора")
+        return
+    ids = callback.data.replace("admin_delete_instruction_confirm_", "")
+    category_id, instruction_id = ids.split("_", 1)
+    manager = get_instruction_manager()
+    ok = manager.delete_instruction(category_id, instruction_id)
+    if ok:
+        await callback.answer("✅ Удалено")
+        await admin_category_actions(callback)
+    else:
+        await callback.answer("❌ Не удалось удалить")
 
 
 @router.callback_query(F.data == "admin_back")

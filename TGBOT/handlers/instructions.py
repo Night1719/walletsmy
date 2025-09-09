@@ -145,7 +145,7 @@ async def instructions_otp_verify(message: types.Message, state: FSMContext):
     await state.set_state(InstructionsStates.main_menu)
     await message.answer(
         "✅ Доступ к инструкциям предоставлен!\n\n"
-        "📚 Раздел инструкций:",
+        "📚 Выберите категорию:",
         reply_markup=instructions_main_keyboard()
     )
 
@@ -276,8 +276,7 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
 async def back_to_categories(callback: types.CallbackQuery, state: FSMContext):
     """Return to categories list"""
     await callback.message.edit_text(
-        "📚 Раздел инструкций:\n\n"
-        "Выберите категорию:",
+        "📚 Выберите категорию:",
         reply_markup=instructions_main_keyboard()
     )
     await callback.answer()
@@ -352,4 +351,8 @@ async def instructions_main_menu_handler(message: types.Message, state: FSMConte
         await state.clear()
         await message.answer("Главное меню:", reply_markup=main_menu_after_auth_keyboard())
     else:
-        await message.answer("Используйте кнопки для навигации")
+        # Show inline categories again
+        await message.answer(
+            "📚 Выберите категорию:",
+            reply_markup=instructions_main_keyboard()
+        )
