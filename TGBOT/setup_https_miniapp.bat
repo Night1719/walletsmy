@@ -27,6 +27,8 @@ if not exist ".env" (
     echo. >> .env
     echo # SSL Configuration >> .env
     echo SSL_VERIFY=true >> .env
+    echo SSL_VERIFY_CERT=true >> .env
+    echo SSL_VERIFY_HOSTNAME=true >> .env
     echo SSL_CERT_PATH= >> .env
     echo SSL_KEY_PATH= >> .env
     echo SSL_PASSWORD= >> .env
@@ -50,6 +52,8 @@ if not exist ".env" (
         echo. >> .env
         echo # SSL Configuration >> .env
         echo SSL_VERIFY=true >> .env
+        echo SSL_VERIFY_CERT=true >> .env
+        echo SSL_VERIFY_HOSTNAME=true >> .env
         echo SSL_CERT_PATH= >> .env
         echo SSL_KEY_PATH= >> .env
         echo SSL_PASSWORD= >> .env

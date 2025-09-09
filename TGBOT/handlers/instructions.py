@@ -299,14 +299,45 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
                 # PEM/CRT format
                 verify_ssl = SSL_CERT_PATH
         else:
-            # Use default SSL verification
-            verify_ssl = SSL_VERIFY
+            # Use default SSL verification with proper CA bundle
+            verify_ssl = True
         
-        response = requests.post(miniapp_api_url, json={
-            "instruction_data": instruction_data,
-            "file_format": file_format,
-            "user_id": callback.from_user.id
-        }, timeout=10, verify=verify_ssl)
+        # Try multiple SSL verification methods
+        ssl_attempts = []
+        
+        if verify_ssl is True:
+            # Try with default CA bundle
+            ssl_attempts.append(True)
+            # Try with system CA bundle
+            ssl_attempts.append('/etc/ssl/certs/ca-certificates.crt')  # Linux
+            ssl_attempts.append('/etc/ssl/cert.pem')  # macOS
+            ssl_attempts.append('C:/Windows/System32/certlm.msc')  # Windows (just for reference)
+        else:
+            ssl_attempts.append(verify_ssl)
+        
+        response = None
+        last_error = None
+        
+        for ssl_verify in ssl_attempts:
+            try:
+                logger.info(f"Trying SSL verification: {ssl_verify}")
+                response = requests.post(miniapp_api_url, json={
+                    "instruction_data": instruction_data,
+                    "file_format": file_format,
+                    "user_id": callback.from_user.id
+                }, timeout=10, verify=ssl_verify)
+                break  # Success, exit loop
+            except requests.exceptions.SSLError as e:
+                last_error = e
+                logger.warning(f"SSL verification failed with {ssl_verify}: {e}")
+                continue
+            except Exception as e:
+                last_error = e
+                logger.error(f"Unexpected error with {ssl_verify}: {e}")
+                break
+        
+        if response is None:
+            raise last_error or Exception("All SSL verification attempts failed")
         
         if response.status_code == 200:
             data = response.json()
