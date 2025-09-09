@@ -239,7 +239,7 @@ async def category_selected(callback: types.CallbackQuery, state: FSMContext):
     else:
         await callback.message.edit_text(
             f"📁 {category['icon']} {category['name']}\n\n"
-            "Выберите инструкцию:",
+            "Выберите инструкцию для просмотра:",
             reply_markup=instructions_category_keyboard(category_id)
         )
     
@@ -248,7 +248,7 @@ async def category_selected(callback: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("instruction_"))
 async def instruction_selected(callback: types.CallbackQuery, state: FSMContext):
-    """Handle instruction selection"""
+    """Handle instruction selection - directly open the file"""
     parts = callback.data.replace("instruction_", "").split("_")
     if len(parts) != 2:
         await callback.answer("❌ Ошибка данных")
@@ -263,43 +263,16 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
         await callback.answer("❌ Инструкция не найдена")
         return
     
-    await callback.message.edit_text(
-        f"📄 {instruction['name']}\n\n"
-        f"📝 {instruction['description']}\n\n"
-        "Выберите формат файла:",
-        reply_markup=instruction_keyboard(category_id, instruction_id)
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data == "back_to_categories")
-async def back_to_categories(callback: types.CallbackQuery, state: FSMContext):
-    """Return to categories list"""
-    await callback.message.edit_text(
-        "📚 Выберите категорию:",
-        reply_markup=instructions_main_keyboard()
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("create_secure_link_"))
-async def create_secure_link(callback: types.CallbackQuery, state: FSMContext):
-    """Create secure link for instruction file"""
-    parts = callback.data.replace("create_secure_link_", "").split("_")
-    if len(parts) != 3:
-        await callback.answer("❌ Ошибка данных")
+    # Find the first available file format
+    available_formats = instruction.get('formats', [])
+    if not available_formats:
+        await callback.answer("❌ Файлы не найдены")
         return
     
-    category_id, instruction_id, file_format = parts
+    # Use the first available format
+    file_format = available_formats[0]
     
-    manager = get_instruction_manager()
-    instruction = manager.get_instruction(category_id, instruction_id)
-    
-    if not instruction:
-        await callback.answer("❌ Инструкция не найдена")
-        return
-    
-    # Create secure link via Mini App API
+    # Create secure link directly
     try:
         import requests
         
@@ -323,6 +296,7 @@ async def create_secure_link(callback: types.CallbackQuery, state: FSMContext):
                 # Send Mini App button
                 await callback.message.edit_text(
                     f"📄 {instruction['name']} ({file_format.upper()})\n\n"
+                    f"📝 {instruction['description']}\n\n"
                     f"🔗 Ссылка действительна 40 минут\n\n"
                     "Нажмите кнопку ниже для просмотра:",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
@@ -331,7 +305,7 @@ async def create_secure_link(callback: types.CallbackQuery, state: FSMContext):
                             web_app=types.WebAppInfo(url=secure_url)
                         )
                     ], [
-                        InlineKeyboardButton(text="⬅️ Назад", callback_data=f"instruction_{category_id}_{instruction_id}")
+                        InlineKeyboardButton(text="⬅️ Назад", callback_data=f"category_{category_id}")
                     ]])
                 )
             else:
@@ -342,6 +316,18 @@ async def create_secure_link(callback: types.CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.error(f"Error creating secure link: {e}")
         await callback.answer("❌ Ошибка подключения к серверу")
+
+
+@router.callback_query(F.data == "back_to_categories")
+async def back_to_categories(callback: types.CallbackQuery, state: FSMContext):
+    """Return to categories list"""
+    await callback.message.edit_text(
+        "📚 Выберите категорию:",
+        reply_markup=instructions_main_keyboard()
+    )
+    await callback.answer()
+
+
 
 
 @router.message(InstructionsStates.main_menu)

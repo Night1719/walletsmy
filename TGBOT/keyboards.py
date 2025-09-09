@@ -317,20 +317,10 @@ def instructions_category_keyboard(category_id: str):
 
 
 def instruction_keyboard(category_id: str, instruction_id: str):
-    """Individual instruction keyboard"""
+    """Individual instruction keyboard - simplified, no format selection"""
     kb = InlineKeyboardBuilder()
     
-    manager = get_instruction_manager()
-    instruction = manager.get_instruction(category_id, instruction_id)
-    
-    if instruction:
-        # Show available formats
-        for format_type in instruction.get('formats', []):
-            kb.button(
-                text=f"📄 {format_type.upper()}",
-                callback_data=f"create_secure_link_{category_id}_{instruction_id}_{format_type}"
-            )
-    
+    # Just show back button since we open files directly now
     kb.button(text="⬅️ Назад", callback_data=f"category_{category_id}")
     kb.adjust(1)
     return kb.as_markup()
