@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Глобальная аналитика - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-globe text-danger me-2"></i>
+            Глобальная аналитика
+        </h2>
+        <p class="text-muted">Общая статистика по всем опросам платформы</p>
+    </div>
+</div>
+
+<!-- Общая статистика -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clipboard-list text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ total_surveys }}</h4>
+                <p class="text-muted mb-0">Всего опросов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ total_responses }}</h4>
+                <p class="text-muted mb-0">Всего ответов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-user-plus text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ total_users }}</h4>
+                <p class="text-muted mb-0">Пользователей</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-chart-line text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ avg_responses_per_survey }}</h4>
+                <p class="text-muted mb-0">Среднее ответов/опрос</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Активность по времени -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-line text-danger me-2"></i>
+                    Активность по времени
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-pie-chart text-danger me-2"></i>
+                    Типы опросов
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="surveyTypesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Топ опросов -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-trophy text-danger me-2"></i>
+                    Топ опросов по количеству ответов
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for survey in top_surveys %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ survey.title }}</h6>
+                            <small class="text-muted">{{ survey.description[:50] }}{% if survey.description|length > 50 %}...{% endif %}</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">{{ survey.response_count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-users text-danger me-2"></i>
+                    Топ пользователей
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for user in top_users %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ user.username }}</h6>
+                            <small class="text-muted">{{ user.survey_count }} опросов</small>
+                        </div>
+                        <span class="badge bg-success rounded-pill">{{ user.total_responses }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики по времени -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-calendar-day text-danger me-2"></i>
+                    Ответы по дням (последние 30 дней)
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-clock text-danger me-2"></i>
+                    Ответы по часам
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="hourlyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Географическая статистика -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                    Географическая статистика
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Уникальные IP адреса: {{ unique_ips }}</h6>
+                        <h6>Страны: {{ countries_count }}</h6>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Города: {{ cities_count }}</h6>
+                        <h6>Провайдеры: {{ providers_count }}</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка возврата -->
+<div class="row">
+    <div class="col">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Вернуться в панель управления
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// График активности по времени
+const activityCtx = document.getElementById('activityChart').getContext('2d');
+new Chart(activityCtx, {
+    type: 'line',
+    data: {
+        labels: {{ activity_labels | tojson }},
+        datasets: [{
+            label: 'Ответы',
+            data: {{ activity_data | tojson }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// График типов опросов
+const typesCtx = document.getElementById('surveyTypesChart').getContext('2d');
+new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ survey_types_labels | tojson }},
+        datasets: [{
+            data: {{ survey_types_data | tojson }},
+            backgroundColor: [
+                '#dc3545',
+                '#28a745',
+                '#ffc107',
+                '#17a2b8',
+                '#6f42c1'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// График ответов по дням
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: {{ daily_labels | tojson }},
+        datasets: [{
+            label: 'Ответы',
+            data: {{ daily_values | tojson }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// График ответов по часам
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ hourly_labels | tojson }},
+        datasets: [{
+            label: 'Ответы',
+            data: {{ hourly_values | tojson }},
+            backgroundColor: 'rgba(220, 53, 69, 0.8)',
+            borderColor: '#dc3545',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

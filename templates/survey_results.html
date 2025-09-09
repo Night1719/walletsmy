@@ -186,6 +186,88 @@
                     </div>
                 {% endif %}
                                 
+                            {% elif result.type == 'grid' %}
+                                <!-- Сетка -->
+                                {% if result.error %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ result.error }}
+                                    </div>
+                                {% elif result.data and result.data.grid_data %}
+                                    <div class="grid-results">
+                                        <h6 class="mb-3">Результаты сетки:</h6>
+                                        
+                                        <!-- Таблица результатов -->
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th></th>
+                                                        {% for col in result.data.columns %}
+                                                            <th class="text-center">{{ col }}</th>
+                                                        {% endfor %}
+                                                        <th class="text-center"><strong>Итого</strong></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in result.data.rows %}
+                                                        <tr>
+                                                            <td class="fw-bold">{{ row }}</td>
+                                                            {% for col in result.data.columns %}
+                                                                {% set key = row + '|' + col %}
+                                                                <td class="text-center">
+                                                                    {{ result.data.grid_data.get(key, 0) }}
+                                                                </td>
+                                                            {% endfor %}
+                                                            <td class="text-center fw-bold">
+                                                                {{ result.data.row_totals.get(row, 0) }}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                    <tr class="table-light">
+                                                        <td class="fw-bold">Итого</td>
+                                                        {% for col in result.data.columns %}
+                                                            <td class="text-center fw-bold">
+                                                                {{ result.data.col_totals.get(col, 0) }}
+                                                            </td>
+                                                        {% endfor %}
+                                                        <td class="text-center fw-bold">
+                                                            {{ result.data.grid_data.values() | sum }}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <!-- Статистика по строкам -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Популярность строк:</h6>
+                                                {% for row, count in result.data.row_totals.items() %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="small">{{ row }}</span>
+                                                        <span class="badge bg-primary">{{ count }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Популярность столбцов:</h6>
+                                                {% for col, count in result.data.col_totals.items() %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="small">{{ col }}</span>
+                                                        <span class="badge bg-success">{{ count }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Нет данных для отображения
+                                    </div>
+                                {% endif %}
+                                
                             {% elif result.type == 'text' %}
                                 <!-- Текстовые ответы -->
                                 {% if result.answers %}
@@ -262,16 +344,40 @@
                                 <td>{{ loop.index }}</td>
                                 <td>{{ response.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
                                 <td>
-                                    {% if response.user_id %}
+                                    {% if survey.is_anonymous %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            Аноним
+                                        </span>
+                                    {% elif survey.require_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Не указано
+                                            {% endif %}
+                                        </span>
+                                    {% elif response.user_id %}
                                         {% set user = response.user %}
                                         {% if user %}
                                             <span class="badge bg-primary">{{ user.username }}</span>
                                             <small class="text-muted d-block">{{ user.email }}</small>
                                         {% else %}
-                                            <span class="badge bg-secondary">Удален</span>
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-user-slash me-1"></i>
+                                                Удален
+                                            </span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="badge bg-warning">Анонимный</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Аноним
+                                            {% endif %}
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -339,15 +445,41 @@
                                     </small>
                                 </td>
                                 <td>
-                                    {% if response.user_id %}
-                                        <span class="badge bg-primary">
-                                            <i class="fas fa-user me-1"></i>
-                                            {{ response.user.username if response.user else 'Неизвестно' }}
+                                    {% if survey.is_anonymous %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-user-secret me-1"></i>
+                                            Аноним
                                         </span>
+                                    {% elif survey.require_name %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Не указано
+                                            {% endif %}
+                                        </span>
+                                    {% elif response.user_id %}
+                                        {% set user = response.user %}
+                                        {% if user %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ user.username }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-user-slash me-1"></i>
+                                                Удален
+                                            </span>
+                                        {% endif %}
                                     {% else %}
                                         <span class="badge bg-success">
                                             <i class="fas fa-user-secret me-1"></i>
-                                            Анонимно
+                                            {% if response.respondent_name %}
+                                                {{ response.respondent_name }}
+                                            {% else %}
+                                                Аноним
+                                            {% endif %}
                                         </span>
                                     {% endif %}
                                 </td>
@@ -526,7 +658,6 @@ function createRatingChart(canvasId, data, title) {
 }
 
 function showResponseDetails(responseId) {
-    // Здесь можно добавить AJAX запрос для получения деталей ответа
     const modal = new bootstrap.Modal(document.getElementById('responseModal'));
     document.getElementById('responseModalBody').innerHTML = `
         <div class="text-center py-4">
@@ -538,15 +669,87 @@ function showResponseDetails(responseId) {
     `;
     modal.show();
     
-    // Имитация загрузки данных
-    setTimeout(() => {
-        document.getElementById('responseModalBody').innerHTML = `
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                Детальная информация об ответе будет доступна в следующих версиях
-            </div>
-        `;
-    }, 1000);
+    // Получаем детали ответа через API
+    fetch(`/api/survey/{{ survey.id }}/response/${responseId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('responseModalBody').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Ошибка: ${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Дата ответа:</strong><br>
+                        <span class="text-muted">${new Date(data.created_at).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Пользователь:</strong><br>
+                        <span class="badge bg-primary">${data.user_name}</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>IP-адрес:</strong><br>
+                        <code>${data.ip_address || 'Неизвестно'}</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Время прохождения:</strong><br>
+                        <span class="text-muted">${data.completion_time ? data.completion_time + ' сек.' : 'Не указано'}</span>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3">Ответы на вопросы:</h6>
+            `;
+            
+            data.details.forEach((detail, index) => {
+                html += `
+                    <div class="mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">${index + 1}. ${detail.question_text}</h6>
+                            <span class="badge bg-secondary">${getQuestionTypeName(detail.question_type)}</span>
+                        </div>
+                        <div class="answer-content">
+                            ${detail.answer}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('responseModalBody').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки деталей ответа:', error);
+            document.getElementById('responseModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Ошибка загрузки деталей ответа
+                </div>
+            `;
+        });
+}
+
+function getQuestionTypeName(type) {
+    const types = {
+        'text': 'Текст',
+        'text_paragraph': 'Абзац',
+        'single_choice': 'Один из списка',
+        'multiple_choice': 'Несколько из списка',
+        'dropdown': 'Раскрывающийся список',
+        'scale': 'Шкала',
+        'rating': 'Оценка',
+        'grid': 'Сетка',
+        'checkbox_grid': 'Сетка из флажков',
+        'date': 'Дата',
+        'time': 'Время'
+    };
+    return types[type] || type;
 }
 
 
@@ -555,4 +758,51 @@ function printResults() {
     window.print();
 }
 </script>
+
+<style>
+/* Стили для сеток */
+.grid-results .table {
+    font-size: 0.9rem;
+}
+
+.grid-results .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border: 1px solid #dee2e6;
+}
+
+.grid-results .table td {
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.grid-results .table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.grid-results .table tbody tr:last-child {
+    background-color: #e9ecef;
+    font-weight: 600;
+}
+
+/* Темная тема для сеток */
+[data-bs-theme="dark"] .grid-results .table th {
+    background-color: #495057;
+    color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+[data-bs-theme="dark"] .grid-results .table td {
+    border-color: #6c757d;
+    color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .grid-results .table tbody tr:hover {
+    background-color: #495057;
+}
+
+[data-bs-theme="dark"] .grid-results .table tbody tr:last-child {
+    background-color: #6c757d;
+}
+</style>
 {% endblock %}

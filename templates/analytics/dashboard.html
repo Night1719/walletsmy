@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-chart-bar text-danger me-2"></i>
+            Аналитическая панель
+        </h2>
+        <p class="text-muted">Комплексный анализ опросов и пользовательской активности</p>
+    </div>
+</div>
+
+<!-- Основные метрики -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ analytics.total_surveys if analytics else 0 }}</h4>
+                        <p class="mb-0">Всего опросов</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-poll fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ analytics.active_surveys if analytics else 0 }}</h4>
+                        <p class="mb-0">Активных опросов</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ analytics.total_responses if analytics else 0 }}</h4>
+                        <p class="mb-0">Всего ответов</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-comments fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ analytics.user_stats.active_respondents if analytics else 0 }}</h4>
+                        <p class="mb-0">Активных респондентов</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Навигация по аналитике -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Типы анализа
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('global_analytics') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-globe fa-2x mb-2"></i>
+                            <span>Глобальная аналитика</span>
+                            <small class="text-muted">По всем опросам</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('cross_analysis') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-project-diagram fa-2x mb-2"></i>
+                            <span>Кросс-анализ</span>
+                            <small class="text-muted">Сравнение опросов</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('my_activity') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-user-chart fa-2x mb-2"></i>
+                            <span>Моя активность</span>
+                            <small class="text-muted">Личная статистика</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-arrow-left fa-2x mb-2"></i>
+                            <span>Назад к опросам</span>
+                            <small class="text-muted">Панель управления</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Мои опросы с аналитикой -->
+<div class="row">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Мои опросы
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if current_user.surveys %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Тип</th>
+                                    <th>Ответов</th>
+                                    <th>Создан</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for survey in current_user.surveys %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ survey.title }}</strong>
+                                        {% if survey.description %}
+                                            <br><small class="text-muted">{{ survey.description[:50] }}...</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if survey.is_anonymous %}secondary{% elif survey.require_auth %}primary{% elif survey.require_name %}info{% else %}success{% endif %}">
+                                            {% if survey.is_anonymous %}Анонимный
+                                            {% elif survey.require_auth %}Авторизация
+                                            {% elif survey.require_name %}Имя
+                                            {% else %}Обычный{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ survey.responses|length }}</span>
+                                    </td>
+                                    <td>{{ survey.created_at.strftime('%d.%m.%Y') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('survey_analytics', survey_id=survey.id) }}" 
+                                               class="btn btn-outline-primary" title="Аналитика">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                            <a href="{{ url_for('view_survey', survey_id=survey.id) }}" 
+                                               class="btn btn-outline-info" title="Просмотр">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('survey_results', survey_id=survey.id) }}" 
+                                               class="btn btn-outline-success" title="Результаты">
+                                                <i class="fas fa-poll"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-poll fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">У вас пока нет опросов</h5>
+                        <p class="text-muted">Создайте свой первый опрос для начала аналитики</p>
+                        <a href="{{ url_for('create_survey') }}" class="btn btn-danger">
+                            <i class="fas fa-plus me-2"></i>Создать опрос
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрая статистика -->
+{% if analytics and analytics.top_surveys %}
+<div class="row mt-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    Топ опросы по популярности
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for survey in analytics.top_surveys[:5] %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                            <div>
+                                <h6 class="mb-1">{{ survey.title }}</h6>
+                                <small class="text-muted">Создатель: {{ survey.creator.username }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success fs-6">{{ survey.responses|length }}</span>
+                                <br><small class="text-muted">ответов</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Загружаем глобальную аналитику при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Здесь можно добавить AJAX загрузку дополнительных данных
+    console.log('Аналитическая панель загружена');
+});
+</script>
+{% endblock %}

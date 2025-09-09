@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Моя активность - BG Survey Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark">
+            <i class="fas fa-user-chart text-danger me-2"></i>
+            Моя активность
+        </h2>
+        <p class="text-muted">Персональная статистика и аналитика</p>
+    </div>
+</div>
+
+<!-- Личная статистика -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clipboard-list text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ user_stats.surveys_created }}</h4>
+                <p class="text-muted mb-0">Создано опросов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-reply text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ user_stats.responses_given }}</h4>
+                <p class="text-muted mb-0">Дано ответов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-users text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ user_stats.total_responses_received }}</h4>
+                <p class="text-muted mb-0">Получено ответов</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clock text-danger fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-dark">{{ user_stats.avg_completion_time }}</h4>
+                <p class="text-muted mb-0">Среднее время (мин)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Активность по времени -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-line text-danger me-2"></i>
+                    Моя активность по времени
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-pie-chart text-danger me-2"></i>
+                    Типы моих опросов
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="surveyTypesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Мои опросы -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-list text-danger me-2"></i>
+                    Мои опросы
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Статус</th>
+                                <th>Ответов</th>
+                                <th>Создан</th>
+                                <th>Последний ответ</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for survey in surveys_created %}
+                            <tr>
+                                <td>
+                                    <strong>{{ survey.title }}</strong>
+                                    {% if survey.description %}
+                                        <br><small class="text-muted">{{ survey.description[:50] }}{% if survey.description|length > 50 %}...{% endif %}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if survey.is_active else 'secondary' }}">
+                                        {% if survey.is_active %}Активен{% else %}Неактивен{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ survey.response_count }}</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ survey.created_at[:10] if survey.created_at else 'Неизвестно' }}</small>
+                                </td>
+                                <td>
+                                    {% if survey.response_count > 0 %}
+                                        <small class="text-muted">Есть ответы</small>
+                                    {% else %}
+                                        <small class="text-muted">Нет ответов</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('view_survey', survey_id=survey.id) }}" class="btn btn-outline-primary" title="Просмотр">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('survey_results', survey_id=survey.id) }}" class="btn btn-outline-success" title="Результаты">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Мои ответы -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-reply text-danger me-2"></i>
+                    Мои ответы на опросы
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Опрос</th>
+                                <th>Автор</th>
+                                <th>Дата ответа</th>
+                                <th>Время прохождения</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for response in responses_given %}
+                            <tr>
+                                <td>
+                                    <strong>{{ response.survey_title }}</strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">Создатель опроса</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ response.created_at[:16] if response.created_at else 'Неизвестно' }}</small>
+                                </td>
+                                <td>
+                                    {% if response.completion_time %}
+                                        <small class="text-muted">{{ (response.completion_time / 60)|round(1) }} мин</small>
+                                    {% else %}
+                                        <small class="text-muted">Не указано</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('survey_results', survey_id=response.survey_id) }}" 
+                                       class="btn btn-outline-primary btn-sm" title="Просмотр результатов">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Достижения -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-trophy text-danger me-2"></i>
+                    Достижения
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for achievement in achievements %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-{{ achievement.icon }} text-{{ achievement.color }} fa-2x mb-2"></i>
+                                <h6 class="card-title">{{ achievement.title }}</h6>
+                                <p class="card-text small text-muted">{{ achievement.description }}</p>
+                                {% if achievement.unlocked %}
+                                    <span class="badge bg-success">Разблокировано</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Заблокировано</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка возврата -->
+<div class="row">
+    <div class="col">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Вернуться в панель управления
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// График активности по времени
+const activityCtx = document.getElementById('activityChart').getContext('2d');
+new Chart(activityCtx, {
+    type: 'line',
+    data: {
+        labels: {{ activity_labels | tojson }},
+        datasets: [{
+            label: 'Созданные опросы',
+            data: {{ surveys_activity_data | tojson }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            tension: 0.4
+        }, {
+            label: 'Данные ответы',
+            data: {{ responses_activity_data | tojson }},
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// График типов опросов
+const typesCtx = document.getElementById('surveyTypesChart').getContext('2d');
+new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ survey_types_labels | tojson }},
+        datasets: [{
+            data: {{ survey_types_data | tojson }},
+            backgroundColor: [
+                '#dc3545',
+                '#28a745',
+                '#ffc107',
+                '#17a2b8'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
