@@ -6,7 +6,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import FSInputFile
-from keyboards import admin_keyboard, admin_categories_keyboard, admin_instructions_keyboard, admin_file_format_keyboard
+from keyboards import admin_keyboard, admin_categories_keyboard, admin_instructions_keyboard
 from instruction_manager import get_instruction_manager
 from config import ADMIN_USER_IDS
 import logging
@@ -373,3 +373,14 @@ async def admin_instruction_actions(callback: types.CallbackQuery):
     else:
         # Handle other instruction actions
         await callback.answer("Функция в разработке")
+
+def admin_file_format_keyboard():
+    """Create file format selection keyboard"""
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="PDF", callback_data="admin_file_format_pdf")
+    keyboard.button(text="DOCX", callback_data="admin_file_format_docx")
+    keyboard.button(text="DOC", callback_data="admin_file_format_doc")
+    keyboard.button(text="TXT", callback_data="admin_file_format_txt")
+    keyboard.button(text="❌ Отмена", callback_data="admin_categories")
+    keyboard.adjust(2)
+    return keyboard.as_markup()

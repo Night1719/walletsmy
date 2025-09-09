@@ -225,13 +225,23 @@ def admin_instruction_keyboard(category_id: str, instruction_id: str):
     return kb.as_markup()
 
 
-def admin_file_format_keyboard(category_id: str, instruction_id: str):
+def admin_file_format_keyboard(category_id: str = None, instruction_id: str = None):
     """File format selection keyboard"""
     kb = InlineKeyboardBuilder()
     
-    kb.button(text="📄 PDF", callback_data=f"format_pdf_{category_id}_{instruction_id}")
-    kb.button(text="📝 DOCX", callback_data=f"format_docx_{category_id}_{instruction_id}")
-    kb.button(text="📄 DOC", callback_data=f"format_doc_{category_id}_{instruction_id}")
-    kb.button(text="⬅️ Назад", callback_data=f"admin_instruction_{category_id}_{instruction_id}")
-    kb.adjust(1)
+    if category_id and instruction_id:
+        # For existing instruction format selection
+        kb.button(text="📄 PDF", callback_data=f"format_pdf_{category_id}_{instruction_id}")
+        kb.button(text="📝 DOCX", callback_data=f"format_docx_{category_id}_{instruction_id}")
+        kb.button(text="📄 DOC", callback_data=f"format_doc_{category_id}_{instruction_id}")
+        kb.button(text="⬅️ Назад", callback_data=f"admin_instruction_{category_id}_{instruction_id}")
+    else:
+        # For new instruction format selection
+        kb.button(text="📄 PDF", callback_data="admin_file_format_pdf")
+        kb.button(text="📝 DOCX", callback_data="admin_file_format_docx")
+        kb.button(text="📄 DOC", callback_data="admin_file_format_doc")
+        kb.button(text="📄 TXT", callback_data="admin_file_format_txt")
+        kb.button(text="❌ Отмена", callback_data="admin_categories")
+    
+    kb.adjust(2)
     return kb.as_markup()
