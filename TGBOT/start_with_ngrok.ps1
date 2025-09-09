@@ -70,7 +70,7 @@ Start-Process -FilePath "cmd" -ArgumentList "/k", "cd miniapp && python run.py" 
 Write-Host "⏳ Ожидание запуска Mini App (5 секунд)..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
-Write-Host "🌐 Запуск ngrok туннеля..." -ForegroundColor Green
+Write-Host "🌐 Запуск ngrok туннеля на порт 4477..." -ForegroundColor Green
 Start-Process -FilePath "ngrok" -ArgumentList "http", "4477" -WindowStyle Normal
 
 Write-Host "⏳ Ожидание запуска ngrok (10 секунд)..." -ForegroundColor Yellow
