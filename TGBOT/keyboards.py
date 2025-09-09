@@ -149,6 +149,14 @@ def instructions_otp_keyboard():
     return kb.as_markup(resize_keyboard=True)
 
 
+def otp_verification_keyboard():
+    """OTP verification keyboard"""
+    kb = ReplyKeyboardBuilder()
+    kb.row(KeyboardButton(text="🔄 Отправить код повторно"))
+    kb.row(KeyboardButton(text="❌ Отмена"))
+    return kb.as_markup(resize_keyboard=True)
+
+
 # === Admin Keyboards ===
 
 def admin_keyboard():
