@@ -125,6 +125,19 @@ class InstructionManager:
         """Get all categories"""
         return self.config["categories"]
     
+    def get_all_categories(self) -> List[Dict]:
+        """Get all categories as list"""
+        categories = self.config.get("categories", {})
+        result = []
+        for cat_id, cat_data in categories.items():
+            result.append({
+                "id": cat_id,
+                "name": cat_data.get("name", ""),
+                "icon": cat_data.get("icon", "📁"),
+                "description": cat_data.get("description", "")
+            })
+        return result
+    
     def get_category(self, category_id: str) -> Optional[Dict]:
         """Get specific category"""
         return self.config["categories"].get(category_id)
@@ -133,6 +146,19 @@ class InstructionManager:
         """Get all instructions in category"""
         category = self.get_category(category_id)
         return category["instructions"] if category else {}
+    
+    def get_instructions_by_category(self, category_id: str) -> List[Dict]:
+        """Get all instructions in category as list"""
+        instructions = self.get_instructions(category_id)
+        result = []
+        for inst_id, inst_data in instructions.items():
+            result.append({
+                "id": inst_id,
+                "name": inst_data.get("name", ""),
+                "description": inst_data.get("description", ""),
+                "formats": inst_data.get("formats", [])
+            })
+        return result
     
     def get_instruction(self, category_id: str, instruction_id: str) -> Optional[Dict]:
         """Get specific instruction"""

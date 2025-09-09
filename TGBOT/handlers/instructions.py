@@ -97,11 +97,11 @@ async def instructions_start(message: types.Message, state: FSMContext):
         await message.answer("📚 Раздел инструкций:", reply_markup=instructions_main_keyboard())
         return
     
-    # Request phone for OTP verification
+    # Request email for OTP verification
     await state.set_state(InstructionsStates.awaiting_otp_phone)
     await message.answer(
         "🔐 Для доступа к инструкциям требуется дополнительная авторизация.\n"
-        "Отправьте ваш номер телефона:",
+        "Введите ваш корпоративный email:",
         reply_markup=instructions_otp_keyboard()
     )
 
