@@ -272,34 +272,59 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
     # Use the first available format
     file_format = available_formats[0]
     
-    # Show instruction info with file details
-    files = instruction.get('files', {})
-    file_path = files.get(file_format, '')
-    
-    if file_path:
-        # Create simple secure URL for local Mini App
+    # Create secure link for external Mini App
+    try:
+        import requests
         import time
-        token = f"{category_id}_{instruction_id}_{file_format}_{callback.from_user.id}_{int(time.time())}"
-        secure_url = f"http://localhost:4477/secure/{token}"
         
-        await callback.message.edit_text(
-            f"📄 <b>{instruction['name']}</b> ({file_format.upper()})\n\n"
-            f"📝 {instruction['description']}\n\n"
-            f"📁 Файл: <code>{file_path}</code>\n\n"
-            f"🔗 Ссылка: <code>{secure_url}</code>\n\n"
-            "Нажмите кнопку ниже для просмотра (требует запущенный Mini App):",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(
-                    text="📱 Открыть инструкцию",
-                    web_app=types.WebAppInfo(url=secure_url)
+        # Prepare data for Mini App API
+        instruction_data = f"{category_id}_{instruction_id}"
+        
+        # Use HTTP instead of HTTPS for external server
+        base_url = MINIAPP_URL.replace('/miniapp', '').replace('https://', 'http://')
+        miniapp_api_url = f"{base_url}/api/secure/create-link"
+        
+        response = requests.post(miniapp_api_url, json={
+            "instruction_data": instruction_data,
+            "file_format": file_format,
+            "user_id": callback.from_user.id
+        }, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            secure_url = data.get("secure_url")
+            
+            if secure_url:
+                # Send Mini App button
+                await callback.message.edit_text(
+                    f"📄 <b>{instruction['name']}</b> ({file_format.upper()})\n\n"
+                    f"📝 {instruction['description']}\n\n"
+                    f"🔗 Ссылка действительна 40 минут\n\n"
+                    "Нажмите кнопку ниже для просмотра:",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                        InlineKeyboardButton(
+                            text="📱 Открыть инструкцию",
+                            web_app=types.WebAppInfo(url=secure_url)
+                        )
+                    ], [
+                        InlineKeyboardButton(text="⬅️ Назад", callback_data=f"category_{category_id}")
+                    ]]),
+                    parse_mode="HTML"
                 )
-            ], [
-                InlineKeyboardButton(text="⬅️ Назад", callback_data=f"category_{category_id}")
-            ]]),
-            parse_mode="HTML"
-        )
-    else:
-        await callback.answer("❌ Файл не найден")
+            else:
+                await callback.answer("❌ Ошибка создания ссылки")
+        else:
+            await callback.answer(f"❌ Ошибка сервера: {response.status_code}")
+    
+    except requests.exceptions.SSLError as e:
+        logger.error(f"SSL Error: {e}")
+        await callback.answer("❌ Ошибка SSL соединения. Проверьте настройки сервера.")
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Connection Error: {e}")
+        await callback.answer("❌ Ошибка подключения к серверу. Сервер недоступен.")
+    except Exception as e:
+        logger.error(f"Error creating secure link: {e}")
+        await callback.answer("❌ Ошибка создания ссылки")
 
 
 @router.callback_query(F.data == "back_to_categories")
