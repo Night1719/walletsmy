@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from keyboards import phone_request_keyboard, main_menu_keyboard
+from keyboards import phone_request_keyboard, main_menu_keyboard, main_menu_after_auth_keyboard
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from storage import get_session, set_session
 from api_client import get_user_by_phone, get_user_by_email, update_user_phone
@@ -32,7 +32,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     session = get_session(message.from_user.id)
     if session and session.get("intraservice_id"):
         await message.answer(
-            f"Снова здравствуйте, {session.get('name', 'пользователь')}!", reply_markup=main_menu_keyboard()
+            f"Снова здравствуйте, {session.get('name', 'пользователь')}!", reply_markup=main_menu_after_auth_keyboard()
         )
         return
 
