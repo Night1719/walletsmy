@@ -202,9 +202,25 @@ async def admin_instructions(callback: types.CallbackQuery):
     else:
         text += "Категории не найдены"
     
+    # Создаем клавиатуру для выбора категории
+    kb = InlineKeyboardBuilder()
+    
+    if categories:
+        for cat in categories:
+            kb.button(
+                text=f"{cat['icon']} {cat['name']}",
+                callback_data=f"admin_category_{cat['id']}"
+            )
+    else:
+        kb.button(text="❌ Категории не найдены", callback_data="no_categories")
+    
+    kb.button(text="➕ Добавить категорию", callback_data="admin_add_category")
+    kb.button(text="⬅️ Назад", callback_data="admin_back")
+    kb.adjust(1)
+    
     await callback.message.edit_text(
         text,
-        reply_markup=admin_instructions_keyboard(),
+        reply_markup=kb.as_markup(),
         parse_mode="HTML"
     )
     await callback.answer()
@@ -374,3 +390,28 @@ async def admin_instruction_actions(callback: types.CallbackQuery):
     else:
         # Handle other instruction actions
         await callback.answer("Функция в разработке")
+
+
+@router.callback_query(F.data == "admin_back")
+async def admin_back(callback: types.CallbackQuery):
+    """Return to admin main menu"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет прав администратора")
+        return
+    
+    await callback.message.edit_text(
+        "🔧 <b>Админ панель</b>\n\nВыберите действие:",
+        reply_markup=admin_keyboard(),
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "no_categories")
+async def no_categories(callback: types.CallbackQuery):
+    """Handle no categories case"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ У вас нет прав администратора")
+        return
+    
+    await callback.answer("❌ Категории не найдены. Создайте первую категорию.")
