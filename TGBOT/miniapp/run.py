@@ -21,7 +21,7 @@ if __name__ == '__main__':
     
     # Get configuration from environment
     host = os.getenv('MINIAPP_HOST', '0.0.0.0')
-    port = int(os.getenv('MINIAPP_PORT', '5000'))
+    port = int(os.getenv('MINIAPP_PORT', '4477'))
     debug = os.getenv('MINIAPP_DEBUG', 'false').lower() == 'true'
     
     print(f"Starting Mini App on {host}:{port}")

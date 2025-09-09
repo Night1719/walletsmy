@@ -30,14 +30,14 @@ set TELEGRAM_BOT_TOKEN=your_bot_token_here
 set FILE_SERVER_BASE_URL=https://files.example.com
 set FILE_SERVER_USER=your_file_server_user
 set FILE_SERVER_PASS=your_file_server_password
-set MINIAPP_URL=http://localhost:5000/miniapp
+set MINIAPP_URL=http://localhost:4477/miniapp
 set FLASK_SECRET_KEY=your_secret_key_here
 set MINIAPP_HOST=0.0.0.0
-set MINIAPP_PORT=5000
+set MINIAPP_PORT=4477
 set MINIAPP_DEBUG=true
 
 REM Start the application
-echo Starting Mini App on http://localhost:5000...
+echo Starting Mini App on http://localhost:4477...
 echo.
 echo Press Ctrl+C to stop the server
 echo.
