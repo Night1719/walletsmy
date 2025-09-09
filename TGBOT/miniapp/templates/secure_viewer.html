@@ -3,465 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Просмотр инструкции - Helpdesk Bot</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <title>Просмотр инструкции</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .viewer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        
-        .header {
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+        .viewer-header {
+            background: #3498db;
+            color: white;
             padding: 15px 20px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
-        }
-        
-        .header-left {
-            display: flex;
             align-items: center;
-            gap: 10px;
         }
-        
-        .back-button {
-            background: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 6px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .back-button:hover {
-            opacity: 0.9;
-        }
-        
-        .title {
-            font-size: 16px;
+        .viewer-title {
+            font-size: 18px;
             font-weight: 600;
-            color: var(--tg-theme-text-color, #000000);
         }
-        
-        .content {
-            flex: 1;
+        .viewer-content {
             padding: 20px;
-            overflow-y: auto;
-            background: var(--tg-theme-bg-color, #ffffff);
+            min-height: 400px;
         }
-        
         .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 20px;
+            text-align: center;
+            padding: 40px;
+            color: #666;
         }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--tg-theme-hint-color, #e0e0e0);
-            border-top: 4px solid var(--tg-theme-button-color, #2481cc);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
         .error {
             text-align: center;
-            color: var(--tg-theme-destructive-text-color, #ff3333);
-            padding: 20px;
+            padding: 40px;
+            color: #e74c3c;
         }
-        
-        .pdf-container {
+        .pdf-viewer {
             width: 100%;
-            height: 70vh;
-            border: 1px solid var(--tg-theme-hint-color, #e0e0e0);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .pdf-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-            border-radius: 6px;
-        }
-        
-        .pdf-button {
-            background: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
+            height: 600px;
             border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
         }
-        
-        .pdf-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .pdf-info {
-            flex: 1;
-            text-align: center;
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
-        }
-        
-        .docx-container {
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-            padding: 20px;
-            border-radius: 8px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        
-        .video-container {
+        .video-viewer {
             width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
+            height: 400px;
         }
-        
-        .video-player {
-            width: 100%;
-            height: auto;
-            max-height: 70vh;
-            display: block;
-        }
-        
-        .video-controls {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .video-info {
-            flex: 1;
-            font-size: 14px;
-        }
-        
-        .video-button {
-            background: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
         .text-content {
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-            padding: 20px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
             white-space: pre-wrap;
-            line-height: 1.6;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        
-        .unsupported {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--tg-theme-hint-color, #999999);
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button class="back-button" onclick="goBack()">← Назад</button>
-            <div class="title">Просмотр инструкции</div>
+    <div class="viewer-container">
+        <div class="viewer-header">
+            <div class="viewer-title">Просмотр инструкции</div>
+            <div id="expiry-info"></div>
         </div>
-    </div>
-    
-    <div class="content">
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <div>Загрузка инструкции...</div>
-        </div>
-        
-        <div id="error" class="error" style="display: none;">
-            <div>❌ Ошибка загрузки инструкции</div>
-            <div id="error-message"></div>
-        </div>
-        
-        <div id="pdf-viewer" style="display: none;">
-            <div class="pdf-controls">
-                <button class="pdf-button" onclick="prevPage()" id="prevBtn">← Предыдущая</button>
-                <div class="pdf-info">
-                    <span id="pageInfo">Страница 1 из 1</span>
-                </div>
-                <button class="pdf-button" onclick="nextPage()" id="nextBtn">Следующая →</button>
+        <div class="viewer-content">
+            <div id="loading" class="loading">
+                <p>Загрузка файла...</p>
             </div>
-            <div class="pdf-container">
-                <canvas id="pdf-canvas"></canvas>
+            <div id="error" class="error" style="display: none;">
+                <p>Ошибка загрузки файла</p>
             </div>
-        </div>
-        
-        <div id="docx-viewer" style="display: none;">
-            <div class="docx-container" id="docx-content"></div>
-        </div>
-        
-        <div id="video-viewer" style="display: none;">
-            <div class="video-container">
-                <video id="video-player" class="video-player" controls>
-                    <source id="video-source" src="" type="video/mp4">
-                    Ваш браузер не поддерживает видео.
-                </video>
-                <div class="video-controls">
-                    <div class="video-info">
-                        <span id="video-filename">Инструкция</span>
-                    </div>
-                    <button class="video-button" onclick="toggleFullscreen()">Полный экран</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="text-viewer" style="display: none;">
-            <div class="text-content" id="text-content"></div>
-        </div>
-        
-        <div id="unsupported" class="unsupported" style="display: none;">
-            <div>❌ Формат файла не поддерживается</div>
+            <div id="content" style="display: none;"></div>
         </div>
     </div>
 
     <script>
-        let currentPage = 1;
-        let totalPages = 1;
-        let pdfDoc = null;
-        let scale = 1.5;
-        
-        // Initialize Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        
-        // Get token from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token') || window.location.pathname.split('/').pop();
-        
-        if (!token) {
-            showError('Токен не найден');
-            return;
-        }
-        
-        // Load instruction content
-        loadInstruction();
-        
-        async function loadInstruction() {
+        // Load file content
+        async function loadFile() {
+            const token = '{{ token }}';
+            const instructionType = '{{ instruction_type }}';
+            const fileFormat = '{{ file_format }}';
+            
             try {
                 const response = await fetch(`/api/secure/convert/${token}`);
                 const data = await response.json();
                 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Ошибка загрузки');
+                if (data.error) {
+                    throw new Error(data.error);
                 }
                 
-                hideLoading();
-                
-                switch (data.type) {
-                    case 'pdf':
-                        await loadPDF(data.content);
-                        break;
-                    case 'docx':
-                        await loadDOCX(data.content);
-                        break;
-                    case 'video':
-                        await loadVideo(data.content, data.filename, data.video_format);
-                        break;
-                    case 'text':
-                        loadText(data.content);
-                        break;
-                    default:
-                        showUnsupported();
-                }
-                
+                displayContent(data);
             } catch (error) {
-                console.error('Error loading instruction:', error);
-                showError(error.message);
+                console.error('Error loading file:', error);
+                showError();
             }
         }
         
-        async function loadPDF(base64Content) {
-            try {
-                const pdfData = atob(base64Content);
-                pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
-                totalPages = pdfDoc.numPages;
-                
-                document.getElementById('pdf-viewer').style.display = 'block';
-                await renderPage(1);
-                updatePageInfo();
-                
-            } catch (error) {
-                console.error('Error loading PDF:', error);
-                showError('Ошибка загрузки PDF');
-            }
-        }
-        
-        async function loadDOCX(base64Content) {
-            try {
-                const docxData = atob(base64Content);
-                const arrayBuffer = new Uint8Array(docxData.length);
-                for (let i = 0; i < docxData.length; i++) {
-                    arrayBuffer[i] = docxData.charCodeAt(i);
-                }
-                
-                const result = await mammoth.convertToHtml({arrayBuffer: arrayBuffer});
-                document.getElementById('docx-content').innerHTML = result.value;
-                document.getElementById('docx-viewer').style.display = 'block';
-                
-                if (result.messages.length > 0) {
-                    console.warn('DOCX conversion warnings:', result.messages);
-                }
-                
-            } catch (error) {
-                console.error('Error loading DOCX:', error);
-                showError('Ошибка загрузки DOCX');
-            }
-        }
-        
-        async function loadVideo(base64Content, filename, videoFormat) {
-            try {
-                const videoData = atob(base64Content);
-                const blob = new Blob([new Uint8Array(videoData.length).map((_, i) => videoData.charCodeAt(i))], {
-                    type: `video/${videoFormat}`
-                });
-                
-                const videoUrl = URL.createObjectURL(blob);
-                const videoPlayer = document.getElementById('video-player');
-                const videoSource = document.getElementById('video-source');
-                
-                videoSource.src = videoUrl;
-                videoSource.type = `video/${videoFormat}`;
-                videoPlayer.load();
-                
-                document.getElementById('video-filename').textContent = filename;
-                document.getElementById('video-viewer').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Error loading video:', error);
-                showError('Ошибка загрузки видео');
-            }
-        }
-        
-        function loadText(textContent) {
-            document.getElementById('text-content').textContent = textContent;
-            document.getElementById('text-viewer').style.display = 'block';
-        }
-        
-        async function renderPage(pageNum) {
-            if (!pdfDoc) return;
+        function displayContent(data) {
+            const contentDiv = document.getElementById('content');
+            const loadingDiv = document.getElementById('loading');
             
-            const page = await pdfDoc.getPage(pageNum);
-            const canvas = document.getElementById('pdf-canvas');
-            const ctx = canvas.getContext('2d');
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
             
-            const viewport = page.getViewport({scale: scale});
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-            
-            await page.render(renderContext).promise;
-        }
-        
-        async function prevPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                await renderPage(currentPage);
-                updatePageInfo();
+            if (data.type === 'pdf') {
+                const pdfData = `data:application/pdf;base64,${data.content}`;
+                contentDiv.innerHTML = `<iframe src="${pdfData}" class="pdf-viewer"></iframe>`;
+            } else if (data.type === 'docx') {
+                // For Word documents, we'll show a message to download
+                contentDiv.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <p>Документ Word готов к просмотру</p>
+                        <a href="/api/secure/file/{{ token }}" download="${data.filename}" 
+                           style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                            Скачать документ
+                        </a>
+                    </div>
+                `;
+            } else if (data.type === 'video') {
+                const videoData = `data:video/${data.video_format};base64,${data.content}`;
+                contentDiv.innerHTML = `
+                    <video controls class="video-viewer">
+                        <source src="${videoData}" type="video/${data.video_format}">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                `;
+            } else if (data.type === 'text') {
+                contentDiv.innerHTML = `<div class="text-content">${data.content}</div>`;
             }
         }
         
-        async function nextPage() {
-            if (currentPage < totalPages) {
-                currentPage++;
-                await renderPage(currentPage);
-                updatePageInfo();
-            }
-        }
-        
-        function updatePageInfo() {
-            document.getElementById('pageInfo').textContent = `Страница ${currentPage} из ${totalPages}`;
-            document.getElementById('prevBtn').disabled = currentPage <= 1;
-            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
-        }
-        
-        function toggleFullscreen() {
-            const video = document.getElementById('video-player');
-            if (video.requestFullscreen) {
-                video.requestFullscreen();
-            } else if (video.webkitRequestFullscreen) {
-                video.webkitRequestFullscreen();
-            } else if (video.msRequestFullscreen) {
-                video.msRequestFullscreen();
-            }
-        }
-        
-        function hideLoading() {
+        function showError() {
             document.getElementById('loading').style.display = 'none';
-        }
-        
-        function showError(message) {
-            hideLoading();
-            document.getElementById('error-message').textContent = message;
             document.getElementById('error').style.display = 'block';
         }
         
-        function showUnsupported() {
-            hideLoading();
-            document.getElementById('unsupported').style.display = 'block';
-        }
+        // Start loading
+        loadFile();
         
-        function goBack() {
-            tg.close();
-        }
-        
-        // Handle keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowLeft') {
-                prevPage();
-            } else if (e.key === 'ArrowRight') {
-                nextPage();
-            }
-        });
+        // Show expiry info
+        const expiryMinutes = 40; // This should match your LINK_EXPIRY_MINUTES
+        document.getElementById('expiry-info').textContent = `Действует ${expiryMinutes} мин`;
     </script>
 </body>
 </html>

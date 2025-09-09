@@ -3,107 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ошибка - Helpdesk Bot</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Ошибка - Инструкции</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
         .error-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
-            padding: 40px 20px;
             max-width: 400px;
+            width: 100%;
         }
-        
         .error-icon {
-            font-size: 64px;
+            font-size: 48px;
             margin-bottom: 20px;
         }
-        
         .error-title {
             font-size: 24px;
             font-weight: 600;
+            color: #e74c3c;
             margin-bottom: 15px;
-            color: #ff4444;
         }
-        
         .error-message {
             font-size: 16px;
+            color: #666;
             line-height: 1.5;
-            color: var(--tg-theme-hint-color, #999999);
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
-        
         .back-button {
-            background: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
+            background: #3498db;
+            color: white;
             border: none;
-            border-radius: 8px;
             padding: 12px 24px;
-            cursor: pointer;
+            border-radius: 6px;
             font-size: 16px;
-            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
         }
-        
         .back-button:hover {
-            opacity: 0.8;
-        }
-        
-        .security-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
+            background: #2980b9;
         }
     </style>
 </head>
 <body>
     <div class="error-container">
         <div class="error-icon">⚠️</div>
-        <div class="error-title">{{ error_title }}</div>
-        <div class="error-message">{{ error_message }}</div>
-        
-        <button class="back-button" onclick="goBack()">← Вернуться к боту</button>
-        
-        <div class="security-info">
-            <strong>🔒 Безопасность:</strong><br>
-            Ссылки на инструкции действительны только 40 минут и привязаны к вашему аккаунту.
-        </div>
+        <h1 class="error-title">{{ error_title }}</h1>
+        <p class="error-message">{{ error_message }}</p>
+        <a href="javascript:history.back()" class="back-button">Назад</a>
     </div>
-
-    <script>
-        // Initialize Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        
-        // Set theme colors
-        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
-        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
-        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
-        document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f8f9fa');
-        
-        // Go back to bot
-        function goBack() {
-            tg.close();
-        }
-    </script>
 </body>
 </html>

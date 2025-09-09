@@ -130,29 +130,47 @@ def _validate_telegram_data(init_data: str, bot_token: str) -> bool:
         logger.error(f"Error validating Telegram data: {e}")
         return False
 
-# Instruction files mapping
-INSTRUCTION_FILES = {
-    "1c_ar2": {
-        "pdf": "instructions/1c/ar2.pdf",
-        "docx": "instructions/1c/ar2.docx"
-    },
-    "1c_dm": {
-        "pdf": "instructions/1c/dm.pdf", 
-        "docx": "instructions/1c/dm.docx"
-    },
-    "email_iphone": {
-        "pdf": "instructions/email/iphone.pdf",
-        "docx": "instructions/email/iphone.docx"
-    },
-    "email_android": {
-        "pdf": "instructions/email/android.pdf",
-        "docx": "instructions/email/android.docx"
-    },
-    "email_outlook": {
-        "pdf": "instructions/email/outlook.pdf",
-        "docx": "instructions/email/outlook.docx"
-    }
-}
+# Dynamic instruction files - loaded from instruction_manager
+def get_instruction_files():
+    """Get instruction files from instruction_manager"""
+    try:
+        # Import instruction_manager from parent directory
+        import sys
+        from pathlib import Path
+        parent_dir = Path(__file__).parent.parent
+        sys.path.insert(0, str(parent_dir))
+        
+        from instruction_manager import get_instruction_manager
+        instruction_manager = get_instruction_manager()
+        
+        # Build instruction files mapping
+        instruction_files = {}
+        categories = instruction_manager.get_all_categories()
+        
+        for category in categories:
+            category_id = category['id']
+            instructions = instruction_manager.get_instructions_by_category(category_id)
+            
+            for instruction in instructions:
+                instruction_id = instruction['id']
+                key = f"{category_id}_{instruction_id}"
+                
+                # Get file formats from instruction
+                formats = instruction.get('formats', [])
+                instruction_files[key] = {}
+                
+                for file_format in formats:
+                    # Construct file path based on instruction structure
+                    file_path = f"instructions/{category_id}/{instruction_id}/{instruction['name']}.{file_format}"
+                    instruction_files[key][file_format] = file_path
+        
+        return instruction_files
+    except Exception as e:
+        logger.error(f"Error loading instruction files: {e}")
+        return {}
+
+# Load instruction files
+INSTRUCTION_FILES = get_instruction_files()
 
 @app.route('/')
 def index():
@@ -210,12 +228,23 @@ def create_secure_link():
     """Create a secure temporary link for instruction file"""
     try:
         data = request.get_json()
-        instruction_type = data.get('instruction_type')
+        instruction_data = data.get('instruction_data')  # Format: "category_id_instruction_id"
         file_format = data.get('file_format')
         user_id = data.get('user_id')
         
-        if not all([instruction_type, file_format, user_id]):
+        if not all([instruction_data, file_format, user_id]):
             return jsonify({"error": "Missing required parameters"}), 400
+        
+        # Parse instruction_data
+        if '_' not in instruction_data:
+            return jsonify({"error": "Invalid instruction data format"}), 400
+        
+        category_id, instruction_id = instruction_data.split('_', 1)
+        instruction_type = f"{category_id}_{instruction_id}"
+        
+        # Reload instruction files to get latest data
+        global INSTRUCTION_FILES
+        INSTRUCTION_FILES = get_instruction_files()
         
         if instruction_type not in INSTRUCTION_FILES:
             return jsonify({"error": "Invalid instruction type"}), 400
