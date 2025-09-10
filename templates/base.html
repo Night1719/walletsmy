@@ -42,6 +42,48 @@
                 document.body.classList.add('fa-fallback');
             }
             
+            // Принудительно применяем fallback иконки для всех элементов
+            setTimeout(() => {
+                const icons = document.querySelectorAll('.fas, .far, .fab');
+                icons.forEach(icon => {
+                    const iconClass = Array.from(icon.classList).find(cls => cls.startsWith('fa-'));
+                    if (iconClass) {
+                        const iconMap = {
+                            'fa-eye': '👁️',
+                            'fa-edit': '✏️',
+                            'fa-trash': '🗑️',
+                            'fa-download': '⬇️',
+                            'fa-share-alt': '📤',
+                            'fa-chart-bar': '📊',
+                            'fa-home': '🏠',
+                            'fa-tachometer-alt': '⚡',
+                            'fa-plus': '➕',
+                            'fa-cog': '⚙️',
+                            'fa-sign-in-alt': '🔑',
+                            'fa-sign-out-alt': '🚪',
+                            'fa-user': '👤',
+                            'fa-moon': '🌙',
+                            'fa-sun': '☀️',
+                            'fa-info-circle': 'ℹ️',
+                            'fa-clipboard-list': '📋',
+                            'fa-users': '👥',
+                            'fa-chart-line': '📈',
+                            'fa-play-circle': '▶️',
+                            'fa-lock': '🔒',
+                            'fa-check': '✅',
+                            'fa-chart-pie': '🥧',
+                            'fa-user-shield': '🛡️'
+                        };
+                        
+                        if (iconMap[iconClass]) {
+                            icon.textContent = iconMap[iconClass];
+                            icon.style.fontFamily = 'sans-serif';
+                            icon.style.fontWeight = 'normal';
+                        }
+                    }
+                });
+            }, 100);
+            
             document.body.removeChild(testIcon);
         });
     </script>
@@ -185,8 +227,14 @@
             font-style: normal;
         }
         
+        /* Принудительно применяем fallback иконки для всех элементов */
+        .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome", sans-serif !important;
+            font-weight: 900 !important;
+            font-style: normal !important;
+        }
+        
         /* Fallback иконки как текст - принудительно применяем */
-        .fas:before, .far:before, .fab:before { content: ""; }
         .fa-chart-bar:before { content: "📊" !important; }
         .fa-home:before { content: "🏠" !important; }
         .fa-tachometer-alt:before { content: "⚡" !important; }
@@ -211,6 +259,17 @@
         .fa-trash:before { content: "🗑️" !important; }
         .fa-download:before { content: "⬇️" !important; }
         .fa-share-alt:before { content: "📤" !important; }
+        
+        /* Дополнительные иконки для кнопок действий */
+        .btn .fas:before, .btn .far:before, .btn .fab:before {
+            content: "" !important;
+        }
+        .btn .fa-eye:before { content: "👁️" !important; }
+        .btn .fa-edit:before { content: "✏️" !important; }
+        .btn .fa-trash:before { content: "🗑️" !important; }
+        .btn .fa-download:before { content: "⬇️" !important; }
+        .btn .fa-share-alt:before { content: "📤" !important; }
+        .btn .fa-chart-bar:before { content: "📊" !important; }
         
         /* Стили для fallback иконок */
         .fa-fallback .fas, .fa-fallback .far, .fa-fallback .fab {
