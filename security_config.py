@@ -86,7 +86,7 @@ class SecurityConfig:
     def get_rate_limits():
         """Возвращает лимиты для различных эндпоинтов"""
         return {
-            'login': '5 per minute',
+            'login': '20 per minute',
             'register': '3 per minute',
             'create_survey': '10 per hour',
             'submit_survey': '20 per hour',

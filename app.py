@@ -261,7 +261,7 @@ def index():
                          recent_surveys=recent_surveys)
 
 @app.route('/login', methods=['GET', 'POST'])
-@rate_limit('5 per minute')
+@rate_limit('20 per minute')
 def login():
     if request.method == 'POST':
         # Валидация входных данных
