@@ -46,6 +46,9 @@
             setTimeout(() => {
                 const icons = document.querySelectorAll('.fas, .far, .fab');
                 icons.forEach(icon => {
+                    // Проверяем, не была ли уже заменена иконка
+                    if (icon.dataset.replaced) return;
+                    
                     const iconClass = Array.from(icon.classList).find(cls => cls.startsWith('fa-'));
                     if (iconClass) {
                         const iconMap = {
@@ -72,13 +75,20 @@
                             'fa-lock': '🔒',
                             'fa-check': '✅',
                             'fa-chart-pie': '🥧',
-                            'fa-user-shield': '🛡️'
+                            'fa-user-shield': '🛡️',
+                            'fa-pause-circle': '⏸️',
+                            'fa-stop-circle': '⏹️',
+                            'fa-ban': '🚫',
+                            'fa-times-circle': '❌'
                         };
                         
                         if (iconMap[iconClass]) {
+                            // Очищаем содержимое и добавляем только эмодзи
+                            icon.innerHTML = '';
                             icon.textContent = iconMap[iconClass];
                             icon.style.fontFamily = 'sans-serif';
                             icon.style.fontWeight = 'normal';
+                            icon.dataset.replaced = 'true';
                         }
                     }
                 });
@@ -112,6 +122,10 @@
         .col-lg-1, .col-lg-2, .col-lg-3, .col-lg-4, .col-lg-5, .col-lg-6, .col-lg-7, .col-lg-8, .col-lg-9, .col-lg-10, .col-lg-11, .col-lg-12 {
             padding: 0 15px;
         }
+        
+        /* Принудительно применяем отступы по бокам */
+        body { padding-left: 15px !important; padding-right: 15px !important; }
+        .container { margin-left: auto !important; margin-right: auto !important; }
         .row { display: flex; flex-wrap: wrap; margin: 0 -15px; }
         
         /* Колонки */
@@ -234,42 +248,7 @@
             font-style: normal !important;
         }
         
-        /* Fallback иконки как текст - принудительно применяем */
-        .fa-chart-bar:before { content: "📊" !important; }
-        .fa-home:before { content: "🏠" !important; }
-        .fa-tachometer-alt:before { content: "⚡" !important; }
-        .fa-plus:before { content: "➕" !important; }
-        .fa-cog:before { content: "⚙️" !important; }
-        .fa-sign-in-alt:before { content: "🔑" !important; }
-        .fa-sign-out-alt:before { content: "🚪" !important; }
-        .fa-user:before { content: "👤" !important; }
-        .fa-moon:before { content: "🌙" !important; }
-        .fa-sun:before { content: "☀️" !important; }
-        .fa-info-circle:before { content: "ℹ️" !important; }
-        .fa-clipboard-list:before { content: "📋" !important; }
-        .fa-users:before { content: "👥" !important; }
-        .fa-chart-line:before { content: "📈" !important; }
-        .fa-play-circle:before { content: "▶️" !important; }
-        .fa-lock:before { content: "🔒" !important; }
-        .fa-check:before { content: "✅" !important; }
-        .fa-chart-pie:before { content: "🥧" !important; }
-        .fa-user-shield:before { content: "🛡️" !important; }
-        .fa-eye:before { content: "👁️" !important; }
-        .fa-edit:before { content: "✏️" !important; }
-        .fa-trash:before { content: "🗑️" !important; }
-        .fa-download:before { content: "⬇️" !important; }
-        .fa-share-alt:before { content: "📤" !important; }
-        
-        /* Дополнительные иконки для кнопок действий */
-        .btn .fas:before, .btn .far:before, .btn .fab:before {
-            content: "" !important;
-        }
-        .btn .fa-eye:before { content: "👁️" !important; }
-        .btn .fa-edit:before { content: "✏️" !important; }
-        .btn .fa-trash:before { content: "🗑️" !important; }
-        .btn .fa-download:before { content: "⬇️" !important; }
-        .btn .fa-share-alt:before { content: "📤" !important; }
-        .btn .fa-chart-bar:before { content: "📊" !important; }
+        /* Убираем CSS fallback иконки, используем только JavaScript */
         
         /* Стили для fallback иконок */
         .fa-fallback .fas, .fa-fallback .far, .fa-fallback .fab {
