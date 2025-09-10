@@ -8,6 +8,28 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css';">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';">
     
+    <!-- Fallback для Font Awesome -->
+    <script>
+        // Проверяем загрузку Font Awesome
+        document.addEventListener('DOMContentLoaded', function() {
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fas fa-chart-bar';
+            testIcon.style.display = 'none';
+            document.body.appendChild(testIcon);
+            
+            const computedStyle = window.getComputedStyle(testIcon);
+            const fontFamily = computedStyle.fontFamily;
+            
+            if (!fontFamily.includes('Font Awesome') && !fontFamily.includes('FontAwesome')) {
+                console.warn('Font Awesome не загружен, применяем fallback иконки');
+                // Добавляем класс для fallback иконок
+                document.body.classList.add('fa-fallback');
+            }
+            
+            document.body.removeChild(testIcon);
+        });
+    </script>
+    
     <!-- Критически важные стили для корректного отображения -->
     <style>
         /* Сброс стилей */
@@ -17,7 +39,8 @@
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.5; color: #212529; background-color: #f8f9fa; }
         
         /* Контейнеры */
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+        .container { max-width: 1140px; margin: 0 auto; padding: 0 15px; }
+        .container-fluid { width: 100%; padding: 0 15px; }
         .row { display: flex; flex-wrap: wrap; margin: 0 -15px; }
         
         /* Колонки */
@@ -100,6 +123,44 @@
         .me-2 { margin-right: 0.5rem; }
         .me-3 { margin-right: 1rem; }
         .mt-3 { margin-top: 1rem; }
+        
+        /* Fallback для иконок если Font Awesome не загрузился */
+        .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome", sans-serif;
+            font-weight: 900;
+            font-style: normal;
+        }
+        
+        /* Fallback иконки как текст */
+        .fa-chart-bar:before { content: "📊"; }
+        .fa-home:before { content: "🏠"; }
+        .fa-tachometer-alt:before { content: "⚡"; }
+        .fa-plus:before { content: "➕"; }
+        .fa-cog:before { content: "⚙️"; }
+        .fa-sign-in-alt:before { content: "🔑"; }
+        .fa-sign-out-alt:before { content: "🚪"; }
+        .fa-user:before { content: "👤"; }
+        .fa-moon:before { content: "🌙"; }
+        .fa-sun:before { content: "☀️"; }
+        .fa-info-circle:before { content: "ℹ️"; }
+        
+        /* Стили для fallback иконок */
+        .fa-fallback .fas, .fa-fallback .far, .fa-fallback .fab {
+            font-family: sans-serif;
+            font-weight: normal;
+        }
+        
+        .fa-fallback .fa-chart-bar:before { content: "📊"; }
+        .fa-fallback .fa-home:before { content: "🏠"; }
+        .fa-fallback .fa-tachometer-alt:before { content: "⚡"; }
+        .fa-fallback .fa-plus:before { content: "➕"; }
+        .fa-fallback .fa-cog:before { content: "⚙️"; }
+        .fa-fallback .fa-sign-in-alt:before { content: "🔑"; }
+        .fa-fallback .fa-sign-out-alt:before { content: "🚪"; }
+        .fa-fallback .fa-user:before { content: "👤"; }
+        .fa-fallback .fa-moon:before { content: "🌙"; }
+        .fa-fallback .fa-sun:before { content: "☀️"; }
+        .fa-fallback .fa-info-circle:before { content: "ℹ️"; }
         
         /* Адаптивность */
         @media (max-width: 991px) {

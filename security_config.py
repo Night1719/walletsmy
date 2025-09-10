@@ -89,7 +89,7 @@ class SecurityConfig:
             'login': '20 per minute',
             'register': '3 per minute',
             'create_survey': '10 per hour',
-            'submit_survey': '20 per hour',
+            'submit_survey': '100 per hour',
             'export_excel': '5 per hour',
             'admin_panel': '100 per hour',
             'api': '100 per hour',
