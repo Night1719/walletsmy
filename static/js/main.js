@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initConfirmations();
     initFormValidation();
     initAnimations();
+    initMobileMenu();
 });
 
 // Переключение темы
@@ -476,6 +477,33 @@ window.addEventListener('error', function(e) {
     console.error('JavaScript error:', e.error);
     notificationUtils.error('Произошла ошибка. Проверьте консоль для деталей.');
 });
+
+// Инициализация мобильного меню
+function initMobileMenu() {
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const navbarCollapse = document.querySelector('.navbar-collapse');
+    
+    if (navbarToggler && navbarCollapse) {
+        navbarToggler.addEventListener('click', function() {
+            navbarCollapse.classList.toggle('show');
+        });
+        
+        // Закрытие меню при клике на ссылку
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                navbarCollapse.classList.remove('show');
+            });
+        });
+        
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(e) {
+            if (!navbarToggler.contains(e.target) && !navbarCollapse.contains(e.target)) {
+                navbarCollapse.classList.remove('show');
+            }
+        });
+    }
+}
 
 // Обработка необработанных промисов
 window.addEventListener('unhandledrejection', function(e) {
