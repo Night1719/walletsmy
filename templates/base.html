@@ -8,21 +8,37 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css';">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';">
     
-    <!-- Fallback для Font Awesome -->
+    <!-- Fallback для Bootstrap и Font Awesome -->
     <script>
-        // Проверяем загрузку Font Awesome
+        // Проверяем загрузку Bootstrap и Font Awesome
         document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем Bootstrap
+            const testContainer = document.createElement('div');
+            testContainer.className = 'container';
+            testContainer.style.display = 'none';
+            document.body.appendChild(testContainer);
+            
+            const computedStyle = window.getComputedStyle(testContainer);
+            const maxWidth = computedStyle.maxWidth;
+            
+            if (maxWidth === 'none' || maxWidth === '') {
+                console.warn('Bootstrap не загружен, применяем fallback стили');
+                document.body.classList.add('bootstrap-not-loaded');
+            }
+            
+            document.body.removeChild(testContainer);
+            
+            // Проверяем Font Awesome
             const testIcon = document.createElement('i');
             testIcon.className = 'fas fa-chart-bar';
             testIcon.style.display = 'none';
             document.body.appendChild(testIcon);
             
-            const computedStyle = window.getComputedStyle(testIcon);
-            const fontFamily = computedStyle.fontFamily;
+            const iconStyle = window.getComputedStyle(testIcon);
+            const fontFamily = iconStyle.fontFamily;
             
             if (!fontFamily.includes('Font Awesome') && !fontFamily.includes('FontAwesome')) {
                 console.warn('Font Awesome не загружен, применяем fallback иконки');
-                // Добавляем класс для fallback иконок
                 document.body.classList.add('fa-fallback');
             }
             
@@ -38,9 +54,13 @@
         /* Базовые стили */
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.5; color: #212529; background-color: #f8f9fa; }
         
-        /* Контейнеры */
+        /* Контейнеры - только если Bootstrap не загружен */
         .container { max-width: 1140px; margin: 0 auto; padding: 0 15px; }
         .container-fluid { width: 100%; padding: 0 15px; }
+        
+        /* Принудительно применяем стили только если Bootstrap не загружен */
+        .bootstrap-not-loaded .container { max-width: 1140px; margin: 0 auto; padding: 0 15px; }
+        .bootstrap-not-loaded .container-fluid { width: 100%; padding: 0 15px; }
         .row { display: flex; flex-wrap: wrap; margin: 0 -15px; }
         
         /* Колонки */
@@ -87,6 +107,19 @@
         .btn-outline-danger { color: #dc3545; border-color: #dc3545; background-color: transparent; }
         .btn-outline-danger:hover { background-color: #dc3545; border-color: #dc3545; color: #fff; }
         .btn-lg { padding: 0.5rem 1rem; font-size: 1.25rem; border-radius: 0.5rem; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 0.25rem; }
+        .btn-group { position: relative; display: inline-flex; vertical-align: middle; }
+        .btn-group > .btn { position: relative; flex: 1 1 auto; }
+        .btn-group > .btn:not(:last-child):not(.dropdown-toggle) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .btn-group > .btn:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .btn-outline-primary { color: #0d6efd; border-color: #0d6efd; background-color: transparent; }
+        .btn-outline-primary:hover { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
+        .btn-outline-warning { color: #ffc107; border-color: #ffc107; background-color: transparent; }
+        .btn-outline-warning:hover { background-color: #ffc107; border-color: #ffc107; color: #000; }
+        .btn-outline-success { color: #198754; border-color: #198754; background-color: transparent; }
+        .btn-outline-success:hover { background-color: #198754; border-color: #198754; color: #fff; }
+        .btn-outline-info { color: #0dcaf0; border-color: #0dcaf0; background-color: transparent; }
+        .btn-outline-info:hover { background-color: #0dcaf0; border-color: #0dcaf0; color: #000; }
         
         /* Карточки */
         .card { position: relative; display: flex; flex-direction: column; min-width: 0; word-wrap: break-word; background-color: #fff; background-clip: border-box; border: 1px solid rgba(0,0,0,.125); border-radius: 0.375rem; }
@@ -161,6 +194,49 @@
         .fa-fallback .fa-moon:before { content: "🌙"; }
         .fa-fallback .fa-sun:before { content: "☀️"; }
         .fa-fallback .fa-info-circle:before { content: "ℹ️"; }
+        .fa-fallback .fa-clipboard-list:before { content: "📋"; }
+        .fa-fallback .fa-users:before { content: "👥"; }
+        .fa-fallback .fa-chart-line:before { content: "📈"; }
+        .fa-fallback .fa-play-circle:before { content: "▶️"; }
+        .fa-fallback .fa-edit:before { content: "✏️"; }
+        .fa-fallback .fa-trash:before { content: "🗑️"; }
+        .fa-fallback .fa-eye:before { content: "👁️"; }
+        .fa-fallback .fa-download:before { content: "⬇️"; }
+        .fa-fallback .fa-upload:before { content: "⬆️"; }
+        .fa-fallback .fa-save:before { content: "💾"; }
+        .fa-fallback .fa-times:before { content: "❌"; }
+        .fa-fallback .fa-check:before { content: "✅"; }
+        .fa-fallback .fa-arrow-left:before { content: "←"; }
+        .fa-fallback .fa-arrow-right:before { content: "→"; }
+        .fa-fallback .fa-bars:before { content: "☰"; }
+        .fa-fallback .fa-search:before { content: "🔍"; }
+        .fa-fallback .fa-filter:before { content: "🔽"; }
+        .fa-fallback .fa-sort:before { content: "⇅"; }
+        .fa-fallback .fa-calendar:before { content: "📅"; }
+        .fa-fallback .fa-clock:before { content: "🕐"; }
+        .fa-fallback .fa-envelope:before { content: "✉️"; }
+        .fa-fallback .fa-phone:before { content: "📞"; }
+        .fa-fallback .fa-map-marker-alt:before { content: "📍"; }
+        .fa-fallback .fa-link:before { content: "🔗"; }
+        .fa-fallback .fa-external-link-alt:before { content: "🔗"; }
+        .fa-fallback .fa-copy:before { content: "📋"; }
+        .fa-fallback .fa-share:before { content: "📤"; }
+        .fa-fallback .fa-heart:before { content: "❤️"; }
+        .fa-fallback .fa-star:before { content: "⭐"; }
+        .fa-fallback .fa-thumbs-up:before { content: "👍"; }
+        .fa-fallback .fa-thumbs-down:before { content: "👎"; }
+        .fa-fallback .fa-comment:before { content: "💬"; }
+        .fa-fallback .fa-reply:before { content: "↩️"; }
+        .fa-fallback .fa-flag:before { content: "🚩"; }
+        .fa-fallback .fa-exclamation-triangle:before { content: "⚠️"; }
+        .fa-fallback .fa-question-circle:before { content: "❓"; }
+        .fa-fallback .fa-question:before { content: "❓"; }
+        .fa-fallback .fa-question-mark:before { content: "❓"; }
+        .fa-fallback .fa-share-alt:before { content: "📤"; }
+        .fa-fallback .fa-share:before { content: "📤"; }
+        .fa-fallback .fa-copy:before { content: "📋"; }
+        .fa-fallback .fa-link:before { content: "🔗"; }
+        .fa-fallback .fa-external-link-alt:before { content: "🔗"; }
         
         /* Адаптивность */
         @media (max-width: 991px) {
