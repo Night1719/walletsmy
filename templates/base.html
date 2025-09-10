@@ -60,6 +60,16 @@
         
         /* Принудительно применяем правильную ширину для всех страниц */
         .container { max-width: 1140px !important; margin: 0 auto !important; padding: 0 15px !important; }
+        
+        /* Дополнительные стили для правильного отображения */
+        body { margin: 0; padding: 0; }
+        .container-fluid { width: 100%; padding: 0 15px; }
+        .row { margin: 0 -15px; }
+        .col, .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10, .col-11, .col-12,
+        .col-md-1, .col-md-2, .col-md-3, .col-md-4, .col-md-5, .col-md-6, .col-md-7, .col-md-8, .col-md-9, .col-md-10, .col-md-11, .col-md-12,
+        .col-lg-1, .col-lg-2, .col-lg-3, .col-lg-4, .col-lg-5, .col-lg-6, .col-lg-7, .col-lg-8, .col-lg-9, .col-lg-10, .col-lg-11, .col-lg-12 {
+            padding: 0 15px;
+        }
         .row { display: flex; flex-wrap: wrap; margin: 0 -15px; }
         
         /* Колонки */
@@ -175,26 +185,32 @@
             font-style: normal;
         }
         
-        /* Fallback иконки как текст */
-        .fa-chart-bar:before { content: "📊"; }
-        .fa-home:before { content: "🏠"; }
-        .fa-tachometer-alt:before { content: "⚡"; }
-        .fa-plus:before { content: "➕"; }
-        .fa-cog:before { content: "⚙️"; }
-        .fa-sign-in-alt:before { content: "🔑"; }
-        .fa-sign-out-alt:before { content: "🚪"; }
-        .fa-user:before { content: "👤"; }
-        .fa-moon:before { content: "🌙"; }
-        .fa-sun:before { content: "☀️"; }
-        .fa-info-circle:before { content: "ℹ️"; }
-        .fa-clipboard-list:before { content: "📋"; }
-        .fa-users:before { content: "👥"; }
-        .fa-chart-line:before { content: "📈"; }
-        .fa-play-circle:before { content: "▶️"; }
-        .fa-lock:before { content: "🔒"; }
-        .fa-check:before { content: "✅"; }
-        .fa-chart-pie:before { content: "🥧"; }
-        .fa-user-shield:before { content: "🛡️"; }
+        /* Fallback иконки как текст - принудительно применяем */
+        .fas:before, .far:before, .fab:before { content: ""; }
+        .fa-chart-bar:before { content: "📊" !important; }
+        .fa-home:before { content: "🏠" !important; }
+        .fa-tachometer-alt:before { content: "⚡" !important; }
+        .fa-plus:before { content: "➕" !important; }
+        .fa-cog:before { content: "⚙️" !important; }
+        .fa-sign-in-alt:before { content: "🔑" !important; }
+        .fa-sign-out-alt:before { content: "🚪" !important; }
+        .fa-user:before { content: "👤" !important; }
+        .fa-moon:before { content: "🌙" !important; }
+        .fa-sun:before { content: "☀️" !important; }
+        .fa-info-circle:before { content: "ℹ️" !important; }
+        .fa-clipboard-list:before { content: "📋" !important; }
+        .fa-users:before { content: "👥" !important; }
+        .fa-chart-line:before { content: "📈" !important; }
+        .fa-play-circle:before { content: "▶️" !important; }
+        .fa-lock:before { content: "🔒" !important; }
+        .fa-check:before { content: "✅" !important; }
+        .fa-chart-pie:before { content: "🥧" !important; }
+        .fa-user-shield:before { content: "🛡️" !important; }
+        .fa-eye:before { content: "👁️" !important; }
+        .fa-edit:before { content: "✏️" !important; }
+        .fa-trash:before { content: "🗑️" !important; }
+        .fa-download:before { content: "⬇️" !important; }
+        .fa-share-alt:before { content: "📤" !important; }
         
         /* Стили для fallback иконок */
         .fa-fallback .fas, .fa-fallback .far, .fa-fallback .fab {
