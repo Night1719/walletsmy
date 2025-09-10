@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initFormValidation();
     initAnimations();
     initMobileMenu();
+    initDropdowns();
 });
 
 // Переключение темы
@@ -503,6 +504,42 @@ function initMobileMenu() {
             }
         });
     }
+}
+
+// Инициализация выпадающих меню
+function initDropdowns() {
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const dropdown = this.closest('.dropdown');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            // Закрываем все другие выпадающие меню
+            document.querySelectorAll('.dropdown-menu.show').forEach(openMenu => {
+                if (openMenu !== menu) {
+                    openMenu.classList.remove('show');
+                }
+            });
+            
+            // Переключаем текущее меню
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        });
+    });
+    
+    // Закрытие выпадающих меню при клике вне их
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
 }
 
 // Обработка необработанных промисов
