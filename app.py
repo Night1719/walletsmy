@@ -740,24 +740,39 @@ def submit_survey(survey_id):
     # Сохраняем ответы на вопросы
     for question in survey.questions:
         answer_value = request.form.get(f'question_{question.id}')
+        
+        # Обрабатываем множественный выбор (checkbox)
+        if question.type in ['multiple_choice', 'checkbox']:
+            # Получаем все выбранные значения
+            selected_values = request.form.getlist(f'question_{question.id}[]')
+            if selected_values:
+                # Обрабатываем "другой вариант"
+                processed_values = []
+                for value in selected_values:
+                    if value == 'other':
+                        other_text = request.form.get(f'other_answer_{question.id}')
+                        if other_text:
+                            processed_values.append(f"Другой: {other_text}")
+                        else:
+                            processed_values.append("Другой вариант")
+                    else:
+                        processed_values.append(value)
+                answer_value = json.dumps(processed_values)
+            else:
+                answer_value = None
+        elif question.type in ['grid', 'checkbox_grid']:
+            # Для сеток ответ уже в JSON формате
+            if isinstance(answer_value, list):
+                answer_value = json.dumps(answer_value)
+        elif question.type == 'dropdown' and answer_value == 'other':
+            # Для dropdown с "другим вариантом" ищем текст
+            other_text = request.form.get(f'question_{question.id}_other_text')
+            if other_text:
+                answer_value = other_text
+            else:
+                answer_value = 'other'
+        
         if answer_value:
-            # Обрабатываем разные типы ответов
-            if question.type in ['multiple_choice', 'checkbox']:
-                # Для множественного выбора ответ может быть списком
-                if isinstance(answer_value, list):
-                    answer_value = json.dumps(answer_value)
-            elif question.type in ['grid', 'checkbox_grid']:
-                # Для сеток ответ уже в JSON формате
-                if isinstance(answer_value, list):
-                    answer_value = json.dumps(answer_value)
-            elif question.type == 'dropdown' and answer_value == 'other':
-                # Для dropdown с "другим вариантом" ищем текст
-                other_text = request.form.get(f'question_{question.id}_other_text')
-                if other_text:
-                    answer_value = other_text
-                else:
-                    answer_value = 'other'
-            
             answer = Answer(
                 question_id=question.id,
                 response_id=response.id,

@@ -49,6 +49,32 @@ body.dark-theme .card {
     color: #e0e0e0;
 }
 
+/* Темная тема для hero секции */
+body.dark-theme .hero-section {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-theme .hero-title {
+    color: #e0e0e0 !important;
+}
+
+body.dark-theme .hero-description {
+    color: #b0b0b0 !important;
+}
+
+/* Стили для валидации сетки */
+.table-warning {
+    background-color: #fff3cd !important;
+    border-color: #ffeaa7 !important;
+}
+
+body.dark-theme .table-warning {
+    background-color: #664d03 !important;
+    border-color: #ffc107 !important;
+    color: #e0e0e0 !important;
+}
+
 body.dark-theme .navbar {
     background-color: #000000 !important;
 }

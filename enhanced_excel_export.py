@@ -515,5 +515,12 @@ def format_answer_for_excel(answer, question):
                 return f"{row} → {col}"
         except:
             pass
+    elif question.type in ['multiple_choice', 'checkbox']:
+        try:
+            if answer.value.startswith('['):
+                selected_options = json.loads(answer.value)
+                return '; '.join(selected_options)
+        except:
+            pass
     
     return answer.value[:100] + ('...' if len(answer.value) > 100 else '')
