@@ -22,13 +22,19 @@ function initThemeToggle() {
             if (body.classList.contains('dark-theme')) {
                 // Переключение на светлую тему
                 body.classList.remove('dark-theme');
-                icon.className = 'fas fa-moon';
+                icon.innerHTML = '';
+                icon.textContent = '🌙';
+                icon.style.fontFamily = 'sans-serif';
+                icon.style.fontWeight = 'normal';
                 document.cookie = 'theme=light; path=/; max-age=31536000';
                 localStorage.setItem('theme', 'light');
             } else {
                 // Переключение на темную тему
                 body.classList.add('dark-theme');
-                icon.className = 'fas fa-sun';
+                icon.innerHTML = '';
+                icon.textContent = '☀️';
+                icon.style.fontFamily = 'sans-serif';
+                icon.style.fontWeight = 'normal';
                 document.cookie = 'theme=dark; path=/; max-age=31536000';
                 localStorage.setItem('theme', 'dark');
             }
