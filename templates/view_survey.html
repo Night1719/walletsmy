@@ -86,6 +86,10 @@
                                 <h5 class="mb-3">
                                     <span class="badge bg-primary me-2">{{ loop.index }}</span>
                                     {{ question.text }}
+                                    {% if question.is_required %}
+                                        <span class="text-danger">*</span>
+                                        <span class="question-required" style="display: none;"></span>
+                                    {% endif %}
                                 </h5>
                                 
                                 {% if question.type == 'text' %}
@@ -147,7 +151,7 @@
                                                 {% for option in options %}
                                                     <div class="form-check">
                                                         <input class="form-check-input" type="checkbox" 
-                                                               name="question_{{ question.id }}" 
+                                                               name="question_{{ question.id }}[]" 
                                                                value="{{ option }}" 
                                                                id="option_{{ question.id }}_{{ loop.index }}">
                                                         <label class="form-check-label" for="option_{{ question.id }}_{{ loop.index }}">
@@ -158,7 +162,7 @@
                                                 {% if question.allow_other %}
                                                     <div class="form-check">
                                                         <input class="form-check-input" type="checkbox" 
-                                                               name="question_{{ question.id }}" 
+                                                               name="question_{{ question.id }}[]" 
                                                                value="other" 
                                                                id="other_{{ question.id }}">
                                                         <label class="form-check-label" for="other_{{ question.id }}">
@@ -311,13 +315,15 @@
                                                 </thead>
                                                 <tbody>
                                                     {% for row in question.grid_rows|from_json %}
-                                                        <tr>
+                                                        <tr data-row="{{ row }}">
                                                             <td><strong>{{ row }}</strong></td>
                                                             {% for column in question.grid_columns|from_json %}
                                                                 <td class="text-center">
                                                                     <input type="checkbox" name="question_{{ question.id }}[]" 
                                                                            value="{{ row }}|{{ column }}" 
-                                                                           class="form-check-input">
+                                                                           class="form-check-input grid-checkbox"
+                                                                           data-question="{{ question.id }}"
+                                                                           data-row="{{ row }}">
                                                                 </td>
                                                             {% endfor %}
                                                         </tr>
@@ -325,6 +331,12 @@
                                                 </tbody>
                                             </table>
                                         </div>
+                                        {% if question.is_required %}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Выберите хотя бы один вариант для каждой строки
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     
                                 {% elif question.type == 'date' %}
@@ -545,6 +557,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Валидируем сетки построчно
+            if (!validateGridAnswers()) {
+                e.preventDefault();
+                return false;
+            }
+            
             // Обрабатываем ответы из сеток перед отправкой
             processGridAnswers();
             
@@ -554,6 +572,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Функция для валидации сетки построчно
+function validateGridAnswers() {
+    let isValid = true;
+    const errorMessages = [];
+    
+    // Проверяем checkbox_grid вопросы
+    document.querySelectorAll('.grid-checkbox').forEach(checkbox => {
+        const questionId = checkbox.dataset.question;
+        const row = checkbox.dataset.row;
+        const questionElement = checkbox.closest('.question-item');
+        
+        if (questionElement && questionElement.querySelector('.question-required')) {
+            // Проверяем, выбрано ли что-то в этой строке
+            const rowCheckboxes = document.querySelectorAll(`input[data-question="${questionId}"][data-row="${row}"]`);
+            const checkedInRow = Array.from(rowCheckboxes).some(cb => cb.checked);
+            
+            if (!checkedInRow) {
+                isValid = false;
+                errorMessages.push(`Необходимо выбрать хотя бы один вариант для строки "${row}"`);
+                
+                // Подсвечиваем строку
+                const rowElement = checkbox.closest('tr');
+                rowElement.classList.add('table-warning');
+            } else {
+                // Убираем подсветку если все в порядке
+                const rowElement = checkbox.closest('tr');
+                rowElement.classList.remove('table-warning');
+            }
+        }
+    });
+    
+    if (!isValid) {
+        alert('Ошибка заполнения:\n' + errorMessages.join('\n'));
+    }
+    
+    return isValid;
+}
 
 // Функция для обработки ответов из сеток
 function processGridAnswers() {

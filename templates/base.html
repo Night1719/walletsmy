@@ -4,9 +4,345 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}BG Survey Platform - BunterGroup{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap CSS с fallback -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css';">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';">
+    
+    <!-- Fallback для Bootstrap и Font Awesome -->
+    <script>
+        // Проверяем загрузку Bootstrap и Font Awesome
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем Bootstrap
+            const testContainer = document.createElement('div');
+            testContainer.className = 'container';
+            testContainer.style.display = 'none';
+            document.body.appendChild(testContainer);
+            
+            const computedStyle = window.getComputedStyle(testContainer);
+            const maxWidth = computedStyle.maxWidth;
+            
+            if (maxWidth === 'none' || maxWidth === '') {
+                console.warn('Bootstrap не загружен, применяем fallback стили');
+                document.body.classList.add('bootstrap-not-loaded');
+            }
+            
+            document.body.removeChild(testContainer);
+            
+            // Проверяем Font Awesome
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fas fa-chart-bar';
+            testIcon.style.display = 'none';
+            document.body.appendChild(testIcon);
+            
+            const iconStyle = window.getComputedStyle(testIcon);
+            const fontFamily = iconStyle.fontFamily;
+            
+            if (!fontFamily.includes('Font Awesome') && !fontFamily.includes('FontAwesome')) {
+                console.warn('Font Awesome не загружен, применяем fallback иконки');
+                document.body.classList.add('fa-fallback');
+            }
+            
+            // Принудительно применяем fallback иконки для всех элементов
+            setTimeout(() => {
+                const icons = document.querySelectorAll('.fas, .far, .fab');
+                icons.forEach(icon => {
+                    // Проверяем, не была ли уже заменена иконка
+                    if (icon.dataset.replaced) return;
+                    
+                    const iconClass = Array.from(icon.classList).find(cls => cls.startsWith('fa-'));
+                    if (iconClass) {
+                        const iconMap = {
+                            'fa-eye': '👁️',
+                            'fa-edit': '✏️',
+                            'fa-trash': '🗑️',
+                            'fa-download': '⬇️',
+                            'fa-share-alt': '📤',
+                            'fa-chart-bar': '📊',
+                            'fa-home': '🏠',
+                            'fa-tachometer-alt': '⚡',
+                            'fa-plus': '➕',
+                            'fa-cog': '⚙️',
+                            'fa-sign-in-alt': '🔑',
+                            'fa-sign-out-alt': '🚪',
+                            'fa-user': '👤',
+                            'fa-moon': '🌙',
+                            'fa-sun': '☀️',
+                            'fa-info-circle': 'ℹ️',
+                            'fa-clipboard-list': '📋',
+                            'fa-users': '👥',
+                            'fa-chart-line': '📈',
+                            'fa-play-circle': '▶️',
+                            'fa-lock': '🔒',
+                            'fa-check': '✅',
+                            'fa-chart-pie': '🥧',
+                            'fa-user-shield': '🛡️',
+                            'fa-pause-circle': '⏸️',
+                            'fa-stop-circle': '⏹️',
+                            'fa-ban': '🚫',
+                            'fa-times-circle': '❌',
+                            'fa-pause': '⏸️',
+                            'fa-play': '▶️'
+                        };
+                        
+                        if (iconMap[iconClass]) {
+                            // Очищаем содержимое и добавляем только эмодзи
+                            icon.innerHTML = '';
+                            icon.textContent = iconMap[iconClass];
+                            icon.style.fontFamily = 'sans-serif';
+                            icon.style.fontWeight = 'normal';
+                            icon.dataset.replaced = 'true';
+                        }
+                    }
+                });
+                
+                // Обновляем иконку темы после замены всех иконок
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) {
+                    const themeIcon = themeToggle.querySelector('i');
+                    if (themeIcon) {
+                        const isDark = document.body.classList.contains('dark-theme');
+                        themeIcon.innerHTML = '';
+                        themeIcon.textContent = isDark ? '☀️' : '🌙';
+                        themeIcon.style.fontFamily = 'sans-serif';
+                        themeIcon.style.fontWeight = 'normal';
+                        themeIcon.dataset.replaced = 'true';
+                    }
+                }
+                    }
+                });
+            }, 100);
+            
+            document.body.removeChild(testIcon);
+        });
+    </script>
+    
+    <!-- Критически важные стили для корректного отображения -->
+    <style>
+        /* Сброс стилей */
+        * { box-sizing: border-box; }
+        
+        /* Базовые стили */
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.5; color: #212529; background-color: #f8f9fa; }
+        
+        /* Контейнеры - только если Bootstrap не загружен */
+        .bootstrap-not-loaded .container { max-width: 1140px; margin: 0 auto; padding: 0 15px; }
+        .bootstrap-not-loaded .container-fluid { width: 100%; padding: 0 15px; }
+        
+        /* Принудительно применяем правильную ширину для всех страниц */
+        .container { max-width: 1140px !important; margin: 0 auto !important; padding: 0 15px !important; }
+        
+        /* Дополнительные стили для правильного отображения */
+        body { margin: 0; padding: 0; }
+        .container-fluid { width: 100%; padding: 0 15px; }
+        .row { margin: 0 -15px; }
+        .col, .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10, .col-11, .col-12,
+        .col-md-1, .col-md-2, .col-md-3, .col-md-4, .col-md-5, .col-md-6, .col-md-7, .col-md-8, .col-md-9, .col-md-10, .col-md-11, .col-md-12,
+        .col-lg-1, .col-lg-2, .col-lg-3, .col-lg-4, .col-lg-5, .col-lg-6, .col-lg-7, .col-lg-8, .col-lg-9, .col-lg-10, .col-lg-11, .col-lg-12 {
+            padding: 0 15px;
+        }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -15px; }
+        
+        /* Колонки */
+        .col-md-3 { flex: 0 0 25%; max-width: 25%; padding: 0 15px; }
+        .col-md-4 { flex: 0 0 33.333333%; max-width: 33.333333%; padding: 0 15px; }
+        .col-md-6 { flex: 0 0 50%; max-width: 50%; padding: 0 15px; }
+        .col-lg-8 { flex: 0 0 66.666667%; max-width: 66.666667%; padding: 0 15px; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        
+        /* Утилиты */
+        .text-center { text-align: center; }
+        .d-flex { display: flex; }
+        .justify-content-center { justify-content: center; }
+        .align-items-center { align-items: center; }
+        .flex-column { flex-direction: column; }
+        .min-vh-100 { min-height: 100vh; }
+        .flex-grow-1 { flex-grow: 1; }
+        .mt-auto { margin-top: auto; }
+        
+        /* Отступы */
+        .mb-3 { margin-bottom: 1rem; }
+        .mb-4 { margin-bottom: 1.5rem; }
+        .mb-5 { margin-bottom: 3rem; }
+        .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
+        .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .p-3 { padding: 1rem; }
+        .p-4 { padding: 1.5rem; }
+        .p-5 { padding: 3rem; }
+        
+        /* Навигация */
+        .navbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; background-color: #212529; flex-wrap: nowrap; width: 100%; }
+        .navbar-brand { font-size: 1.25rem; font-weight: 700; color: #fff; text-decoration: none; white-space: nowrap; }
+        .navbar-nav { display: flex; list-style: none; margin: 0; padding: 0; align-items: center; }
+        .nav-item { margin: 0; }
+        .nav-link { display: block; padding: 0.5rem 1rem; color: rgba(255,255,255,.55); text-decoration: none; white-space: nowrap; }
+        .nav-link:hover { color: rgba(255,255,255,.75); }
+        .navbar-toggler { display: none; background: none; border: none; color: #fff; font-size: 1.25rem; }
+        .navbar-collapse { display: flex; }
+        .navbar-nav .nav-item { margin: 0; }
+        .navbar-nav .nav-link { padding: 0.5rem 0.75rem; }
+        
+        /* Кнопки */
+        .btn { display: inline-block; padding: 0.375rem 0.75rem; margin-bottom: 0; font-size: 1rem; font-weight: 400; line-height: 1.5; text-align: center; text-decoration: none; vertical-align: middle; cursor: pointer; border: 1px solid transparent; border-radius: 0.375rem; transition: all 0.15s ease-in-out; }
+        .btn-danger { color: #fff; background-color: #dc3545; border-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; border-color: #bd2130; color: #fff; }
+        .btn-outline-danger { color: #dc3545; border-color: #dc3545; background-color: transparent; }
+        .btn-outline-danger:hover { background-color: #dc3545; border-color: #dc3545; color: #fff; }
+        .btn-lg { padding: 0.5rem 1rem; font-size: 1.25rem; border-radius: 0.5rem; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 0.25rem; }
+        .btn-group { position: relative; display: inline-flex; vertical-align: middle; }
+        .btn-group > .btn { position: relative; flex: 1 1 auto; }
+        .btn-group > .btn:not(:last-child):not(.dropdown-toggle) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .btn-group > .btn:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .btn-outline-primary { color: #0d6efd; border-color: #0d6efd; background-color: transparent; }
+        .btn-outline-primary:hover { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
+        .btn-outline-warning { color: #ffc107; border-color: #ffc107; background-color: transparent; }
+        .btn-outline-warning:hover { background-color: #ffc107; border-color: #ffc107; color: #000; }
+        .btn-outline-success { color: #198754; border-color: #198754; background-color: transparent; }
+        .btn-outline-success:hover { background-color: #198754; border-color: #198754; color: #fff; }
+        .btn-outline-info { color: #0dcaf0; border-color: #0dcaf0; background-color: transparent; }
+        .btn-outline-info:hover { background-color: #0dcaf0; border-color: #0dcaf0; color: #000; }
+        
+        /* Выпадающие меню */
+        .dropdown { position: relative; }
+        .dropdown-toggle { cursor: pointer; }
+        .dropdown-menu { position: absolute; top: 100%; left: 0; z-index: 1000; display: none; min-width: 160px; padding: 0.5rem 0; margin: 0.125rem 0 0; background-color: #fff; border: 1px solid rgba(0,0,0,.15); border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,.175); }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { display: block; width: 100%; padding: 0.25rem 1rem; clear: both; font-weight: 400; color: #212529; text-align: inherit; text-decoration: none; white-space: nowrap; background-color: transparent; border: 0; }
+        .dropdown-item:hover { color: #1e2125; background-color: #e9ecef; }
+        .dropdown-item:focus { color: #1e2125; background-color: #e9ecef; }
+        .dropdown-item:active { color: #fff; background-color: #0d6efd; }
+        
+        /* Карточки */
+        .card { position: relative; display: flex; flex-direction: column; min-width: 0; word-wrap: break-word; background-color: #fff; background-clip: border-box; border: 1px solid rgba(0,0,0,.125); border-radius: 0.375rem; }
+        .card-body { flex: 1 1 auto; padding: 1rem; }
+        .card-header { padding: 0.75rem 1rem; margin-bottom: 0; background-color: rgba(0,0,0,.03); border-bottom: 1px solid rgba(0,0,0,.125); }
+        .card-footer { padding: 0.75rem 1rem; background-color: rgba(0,0,0,.03); border-top: 1px solid rgba(0,0,0,.125); }
+        .shadow-sm { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .h-100 { height: 100%; }
+        
+        /* Текст */
+        .display-4 { font-size: 2.5rem; font-weight: 300; line-height: 1.2; }
+        .display-6 { font-size: 1.75rem; font-weight: 300; line-height: 1.2; }
+        .fw-bold { font-weight: 700; }
+        .lead { font-size: 1.25rem; font-weight: 300; }
+        .text-muted { color: #6c757d; }
+        .text-danger { color: #dc3545; }
+        .text-success { color: #198754; }
+        .text-info { color: #0dcaf0; }
+        .text-warning { color: #ffc107; }
+        .text-primary { color: #0d6efd; }
+        
+        /* Цвета фона */
+        .bg-dark { background-color: #212529 !important; }
+        .bg-light { background-color: #f8f9fa !important; }
+        .text-light { color: #f8f9fa !important; }
+        
+        /* Границы */
+        .border-0 { border: 0; }
+        .rounded { border-radius: 0.375rem; }
+        
+        /* Иконки */
+        .fa-3x { font-size: 3em; }
+        .me-1 { margin-right: 0.25rem; }
+        .me-2 { margin-right: 0.5rem; }
+        .me-3 { margin-right: 1rem; }
+        .mt-3 { margin-top: 1rem; }
+        
+        /* Fallback для иконок если Font Awesome не загрузился */
+        .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome", sans-serif;
+            font-weight: 900;
+            font-style: normal;
+        }
+        
+        /* Принудительно применяем fallback иконки для всех элементов */
+        .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome", sans-serif !important;
+            font-weight: 900 !important;
+            font-style: normal !important;
+        }
+        
+        /* Убираем CSS fallback иконки, используем только JavaScript */
+        
+        /* Стили для fallback иконок */
+        .fa-fallback .fas, .fa-fallback .far, .fa-fallback .fab {
+            font-family: sans-serif;
+            font-weight: normal;
+        }
+        
+        .fa-fallback .fa-chart-bar:before { content: "📊"; }
+        .fa-fallback .fa-home:before { content: "🏠"; }
+        .fa-fallback .fa-tachometer-alt:before { content: "⚡"; }
+        .fa-fallback .fa-plus:before { content: "➕"; }
+        .fa-fallback .fa-cog:before { content: "⚙️"; }
+        .fa-fallback .fa-sign-in-alt:before { content: "🔑"; }
+        .fa-fallback .fa-sign-out-alt:before { content: "🚪"; }
+        .fa-fallback .fa-user:before { content: "👤"; }
+        .fa-fallback .fa-moon:before { content: "🌙"; }
+        .fa-fallback .fa-sun:before { content: "☀️"; }
+        .fa-fallback .fa-info-circle:before { content: "ℹ️"; }
+        .fa-fallback .fa-clipboard-list:before { content: "📋"; }
+        .fa-fallback .fa-users:before { content: "👥"; }
+        .fa-fallback .fa-chart-line:before { content: "📈"; }
+        .fa-fallback .fa-play-circle:before { content: "▶️"; }
+        .fa-fallback .fa-edit:before { content: "✏️"; }
+        .fa-fallback .fa-trash:before { content: "🗑️"; }
+        .fa-fallback .fa-eye:before { content: "👁️"; }
+        .fa-fallback .fa-download:before { content: "⬇️"; }
+        .fa-fallback .fa-upload:before { content: "⬆️"; }
+        .fa-fallback .fa-save:before { content: "💾"; }
+        .fa-fallback .fa-times:before { content: "❌"; }
+        .fa-fallback .fa-check:before { content: "✅"; }
+        .fa-fallback .fa-arrow-left:before { content: "←"; }
+        .fa-fallback .fa-arrow-right:before { content: "→"; }
+        .fa-fallback .fa-bars:before { content: "☰"; }
+        .fa-fallback .fa-search:before { content: "🔍"; }
+        .fa-fallback .fa-filter:before { content: "🔽"; }
+        .fa-fallback .fa-sort:before { content: "⇅"; }
+        .fa-fallback .fa-calendar:before { content: "📅"; }
+        .fa-fallback .fa-clock:before { content: "🕐"; }
+        .fa-fallback .fa-envelope:before { content: "✉️"; }
+        .fa-fallback .fa-phone:before { content: "📞"; }
+        .fa-fallback .fa-map-marker-alt:before { content: "📍"; }
+        .fa-fallback .fa-link:before { content: "🔗"; }
+        .fa-fallback .fa-external-link-alt:before { content: "🔗"; }
+        .fa-fallback .fa-copy:before { content: "📋"; }
+        .fa-fallback .fa-share:before { content: "📤"; }
+        .fa-fallback .fa-heart:before { content: "❤️"; }
+        .fa-fallback .fa-star:before { content: "⭐"; }
+        .fa-fallback .fa-thumbs-up:before { content: "👍"; }
+        .fa-fallback .fa-thumbs-down:before { content: "👎"; }
+        .fa-fallback .fa-comment:before { content: "💬"; }
+        .fa-fallback .fa-reply:before { content: "↩️"; }
+        .fa-fallback .fa-flag:before { content: "🚩"; }
+        .fa-fallback .fa-exclamation-triangle:before { content: "⚠️"; }
+        .fa-fallback .fa-question-circle:before { content: "❓"; }
+        .fa-fallback .fa-question:before { content: "❓"; }
+        .fa-fallback .fa-question-mark:before { content: "❓"; }
+        .fa-fallback .fa-share-alt:before { content: "📤"; }
+        .fa-fallback .fa-share:before { content: "📤"; }
+        .fa-fallback .fa-copy:before { content: "📋"; }
+        .fa-fallback .fa-link:before { content: "🔗"; }
+        .fa-fallback .fa-external-link-alt:before { content: "🔗"; }
+        .fa-fallback .fa-lock:before { content: "🔒"; }
+        .fa-fallback .fa-check:before { content: "✅"; }
+        .fa-fallback .fa-chart-pie:before { content: "🥧"; }
+        .fa-fallback .fa-user-shield:before { content: "🛡️"; }
+        
+        /* Адаптивность */
+        @media (max-width: 991px) {
+            .navbar-nav { flex-direction: column; }
+            .navbar-toggler { display: block; }
+            .navbar-collapse { display: none; }
+            .navbar-collapse.show { display: flex; }
+        }
+        
+        @media (max-width: 767px) {
+            .col-md-3, .col-md-4, .col-md-6, .col-lg-8 { flex: 0 0 100%; max-width: 100%; }
+        }
+    </style>
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 </head>
 <body class="{% if request.cookies.get('theme') == 'dark' %}dark-theme{% else %}light-theme{% endif %} d-flex flex-column min-vh-100">
@@ -97,15 +433,17 @@
     </nav>
 
     <!-- Основной контент -->
-    <main class="container my-4 flex-grow-1">
+    <main class="flex-grow-1">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
+                <div class="container my-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
         

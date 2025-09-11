@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initConfirmations();
     initFormValidation();
     initAnimations();
+    initMobileMenu();
+    initDropdowns();
 });
 
 // Переключение темы
@@ -20,13 +22,19 @@ function initThemeToggle() {
             if (body.classList.contains('dark-theme')) {
                 // Переключение на светлую тему
                 body.classList.remove('dark-theme');
-                icon.className = 'fas fa-moon';
+                icon.innerHTML = '';
+                icon.textContent = '🌙';
+                icon.style.fontFamily = 'sans-serif';
+                icon.style.fontWeight = 'normal';
                 document.cookie = 'theme=light; path=/; max-age=31536000';
                 localStorage.setItem('theme', 'light');
             } else {
                 // Переключение на темную тему
                 body.classList.add('dark-theme');
-                icon.className = 'fas fa-sun';
+                icon.innerHTML = '';
+                icon.textContent = '☀️';
+                icon.style.fontFamily = 'sans-serif';
+                icon.style.fontWeight = 'normal';
                 document.cookie = 'theme=dark; path=/; max-age=31536000';
                 localStorage.setItem('theme', 'dark');
             }
@@ -476,6 +484,69 @@ window.addEventListener('error', function(e) {
     console.error('JavaScript error:', e.error);
     notificationUtils.error('Произошла ошибка. Проверьте консоль для деталей.');
 });
+
+// Инициализация мобильного меню
+function initMobileMenu() {
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const navbarCollapse = document.querySelector('.navbar-collapse');
+    
+    if (navbarToggler && navbarCollapse) {
+        navbarToggler.addEventListener('click', function() {
+            navbarCollapse.classList.toggle('show');
+        });
+        
+        // Закрытие меню при клике на ссылку
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                navbarCollapse.classList.remove('show');
+            });
+        });
+        
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(e) {
+            if (!navbarToggler.contains(e.target) && !navbarCollapse.contains(e.target)) {
+                navbarCollapse.classList.remove('show');
+            }
+        });
+    }
+}
+
+// Инициализация выпадающих меню
+function initDropdowns() {
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const dropdown = this.closest('.dropdown');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            // Закрываем все другие выпадающие меню
+            document.querySelectorAll('.dropdown-menu.show').forEach(openMenu => {
+                if (openMenu !== menu) {
+                    openMenu.classList.remove('show');
+                }
+            });
+            
+            // Переключаем текущее меню
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        });
+    });
+    
+    // Закрытие выпадающих меню при клике вне их
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+}
 
 // Обработка необработанных промисов
 window.addEventListener('unhandledrejection', function(e) {

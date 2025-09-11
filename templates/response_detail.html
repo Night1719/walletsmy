@@ -3,7 +3,7 @@
 {% block title %}Ответ пользователя - {{ survey.title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container py-4">
     <!-- Заголовок -->
     <div class="row mb-4">
         <div class="col">
@@ -128,9 +128,16 @@
                                             </div>
                                         {% elif question.type == 'multiple_choice' %}
                                             <div class="choice-answer p-3 bg-light rounded">
-                                                <strong>Выбранный вариант:</strong>
+                                                <strong>Выбранные варианты:</strong>
                                                 <p class="mb-0 mt-2">
-                                                    <span class="badge bg-success">{{ answer.answer_value }}</span>
+                                                    {% if answer.answer_value.startswith('[') %}
+                                                        {% set selected_options = answer.answer_value|from_json %}
+                                                        {% for option in selected_options %}
+                                                            <span class="badge bg-success me-1">{{ option }}</span>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ answer.answer_value }}</span>
+                                                    {% endif %}
                                                 </p>
                                                 {% if answer.question_options %}
                                                     <small class="text-muted mt-2 d-block">

@@ -86,14 +86,14 @@ class SecurityConfig:
     def get_rate_limits():
         """Возвращает лимиты для различных эндпоинтов"""
         return {
-            'login': '5 per minute',
-            'register': '3 per minute',
-            'create_survey': '10 per hour',
-            'submit_survey': '20 per hour',
-            'export_excel': '5 per hour',
-            'admin_panel': '100 per hour',
-            'api': '100 per hour',
-            'default': '1000 per hour'
+            'login': '50 per minute',
+            'register': '10 per minute',
+            'create_survey': '200 per hour',
+            'submit_survey': '500 per hour',
+            'export_excel': '50 per hour',
+            'admin_panel': '500 per hour',
+            'api': '1000 per hour',
+            'default': '2000 per hour'
         }
     
     @staticmethod
