@@ -33,11 +33,22 @@ if __name__ == '__main__':
         cert_path = os.getenv('SSL_CERT_PATH', '')
         key_path = os.getenv('SSL_KEY_PATH', '')
         
-        if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
-            ssl_context = (cert_path, key_path)
-            print(f"🔒 Используется сертификат: {cert_path}")
+        print(f"🔍 Поиск сертификата...")
+        print(f"   SSL_CERT_PATH: {cert_path}")
+        print(f"   SSL_KEY_PATH: {key_path}")
+        
+        if cert_path and key_path:
+            if os.path.exists(cert_path) and os.path.exists(key_path):
+                ssl_context = (cert_path, key_path)
+                print(f"✅ Найден сертификат: {cert_path}")
+            else:
+                print(f"❌ Файлы сертификата не найдены:")
+                print(f"   Сертификат: {cert_path} - {'существует' if os.path.exists(cert_path) else 'НЕ НАЙДЕН'}")
+                print(f"   Ключ: {key_path} - {'существует' if os.path.exists(key_path) else 'НЕ НАЙДЕН'}")
+                ssl_context = 'adhoc'
+                print("⚠️  Используется самоподписной сертификат")
         else:
-            # Use adhoc SSL as fallback
+            print("❌ Пути к сертификату не настроены в .env")
             ssl_context = 'adhoc'
             print("⚠️  Используется самоподписной сертификат")
         
