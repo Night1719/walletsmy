@@ -19,6 +19,8 @@ import hashlib
 import hmac
 import time
 import json
+import mammoth
+from docx import Document
 from config_local import (
     is_local_mode, get_local_file_path, check_local_files, 
     get_available_local_files, LOCAL_MINIAPP_URL
@@ -75,6 +77,31 @@ def _get_file_type(file_path):
         return "text"
     else:
         return "unknown"
+
+def _convert_docx_to_html(content):
+    """Convert DOCX content to HTML"""
+    try:
+        # Use mammoth to convert DOCX to HTML
+        result = mammoth.convert_to_html(io.BytesIO(content))
+        html_content = result.value
+        
+        # Add some basic styling
+        styled_html = f"""
+        <div style="
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 100%;
+            word-wrap: break-word;
+        ">
+            {html_content}
+        </div>
+        """
+        
+        return styled_html
+    except Exception as e:
+        logger.error(f"Error converting DOCX to HTML: {e}")
+        return f"<p>Ошибка конвертации документа: {str(e)}</p>"
 
 def _validate_telegram_data(init_data: str, bot_token: str) -> bool:
     """Validate Telegram Mini App init data"""
@@ -356,10 +383,13 @@ def convert_secure_file(token):
                 "filename": f"instruction_{instruction_type}.pdf"
             })
         elif file_type == 'document':
+            # Convert DOCX to HTML for online viewing
+            html_content = _convert_docx_to_html(content)
             return jsonify({
-                "type": "docx",
-                "content": base64.b64encode(content).decode(),
-                "filename": f"instruction_{instruction_type}.{file_format}"
+                "type": "html",
+                "content": html_content,
+                "filename": f"instruction_{instruction_type}.{file_format}",
+                "original_type": "docx"
             })
         elif file_type == 'video':
             return jsonify({
