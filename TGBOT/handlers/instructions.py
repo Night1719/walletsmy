@@ -280,7 +280,7 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
         # Prepare data for Mini App API
         instruction_data = f"{category_id}_{instruction_id}"
         
-        # Use HTTPS for external server with SSL certificate
+        # Use HTTP for local Mini App
         base_url = MINIAPP_URL.replace('/miniapp', '')
         miniapp_api_url = f"{base_url}/api/secure/create-link"
         
@@ -321,13 +321,13 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
     
     except requests.exceptions.SSLError as e:
         logger.error(f"SSL Error: {e}")
-        await callback.answer("❌ Ошибка SSL сертификата. Проверьте настройки сервера и сертификат.")
+        await callback.answer("❌ Ошибка SSL. Убедитесь, что Mini App запущен на localhost:4477")
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Connection Error: {e}")
-        await callback.answer("❌ Ошибка подключения к серверу. Сервер недоступен или порт заблокирован.")
+        await callback.answer("❌ Mini App недоступен. Запустите: cd miniapp && python run.py")
     except requests.exceptions.Timeout as e:
         logger.error(f"Timeout Error: {e}")
-        await callback.answer("❌ Таймаут соединения. Сервер не отвечает.")
+        await callback.answer("❌ Таймаут соединения. Mini App не отвечает.")
     except Exception as e:
         logger.error(f"Error creating secure link: {e}")
         await callback.answer("❌ Ошибка создания ссылки")
