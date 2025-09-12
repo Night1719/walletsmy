@@ -2,23 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Просмотр инструкции</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: #f5f5f5;
+            overflow-x: hidden;
         }
+        
         .viewer-container {
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            min-height: 100vh;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
+        
         .viewer-header {
             background: #3498db;
             color: white;
@@ -26,34 +30,46 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+        
         .viewer-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
         }
+        
         .viewer-content {
             padding: 20px;
-            min-height: 400px;
+            min-height: calc(100vh - 70px);
         }
+        
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 40px 20px;
             color: #666;
         }
+        
         .error {
             text-align: center;
-            padding: 40px;
+            padding: 40px 20px;
             color: #e74c3c;
         }
+        
         .pdf-viewer {
             width: 100%;
-            height: 600px;
+            height: 70vh;
             border: none;
+            border-radius: 4px;
         }
+        
         .video-viewer {
             width: 100%;
-            height: 400px;
+            height: 50vh;
+            border-radius: 4px;
         }
+        
         .text-content {
             white-space: pre-wrap;
             font-family: monospace;
@@ -61,6 +77,45 @@
             padding: 15px;
             border-radius: 4px;
             border: 1px solid #e9ecef;
+            word-wrap: break-word;
+            overflow-x: auto;
+        }
+        
+        .download-button {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            display: inline-block;
+            margin: 10px;
+            font-weight: 500;
+        }
+        
+        .download-button:hover {
+            background: #2980b9;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .viewer-content {
+                padding: 10px;
+            }
+            
+            .pdf-viewer {
+                height: 60vh;
+            }
+            
+            .video-viewer {
+                height: 40vh;
+            }
         }
     </style>
 </head>
@@ -68,29 +123,53 @@
     <div class="viewer-container">
         <div class="viewer-header">
             <div class="viewer-title">Просмотр инструкции</div>
-            <div id="expiry-info"></div>
+            <div id="expiry-info">Действует 40 мин</div>
         </div>
         <div class="viewer-content">
             <div id="loading" class="loading">
-                <p>Загрузка файла...</p>
+                <p>🔄 Загрузка файла...</p>
+                <div class="status-message">
+                    Пожалуйста, подождите...
+                </div>
             </div>
             <div id="error" class="error" style="display: none;">
-                <p>Ошибка загрузки файла</p>
+                <p>❌ Ошибка загрузки файла</p>
+                <div class="status-message">
+                    Не удалось загрузить документ. Попробуйте обновить страницу.
+                </div>
             </div>
             <div id="content" style="display: none;"></div>
         </div>
     </div>
 
     <script>
+        console.log('🚀 Запуск скрипта просмотра');
+        
         // Load file content
         async function loadFile() {
             const token = '{{ token }}';
             const instructionType = '{{ instruction_type }}';
             const fileFormat = '{{ file_format }}';
             
+            console.log('📄 Загрузка файла:', { token, instructionType, fileFormat });
+            
             try {
-                const response = await fetch(`/api/secure/convert/${token}`);
+                const response = await fetch(`/api/secure/convert/${token}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('📡 Ответ сервера:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('📋 Данные получены:', data.type);
                 
                 if (data.error) {
                     throw new Error(data.error);
@@ -98,12 +177,14 @@
                 
                 displayContent(data);
             } catch (error) {
-                console.error('Error loading file:', error);
-                showError();
+                console.error('❌ Ошибка загрузки файла:', error);
+                showError(error.message);
             }
         }
         
         function displayContent(data) {
+            console.log('🎨 Отображение контента:', data.type);
+            
             const contentDiv = document.getElementById('content');
             const loadingDiv = document.getElementById('loading');
             
@@ -111,43 +192,76 @@
             contentDiv.style.display = 'block';
             
             if (data.type === 'pdf') {
+                console.log('📄 Отображение PDF');
                 const pdfData = `data:application/pdf;base64,${data.content}`;
-                contentDiv.innerHTML = `<iframe src="${pdfData}" class="pdf-viewer"></iframe>`;
-            } else if (data.type === 'docx') {
-                // For Word documents, we'll show a message to download
                 contentDiv.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <p>Документ Word готов к просмотру</p>
-                        <a href="/api/secure/file/{{ token }}" download="${data.filename}" 
-                           style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
-                            Скачать документ
+                    <div class="status-message">
+                        📄 PDF документ загружен
+                    </div>
+                    <iframe src="${pdfData}" class="pdf-viewer" title="PDF Viewer"></iframe>
+                `;
+            } else if (data.type === 'docx') {
+                console.log('📝 Отображение Word документа');
+                contentDiv.innerHTML = `
+                    <div class="status-message">
+                        📝 Документ Word готов к просмотру
+                    </div>
+                    <div style="text-align: center;">
+                        <a href="/api/secure/file/{{ token }}" download="${data.filename}" class="download-button">
+                            📥 Скачать документ
                         </a>
                     </div>
                 `;
             } else if (data.type === 'video') {
+                console.log('🎥 Отображение видео');
                 const videoData = `data:video/${data.video_format};base64,${data.content}`;
                 contentDiv.innerHTML = `
-                    <video controls class="video-viewer">
+                    <div class="status-message">
+                        🎥 Видео инструкция загружена
+                    </div>
+                    <video controls class="video-viewer" preload="metadata">
                         <source src="${videoData}" type="video/${data.video_format}">
                         Ваш браузер не поддерживает видео.
                     </video>
                 `;
             } else if (data.type === 'text') {
-                contentDiv.innerHTML = `<div class="text-content">${data.content}</div>`;
+                console.log('📄 Отображение текста');
+                contentDiv.innerHTML = `
+                    <div class="status-message">
+                        📄 Текстовый файл загружен
+                    </div>
+                    <div class="text-content">${data.content}</div>
+                `;
+            } else {
+                console.log('❓ Неизвестный тип файла:', data.type);
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <p>❓ Неподдерживаемый тип файла: ${data.type}</p>
+                    </div>
+                `;
             }
         }
         
-        function showError() {
+        function showError(message) {
+            console.log('❌ Показ ошибки:', message);
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'block';
+            errorDiv.querySelector('.status-message').textContent = `Ошибка: ${message}`;
         }
         
-        // Start loading
-        loadFile();
+        // Start loading when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 Страница загружена, начинаем загрузку файла');
+            loadFile();
+        });
         
-        // Show expiry info
-        const expiryMinutes = 40; // This should match your LINK_EXPIRY_MINUTES
-        document.getElementById('expiry-info').textContent = `Действует ${expiryMinutes} мин`;
+        // Fallback if DOMContentLoaded already fired
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadFile);
+        } else {
+            loadFile();
+        }
     </script>
 </body>
 </html>

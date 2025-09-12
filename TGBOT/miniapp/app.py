@@ -316,20 +316,38 @@ def get_secure_file(token):
 def convert_secure_file(token):
     """Convert secure file to viewable format"""
     try:
+        logger.info(f"Converting secure file for token: {token}")
+        
         # Validate token
         link_manager = get_link_manager()
         payload = link_manager.validate_token(token)
         
         if not payload:
+            logger.warning(f"Invalid or expired token: {token}")
             return jsonify({"error": "Invalid or expired token"}), 401
         
         instruction_type = payload['instruction_type']
         file_format = payload['file_format']
         
+        logger.info(f"Processing instruction: {instruction_type}, format: {file_format}")
+        
+        # Check if instruction exists
+        if instruction_type not in INSTRUCTION_FILES:
+            logger.error(f"Instruction type not found: {instruction_type}")
+            return jsonify({"error": "Instruction not found"}), 404
+        
+        if file_format not in INSTRUCTION_FILES[instruction_type]:
+            logger.error(f"File format not found: {file_format} for {instruction_type}")
+            return jsonify({"error": "File format not available"}), 404
+        
         # Get file content
         file_path = INSTRUCTION_FILES[instruction_type][file_format]
+        logger.info(f"Loading file: {file_path}")
+        
         content = _download_file(file_path)
         file_type = _get_file_type(file_path)
+        
+        logger.info(f"File loaded: {len(content)} bytes, type: {file_type}")
         
         if file_type == 'pdf':
             return jsonify({
@@ -357,6 +375,7 @@ def convert_secure_file(token):
                 "filename": f"instruction_{instruction_type}.{file_format}"
             })
         else:
+            logger.error(f"Unsupported file type: {file_type}")
             return jsonify({"error": "Unsupported file format"}), 400
             
     except Exception as e:
