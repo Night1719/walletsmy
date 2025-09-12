@@ -5,6 +5,7 @@ Supports PDF and Word document viewing in Telegram.
 import os
 import logging
 import io
+from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import tempfile
@@ -48,32 +49,14 @@ def _get_auth_headers():
     return headers
 
 def _download_file(file_path: str) -> bytes:
-    """Download file from file server or local storage"""
-    if is_local_mode():
-        # Use local files
-        local_path = get_local_file_path(file_path.split('/')[-2], file_path.split('/')[-1].split('.')[0])
-        if not local_path.exists():
-            raise Exception(f"Local file not found: {local_path}")
-        
-        with open(local_path, 'rb') as f:
-            return f.read()
-    else:
-        # Use file server
-        if not FILE_SERVER_BASE_URL:
-            raise Exception("FILE_SERVER_BASE_URL not configured")
-        
-        url = f"{FILE_SERVER_BASE_URL.rstrip('/')}/{file_path.lstrip('/')}"
-        headers = _get_auth_headers()
-        
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            if response.status_code == 200:
-                return response.content
-            else:
-                raise Exception(f"Failed to download file: {response.status_code}")
-        except Exception as e:
-            logger.error(f"Error downloading file {file_path}: {e}")
-            raise
+    """Download file from local storage"""
+    # Use local files
+    local_path = Path(__file__).parent.parent / file_path
+    if not local_path.exists():
+        raise Exception(f"Local file not found: {local_path}")
+    
+    with open(local_path, 'rb') as f:
+        return f.read()
 
 def _get_file_type(file_path):
     """Determine file type based on extension"""
@@ -174,8 +157,30 @@ def get_instruction_files():
 try:
     INSTRUCTION_FILES = get_instruction_files()
     if not INSTRUCTION_FILES:
-        logger.warning("No instruction files loaded, using empty mapping")
-        INSTRUCTION_FILES = {}
+        logger.warning("No instruction files loaded, using test mapping")
+        # Test instruction files for development
+        INSTRUCTION_FILES = {
+            "1c_ar2": {
+                "pdf": "instructions/1c/ar2.pdf",
+                "docx": "instructions/1c/ar2.docx"
+            },
+            "1c_dm": {
+                "pdf": "instructions/1c/dm.pdf", 
+                "docx": "instructions/1c/dm.docx"
+            },
+            "email_iphone": {
+                "pdf": "instructions/email/iphone.pdf",
+                "docx": "instructions/email/iphone.docx"
+            },
+            "email_android": {
+                "pdf": "instructions/email/android.pdf",
+                "docx": "instructions/email/android.docx"
+            },
+            "email_outlook": {
+                "pdf": "instructions/email/outlook.pdf",
+                "docx": "instructions/email/outlook.docx"
+            }
+        }
 except Exception as e:
     logger.error(f"Failed to load instruction files: {e}")
     INSTRUCTION_FILES = {}
@@ -250,13 +255,8 @@ def create_secure_link():
         category_id, instruction_id = instruction_data.split('_', 1)
         instruction_type = f"{category_id}_{instruction_id}"
         
-        # Reload instruction files to get latest data
-        global INSTRUCTION_FILES
-        try:
-            INSTRUCTION_FILES = get_instruction_files()
-        except Exception as e:
-            logger.warning(f"Failed to reload instruction files: {e}")
-            # Keep existing INSTRUCTION_FILES
+        # Keep existing INSTRUCTION_FILES for now
+        # TODO: Implement dynamic reloading when instruction_manager is available
         
         if instruction_type not in INSTRUCTION_FILES:
             logger.warning(f"Instruction type {instruction_type} not found in {list(INSTRUCTION_FILES.keys())}")
