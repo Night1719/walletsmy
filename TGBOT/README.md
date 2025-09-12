@@ -11,13 +11,18 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
 ADMIN_USER_IDS=your_user_id_here
 ```
 
-### 2. Запуск Mini App
+### 2. Установка зависимостей для Mini App
 ```cmd
 cd miniapp
+pip install -r requirements.txt
+```
+
+### 3. Запуск Mini App
+```cmd
 python run.py
 ```
 
-### 3. Запуск бота
+### 4. Запуск бота
 ```cmd
 python bot.py
 ```

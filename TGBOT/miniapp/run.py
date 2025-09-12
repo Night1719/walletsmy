@@ -22,14 +22,16 @@ if __name__ == '__main__':
     print(f"📍 Хост: {FLASK_HOST}")
     print(f"🔌 Порт: {FLASK_PORT}")
     print(f"🐛 Режим отладки: {FLASK_DEBUG}")
-    print(f"🌐 URL: http://{FLASK_HOST}:{FLASK_PORT}")
+    print(f"🌐 URL: https://{FLASK_HOST}:{FLASK_PORT}")
     print("=" * 50)
     
     try:
+        # Use adhoc SSL for HTTPS
         app.run(
             host=FLASK_HOST,
             port=FLASK_PORT,
-            debug=FLASK_DEBUG
+            debug=FLASK_DEBUG,
+            ssl_context='adhoc'
         )
     except KeyboardInterrupt:
         print("\n🛑 Mini App остановлен пользователем")
