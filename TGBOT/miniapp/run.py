@@ -22,7 +22,7 @@ if __name__ == '__main__':
     print(f"📍 Хост: {FLASK_HOST}")
     print(f"🔌 Порт: {FLASK_PORT}")
     print(f"🐛 Режим отладки: {FLASK_DEBUG}")
-    print(f"🌐 URL: https://{FLASK_HOST}:{FLASK_PORT}")
+    print(f"🌐 URL: https://127.0.0.1:{FLASK_PORT}")
     print("=" * 50)
     
     try:
