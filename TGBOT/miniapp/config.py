@@ -15,12 +15,14 @@ MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))
 VIDEO_FILE_EXTENSIONS = os.getenv("VIDEO_FILE_EXTENSIONS", "mp4,avi,mov,wmv,flv,webm,mkv").split(",")
 
 # === Mini App Configuration ===
-MINIAPP_URL = os.getenv("MINIAPP_URL", "https://bot.bunter.ru:4477/miniapp")
-MINIAPP_MODE = os.getenv("MINIAPP_MODE", "remote")  # local or remote
+MINIAPP_URL = os.getenv("MINIAPP_URL", "http://localhost:4477/miniapp")
+MINIAPP_MODE = os.getenv("MINIAPP_MODE", "local")  # local or remote
 LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))
 
 # === SSL Configuration ===
-SSL_VERIFY = os.getenv("SSL_VERIFY", "true").lower() == "true"
+SSL_VERIFY = os.getenv("SSL_VERIFY", "false").lower() == "true"
+SSL_VERIFY_CERT = os.getenv("SSL_VERIFY_CERT", "false").lower() == "true"
+SSL_VERIFY_HOSTNAME = os.getenv("SSL_VERIFY_HOSTNAME", "false").lower() == "true"
 SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", "")
 SSL_KEY_PATH = os.getenv("SSL_KEY_PATH", "")
 SSL_PASSWORD = os.getenv("SSL_PASSWORD", "")
