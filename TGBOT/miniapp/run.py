@@ -29,8 +29,7 @@ if __name__ == '__main__':
         app.run(
             host=FLASK_HOST,
             port=FLASK_PORT,
-            debug=FLASK_DEBUG,
-            ssl_context='adhoc' if os.getenv('USE_SSL', 'false').lower() == 'true' else None
+            debug=FLASK_DEBUG
         )
     except KeyboardInterrupt:
         print("\n🛑 Mini App остановлен пользователем")

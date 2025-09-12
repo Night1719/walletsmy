@@ -284,60 +284,14 @@ async def instruction_selected(callback: types.CallbackQuery, state: FSMContext)
         base_url = MINIAPP_URL.replace('/miniapp', '')
         miniapp_api_url = f"{base_url}/api/secure/create-link"
         
-        # Configure SSL verification
-        if not SSL_VERIFY_CERT:
-            # Disable SSL certificate verification
-            verify_ssl = False
-            logger.warning("SSL certificate verification disabled")
-        elif SSL_CERT_PATH:
-            # Use custom certificate
-            if SSL_CERT_PATH.endswith(('.p12', '.pfx')):
-                # PKCS#12 format - for now, disable verification
-                verify_ssl = False
-                logger.warning("PKCS#12 certificates not fully supported, disabling SSL verification")
-            else:
-                # PEM/CRT format
-                verify_ssl = SSL_CERT_PATH
-        else:
-            # Use default SSL verification with proper CA bundle
-            verify_ssl = True
+        # Disable SSL verification for Mini App connection
+        verify_ssl = False
         
-        # Try multiple SSL verification methods
-        ssl_attempts = []
-        
-        if verify_ssl is True:
-            # Try with default CA bundle
-            ssl_attempts.append(True)
-            # Try with system CA bundle
-            ssl_attempts.append('/etc/ssl/certs/ca-certificates.crt')  # Linux
-            ssl_attempts.append('/etc/ssl/cert.pem')  # macOS
-            ssl_attempts.append('C:/Windows/System32/certlm.msc')  # Windows (just for reference)
-        else:
-            ssl_attempts.append(verify_ssl)
-        
-        response = None
-        last_error = None
-        
-        for ssl_verify in ssl_attempts:
-            try:
-                logger.info(f"Trying SSL verification: {ssl_verify}")
-                response = requests.post(miniapp_api_url, json={
-                    "instruction_data": instruction_data,
-                    "file_format": file_format,
-                    "user_id": callback.from_user.id
-                }, timeout=10, verify=ssl_verify)
-                break  # Success, exit loop
-            except requests.exceptions.SSLError as e:
-                last_error = e
-                logger.warning(f"SSL verification failed with {ssl_verify}: {e}")
-                continue
-            except Exception as e:
-                last_error = e
-                logger.error(f"Unexpected error with {ssl_verify}: {e}")
-                break
-        
-        if response is None:
-            raise last_error or Exception("All SSL verification attempts failed")
+        response = requests.post(miniapp_api_url, json={
+            "instruction_data": instruction_data,
+            "file_format": file_format,
+            "user_id": callback.from_user.id
+        }, timeout=10, verify=verify_ssl)
         
         if response.status_code == 200:
             data = response.json()

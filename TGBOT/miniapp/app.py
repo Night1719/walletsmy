@@ -252,13 +252,19 @@ def create_secure_link():
         
         # Reload instruction files to get latest data
         global INSTRUCTION_FILES
-        INSTRUCTION_FILES = get_instruction_files()
+        try:
+            INSTRUCTION_FILES = get_instruction_files()
+        except Exception as e:
+            logger.warning(f"Failed to reload instruction files: {e}")
+            # Keep existing INSTRUCTION_FILES
         
         if instruction_type not in INSTRUCTION_FILES:
-            return jsonify({"error": "Invalid instruction type"}), 400
+            logger.warning(f"Instruction type {instruction_type} not found in {list(INSTRUCTION_FILES.keys())}")
+            return jsonify({"error": "Instruction not found"}), 404
         
         if file_format not in INSTRUCTION_FILES[instruction_type]:
-            return jsonify({"error": "Invalid file format"}), 400
+            logger.warning(f"File format {file_format} not found for {instruction_type}")
+            return jsonify({"error": "File format not available"}), 404
         
         # Create secure link
         link_manager = get_link_manager()
