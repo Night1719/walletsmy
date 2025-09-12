@@ -88,16 +88,16 @@ INSTRUCTIONS_CONFIG_FILE = os.getenv("INSTRUCTIONS_CONFIG_FILE", "instructions_c
 MINIAPP_URL = os.getenv("MINIAPP_URL", "http://localhost:4477/miniapp")
 MINIAPP_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # Same as bot token
 MINIAPP_WEBHOOK_URL = os.getenv("MINIAPP_WEBHOOK_URL", "http://localhost:4477")
-MINIAPP_MODE = os.getenv("MINIAPP_MODE", "remote")  # local or remote
+MINIAPP_MODE = os.getenv("MINIAPP_MODE", "local")  # local or remote
 LINK_EXPIRY_MINUTES = int(os.getenv("LINK_EXPIRY_MINUTES", "40"))  # Secure link expiry time
 
 # === SSL Configuration ===
-SSL_VERIFY = os.getenv("SSL_VERIFY", "true").lower() == "true"
+SSL_VERIFY = os.getenv("SSL_VERIFY", "false").lower() == "true"
 SSL_CERT_PATH = os.getenv("SSL_CERT_PATH", "")  # Path to SSL certificate (.pem, .crt, .p12)
 SSL_KEY_PATH = os.getenv("SSL_KEY_PATH", "")  # Path to private key (.key, .pem)
 SSL_PASSWORD = os.getenv("SSL_PASSWORD", "")  # Password for PKCS#12 files
-SSL_VERIFY_HOSTNAME = os.getenv("SSL_VERIFY_HOSTNAME", "true").lower() == "true"  # Verify hostname
-SSL_VERIFY_CERT = os.getenv("SSL_VERIFY_CERT", "true").lower() == "true"  # Verify certificate
+SSL_VERIFY_HOSTNAME = os.getenv("SSL_VERIFY_HOSTNAME", "false").lower() == "true"  # Verify hostname
+SSL_VERIFY_CERT = os.getenv("SSL_VERIFY_CERT", "false").lower() == "true"  # Verify certificate
 
 # === File Restrictions ===
 # Allowed file extensions for instructions
