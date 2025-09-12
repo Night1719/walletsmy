@@ -13,6 +13,11 @@ sys.path.insert(0, str(current_dir))
 from dotenv import load_dotenv
 load_dotenv()
 
+# Also load from parent directory
+parent_env = Path(__file__).parent.parent / ".env"
+if parent_env.exists():
+    load_dotenv(parent_env)
+
 # Import and run the app
 from app import app
 from config import FLASK_HOST, FLASK_PORT, FLASK_DEBUG
