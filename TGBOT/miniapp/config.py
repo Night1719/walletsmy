@@ -29,7 +29,7 @@ SSL_PASSWORD = os.getenv("SSL_PASSWORD", "")
 
 # === Flask Configuration ===
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "your-secret-key-here")
-FLASK_HOST = os.getenv("FLASK_HOST", "127.0.0.1")
+FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 FLASK_PORT = int(os.getenv("FLASK_PORT", "4477"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
