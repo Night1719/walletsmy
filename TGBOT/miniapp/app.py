@@ -167,10 +167,18 @@ def get_instruction_files():
         return instruction_files
     except Exception as e:
         logger.error(f"Error loading instruction files: {e}")
+        # Return empty dict instead of failing
         return {}
 
-# Load instruction files
-INSTRUCTION_FILES = get_instruction_files()
+# Load instruction files (with fallback)
+try:
+    INSTRUCTION_FILES = get_instruction_files()
+    if not INSTRUCTION_FILES:
+        logger.warning("No instruction files loaded, using empty mapping")
+        INSTRUCTION_FILES = {}
+except Exception as e:
+    logger.error(f"Failed to load instruction files: {e}")
+    INSTRUCTION_FILES = {}
 
 @app.route('/')
 def index():
