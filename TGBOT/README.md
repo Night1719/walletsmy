@@ -22,9 +22,19 @@ pip install -r requirements.txt
 python run.py
 ```
 
-### 4. Запуск бота
+### 4. Тестирование подключения (опционально)
+```cmd
+python test_connection.py
+```
+
+### 5. Запуск бота
 ```cmd
 python bot.py
+```
+
+### Альтернативный запуск с ngrok (для внешнего доступа)
+```cmd
+python run_with_ngrok.py
 ```
 
 ## Возможности
