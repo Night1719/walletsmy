@@ -22,15 +22,30 @@ if __name__ == '__main__':
     print(f"📍 Хост: {FLASK_HOST}")
     print(f"🔌 Порт: {FLASK_PORT}")
     print(f"🐛 Режим отладки: {FLASK_DEBUG}")
-    print(f"🌐 URL: http://79.110.252.4:{FLASK_PORT}")
+    print(f"🌐 URL: https://bot.bunter.ru:{FLASK_PORT}")
     print("=" * 50)
     
     try:
-        # Use HTTP (no SSL)
+        # Use HTTPS with custom certificate
+        ssl_context = None
+        
+        # Try to use custom certificate if available
+        cert_path = os.getenv('SSL_CERT_PATH', '')
+        key_path = os.getenv('SSL_KEY_PATH', '')
+        
+        if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
+            ssl_context = (cert_path, key_path)
+            print(f"🔒 Используется сертификат: {cert_path}")
+        else:
+            # Use adhoc SSL as fallback
+            ssl_context = 'adhoc'
+            print("⚠️  Используется самоподписной сертификат")
+        
         app.run(
             host=FLASK_HOST,
             port=FLASK_PORT,
-            debug=FLASK_DEBUG
+            debug=FLASK_DEBUG,
+            ssl_context=ssl_context
         )
     except KeyboardInterrupt:
         print("\n🛑 Mini App остановлен пользователем")
